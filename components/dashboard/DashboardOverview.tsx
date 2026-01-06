@@ -45,6 +45,7 @@ export const DashboardOverview: React.FC = () => {
   
   // Activité récente
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
