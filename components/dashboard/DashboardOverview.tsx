@@ -255,13 +255,13 @@ export const DashboardOverview: React.FC = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'booking':
-        return <Calendar className="text-green-400" size={16} />;
+        return <Calendar className="text-yellow-500/60" size={14} />;
       case 'project':
-        return <MessageSquare className="text-blue-400" size={16} />;
+        return <MessageSquare className="text-slate-400" size={14} />;
       case 'flash':
-        return <Zap className="text-amber-400" size={16} />;
+        return <Zap className="text-yellow-500/60" size={14} />;
       default:
-        return <CheckCircle className="text-slate-400" size={16} />;
+        return <CheckCircle className="text-slate-500" size={14} />;
     }
   };
 
@@ -276,235 +276,238 @@ export const DashboardOverview: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
-        <div className="flex items-center gap-2 md:gap-4">
-          <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 text-white">
-            <TrendingUp className="text-amber-400" size={18}/> 
+      <header className="h-14 border-b border-white/5 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between px-4 z-10 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-light tracking-tight text-white">
             <span className="hidden sm:inline">Tableau de Bord</span>
             <span className="sm:hidden">Dashboard</span>
           </h2>
         </div>
-        <div className="flex gap-2 md:gap-3">
+        <div className="flex gap-2">
           <button
             onClick={handleShare}
-            className="hidden md:flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+            className="hidden md:flex items-center gap-1.5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-md text-xs font-light hover:bg-white/5 hover:text-white transition-colors"
           >
-            <Share2 size={16} /> Partager mon lien
+            <Share2 size={14} /> Partager
           </button>
           <button
             onClick={() => navigate('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-amber-400 text-black px-3 md:px-4 py-2 rounded-lg text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20"
+            className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-yellow-500/20 transition-colors"
           >
-            <Plus size={16}/> <span className="hidden sm:inline">Nouveau Flash</span>
+            <Plus size={14}/> <span className="hidden sm:inline">Flash</span>
           </button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-        {/* KPIs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 pb-20 md:pb-4">
+        {/* KPIs Horizontal Scroll (Mobile) */}
+        <div className="md:hidden mb-4">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-3 px-3">
+            {/* CA Mensuel */}
+            <button
+              onClick={() => navigate('/dashboard/finance')}
+              className="flex-shrink-0 w-32 h-32 bg-zinc-900/50 border border-white/10 rounded-xl p-4 hover:border-yellow-500/20 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm"
+            >
+              <DollarSign className="text-yellow-500/60 mb-2" size={16} />
+              <p className="text-xs text-slate-500 mb-1 font-light">CA</p>
+              <p className="text-xl font-light text-white leading-tight">
+                {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
+              </p>
+            </button>
+
+            {/* RDV à venir */}
+            <button
+              onClick={() => navigate('/dashboard/calendar')}
+              className="flex-shrink-0 w-32 h-32 bg-zinc-900/50 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm"
+            >
+              <Calendar className="text-slate-400 mb-2" size={16} />
+              <p className="text-xs text-slate-500 mb-1 font-light">RDV</p>
+              <p className="text-xl font-light text-white leading-tight">{upcomingBookings}</p>
+            </button>
+
+            {/* Demandes en attente */}
+            <button
+              onClick={() => navigate('/dashboard/requests')}
+              className={`flex-shrink-0 w-32 h-32 bg-zinc-900/50 border rounded-xl p-4 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm ${
+                pendingRequests > 0
+                  ? 'border-red-500/20 hover:border-red-500/30'
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <AlertCircle className={`mb-2 ${pendingRequests > 0 ? 'text-red-500/60' : 'text-slate-400'}`} size={16} />
+              <p className="text-xs text-slate-500 mb-1 font-light">En attente</p>
+              <p className="text-xl font-light text-white leading-tight">{pendingRequests}</p>
+            </button>
+          </div>
+        </div>
+
+        {/* KPIs Grid (Desktop) */}
+        <div className="hidden md:grid md:grid-cols-3 gap-3 mb-4">
           {/* CA Mensuel */}
           <button
             onClick={() => navigate('/dashboard/finance')}
-            className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-colors text-left cursor-pointer"
+            className="bg-zinc-900/50 border border-white/10 rounded-xl p-4 hover:border-yellow-500/20 transition-colors text-left cursor-pointer backdrop-blur-sm"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                <DollarSign className="text-amber-400" size={24} />
-              </div>
-              <TrendingUp className="text-amber-400" size={20} />
+            <div className="flex items-center justify-between mb-3">
+              <DollarSign className="text-yellow-500/60" size={18} />
             </div>
-            <div className="mb-2">
-              <p className="text-sm text-slate-400 mb-1">Chiffre d'affaires</p>
-              <p className="text-3xl font-black text-white">
-                {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
-              </p>
-            </div>
-            <p className="text-xs text-slate-500">Ce mois-ci</p>
+            <p className="text-xs text-slate-500 mb-1 font-light">Chiffre d'affaires</p>
+            <p className="text-2xl font-light text-white">
+              {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
+            </p>
           </button>
 
           {/* RDV à venir */}
-          <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <Calendar className="text-blue-400" size={24} />
-              </div>
+          <button
+            onClick={() => navigate('/dashboard/calendar')}
+            className="bg-zinc-900/50 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-colors text-left cursor-pointer backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Calendar className="text-slate-400" size={18} />
             </div>
-            <div className="mb-2">
-              <p className="text-sm text-slate-400 mb-1">RDV à venir</p>
-              <p className="text-3xl font-black text-white">{upcomingBookings}</p>
-            </div>
-            <button
-              onClick={() => navigate('/dashboard/calendar')}
-              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-2"
-            >
-              Voir le calendrier <ArrowRight size={12} />
-            </button>
-          </div>
+            <p className="text-xs text-slate-500 mb-1 font-light">RDV à venir</p>
+            <p className="text-2xl font-light text-white">{upcomingBookings}</p>
+          </button>
 
           {/* Demandes en attente */}
           <button
             onClick={() => navigate('/dashboard/requests')}
-            className={`rounded-2xl p-6 border text-left cursor-pointer hover:opacity-90 transition-opacity ${
+            className={`bg-zinc-900/50 border rounded-xl p-4 transition-colors text-left cursor-pointer backdrop-blur-sm ${
               pendingRequests > 0
-                ? 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border-red-500/30 hover:border-red-500/50'
-                : 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 hover:border-green-500/50'
+                ? 'border-red-500/20 hover:border-red-500/30'
+                : 'border-white/10 hover:border-white/20'
             }`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                pendingRequests > 0 ? 'bg-red-500/20' : 'bg-green-500/20'
-              }`}>
-                <AlertCircle className={pendingRequests > 0 ? 'text-red-400' : 'text-green-400'} size={24} />
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <AlertCircle className={pendingRequests > 0 ? 'text-red-500/60' : 'text-slate-400'} size={18} />
             </div>
-            <div className="mb-2">
-              <p className="text-sm text-slate-400 mb-1">Demandes en attente</p>
-              <p className={`text-3xl font-black ${
-                pendingRequests > 0 ? 'text-white' : 'text-white'
-              }`}>
-                {pendingRequests}
-              </p>
-            </div>
-            {pendingRequests > 0 && (
-              <div className="text-xs text-red-400 flex items-center gap-1 mt-2">
-                Traiter maintenant <ArrowRight size={12} />
-              </div>
-            )}
+            <p className="text-xs text-slate-500 mb-1 font-light">Demandes en attente</p>
+            <p className="text-2xl font-light text-white">{pendingRequests}</p>
           </button>
         </div>
 
         {/* Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Aujourd'hui - Large */}
-          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Clock className="text-amber-400" size={20} />
+          <div className="lg:col-span-2 bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-light text-slate-400 uppercase tracking-wider">
                 Aujourd'hui
               </h3>
               <button
                 onClick={() => navigate('/dashboard/calendar')}
-                className="text-sm text-slate-400 hover:text-white flex items-center gap-1"
+                className="text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
               >
-                Voir tout <ArrowRight size={14} />
+                Tout voir <ArrowRight size={12} />
               </button>
             </div>
 
             {nextBooking ? (
-              <div className="bg-slate-900/50 rounded-xl p-6 border border-amber-400/20">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-amber-400/20 rounded-xl flex items-center justify-center">
-                        <Clock className="text-amber-400" size={24} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-black text-white">
-                          {formatTime(nextBooking.date_debut)}
-                        </p>
-                        <p className="text-sm text-slate-400">Prochain RDV</p>
-                      </div>
+              <div className="bg-zinc-950/50 rounded-lg p-4 border border-yellow-500/10">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                    <Clock className="text-yellow-500/80" size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <p className="text-lg font-light text-white">
+                        {formatTime(nextBooking.date_debut)}
+                      </p>
+                      <span className="text-xs text-slate-500 font-light">Prochain RDV</span>
                     </div>
-                    <div className="ml-16">
-                      <p className="text-lg font-bold text-white mb-1">
-                        {nextBooking.client_name || 'Client'}
-                      </p>
-                      <p className="text-slate-400">
-                        {nextBooking.flash_id
-                          ? `Flash: ${nextBooking.flashs?.title || 'Flash'}`
-                          : `Projet: ${nextBooking.projects?.body_part || 'Projet'} • ${nextBooking.projects?.style || ''}`
-                        }
-                      </p>
-                      <div className="flex items-center gap-4 mt-3 text-sm text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} /> {nextBooking.duree_minutes} min
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <DollarSign size={14} /> {Math.round(nextBooking.prix_total / 100)}€
-                        </span>
-                      </div>
+                    <p className="text-sm font-medium text-white mb-1">
+                      {nextBooking.client_name || 'Client'}
+                    </p>
+                    <p className="text-xs text-slate-400 mb-2">
+                      {nextBooking.flash_id
+                        ? nextBooking.flashs?.title || 'Flash'
+                        : `${nextBooking.projects?.body_part || 'Projet'} • ${nextBooking.projects?.style || ''}`
+                      }
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <span>{nextBooking.duree_minutes} min</span>
+                      <span>•</span>
+                      <span>{Math.round(nextBooking.prix_total / 100)}€</span>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-900/50 rounded-xl p-12 text-center border border-slate-700">
-                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="text-slate-500" size={32} />
-                </div>
-                <p className="text-lg font-bold text-white mb-2">Aucun RDV prévu aujourd'hui</p>
-                <p className="text-slate-400">Profitez-en pour dessiner ! 🎨</p>
+              <div className="bg-zinc-950/30 rounded-lg p-8 text-center border border-white/5">
+                <Calendar className="text-slate-600 mx-auto mb-3" size={24} />
+                <p className="text-sm font-light text-slate-400 mb-1">Aucun RDV aujourd'hui</p>
+                <p className="text-xs text-slate-500">Profitez-en pour dessiner</p>
               </div>
             )}
           </div>
 
           {/* Graphique - Medium */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <TrendingUp className="text-amber-400" size={20} />
+          <div className="bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
+            <h3 className="text-xs font-light text-slate-400 uppercase tracking-wider mb-4">
               Revenus (6 mois)
             </h3>
             {monthlyRevenues.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={monthlyRevenues}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                   <XAxis 
                     dataKey="month" 
-                    stroke="#94a3b8"
-                    fontSize={12}
+                    stroke="#71717a"
+                    fontSize={10}
+                    tick={{ fill: '#71717a' }}
                   />
                   <YAxis 
-                    stroke="#94a3b8"
-                    fontSize={12}
+                    stroke="#71717a"
+                    fontSize={10}
+                    tick={{ fill: '#71717a' }}
                     tickFormatter={(value) => `${value}€`}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid #334155',
-                      borderRadius: '8px',
+                      backgroundColor: '#18181b',
+                      border: '1px solid #27272a',
+                      borderRadius: '6px',
+                      fontSize: '12px',
                     }}
                     formatter={(value: number) => [`${value}€`, 'Revenus']}
                   />
-                  <Bar dataKey="revenue" fill="#fbbf24" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="revenue" fill="#eab308" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-slate-500">
-                <p className="text-sm">Pas encore de données</p>
+              <div className="h-[160px] flex items-center justify-center text-slate-600">
+                <p className="text-xs font-light">Pas de données</p>
               </div>
             )}
           </div>
 
           {/* Activité Récente - Full Width */}
-          <div className="lg:col-span-3 bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <Clock className="text-amber-400" size={20} />
+          <div className="lg:col-span-3 bg-zinc-900/50 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
+            <h3 className="text-xs font-light text-slate-400 uppercase tracking-wider mb-3">
               Activité Récente
             </h3>
             {recentActivity.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentActivity.map((activity, index) => (
                   <div
                     key={`${activity.type}-${activity.id}-${index}`}
-                    className="flex items-start gap-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
+                    className="flex items-start gap-3 p-3 bg-zinc-950/30 rounded-lg border border-white/5 hover:border-white/10 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-md bg-zinc-900/50 border border-white/5 flex items-center justify-center flex-shrink-0">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium mb-1">{activity.title}</p>
+                      <p className="text-sm font-light text-white mb-0.5">{activity.title}</p>
                       {activity.client && (
-                        <p className="text-sm text-slate-400 flex items-center gap-1">
-                          <User size={12} /> {activity.client}
+                        <p className="text-xs text-slate-500 font-light">
+                          {activity.client}
                         </p>
                       )}
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-600 mt-1 font-light">
                         {new Date(activity.date).toLocaleDateString('fr-FR', {
                           day: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
@@ -514,8 +517,8 @@ export const DashboardOverview: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500">
-                <p>Aucune activité récente</p>
+              <div className="text-center py-6 text-slate-600">
+                <p className="text-xs font-light">Aucune activité</p>
               </div>
             )}
           </div>
@@ -526,15 +529,15 @@ export const DashboardOverview: React.FC = () => {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-6 right-6 z-50 px-6 py-4 rounded-xl shadow-lg bg-green-500/90 text-white flex items-center gap-3"
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-20 md:bottom-6 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg bg-zinc-900/95 border border-white/10 backdrop-blur-md text-white flex items-center gap-2 text-sm font-light"
           >
-            <CheckCircle size={20} />
-            <span className="font-medium">{toast}</span>
-            <button onClick={() => setToast(null)}>
-              <X size={18} />
+            <CheckCircle size={16} className="text-yellow-500/80" />
+            <span>{toast}</span>
+            <button onClick={() => setToast(null)} className="ml-1">
+              <X size={14} className="text-slate-400" />
             </button>
           </motion.div>
         )}
