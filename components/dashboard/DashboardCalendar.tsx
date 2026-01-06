@@ -244,14 +244,18 @@ export const DashboardCalendar: React.FC = () => {
 
   // Détecter la taille d'écran
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
+      const width = window.innerWidth || 0;
+      setIsMobile(width < 768);
+      if (width < 768) {
         setViewMode('list');
       } else {
         setViewMode('week');
       }
     };
+    
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -262,21 +266,6 @@ export const DashboardCalendar: React.FC = () => {
       fetchBookings();
     }
   }, [user]);
-
-  // Détecter la taille d'écran
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setViewMode('list');
-      } else {
-        setViewMode('week');
-      }
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const fetchBookings = async () => {
     if (!user) return;

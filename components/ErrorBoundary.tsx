@@ -37,7 +37,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null });
-                window.location.reload();
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
               }}
               className="bg-amber-400 text-black px-6 py-2 rounded-lg font-bold hover:bg-amber-300"
             >

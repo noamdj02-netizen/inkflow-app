@@ -217,26 +217,32 @@ export const DashboardOverview: React.FC = () => {
   };
 
   const handleShare = async () => {
-    if (!profile?.slug_profil) return;
+    if (!profile?.slug_profil || typeof window === 'undefined') return;
     
     const url = `${window.location.origin}/p/${profile.slug_profil}`;
     try {
-      if (navigator.share) {
+      if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
           title: `${profile.nom_studio} - InkFlow`,
           text: `Découvrez mes flashs disponibles`,
           url: url,
         });
-      } else {
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(url);
         setToast('Lien copié !');
         setTimeout(() => setToast(null), 3000);
       }
     } catch (err) {
-      // Si l'utilisateur annule le partage, on copie quand même
-      await navigator.clipboard.writeText(url);
-      setToast('Lien copié !');
-      setTimeout(() => setToast(null), 3000);
+      // Si l'utilisateur annule le partage ou erreur, on copie quand même si possible
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(url);
+          setToast('Lien copié !');
+          setTimeout(() => setToast(null), 3000);
+        } catch (clipboardErr) {
+          console.error('Failed to copy to clipboard:', clipboardErr);
+        }
+      }
     }
   };
 

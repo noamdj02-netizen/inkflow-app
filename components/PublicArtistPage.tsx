@@ -80,8 +80,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
           client_name: formData.client_name,
           booking_id: bookingData.id,
           artist_id: artist.id,
-          success_url: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/payment/cancel`,
+          success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/cancel`,
         },
       });
 
@@ -89,7 +89,9 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
       if (!sessionData?.url) throw new Error('URL de paiement non reçue');
 
       // 3. Rediriger vers Stripe Checkout
-      window.location.href = sessionData.url;
+      if (typeof window !== 'undefined' && sessionData.url) {
+        window.location.href = sessionData.url;
+      }
     } catch (err: any) {
       console.error('Error creating booking:', err);
       setError(err.message || 'Erreur lors de la réservation');
@@ -356,8 +358,10 @@ export const PublicArtistPage: React.FC = () => {
   }, [slug]);
 
   const handleShare = async () => {
+    if (typeof window === 'undefined') return;
+    
     const url = window.location.href;
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
           title: `${artist?.nom_studio} - InkFlow`,
@@ -366,9 +370,11 @@ export const PublicArtistPage: React.FC = () => {
         });
       } catch (err) {
         // User cancelled or error
-        navigator.clipboard.writeText(url);
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url);
+        }
       }
-    } else {
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(url);
     }
   };

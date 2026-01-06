@@ -400,7 +400,7 @@ export const DashboardSettings: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Slug de votre profil</label>
                 <div className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-400 font-mono">
-                  {window.location.origin}/p/{profile.slug_profil}
+                  {typeof window !== 'undefined' ? `${window.location.origin}/p/${profile.slug_profil}` : `inkflow.app/p/${profile.slug_profil}`}
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Le slug ne peut pas être modifié</p>
               </div>

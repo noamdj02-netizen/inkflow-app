@@ -49,7 +49,7 @@ export const useDashboardData = () => {
         // Total flashs
         supabase
           .from('flashs')
-          .select('id', { count: 'exact' })
+          .select('*', { count: 'exact', head: true })
           .eq('artist_id', user.id),
 
         // Revenus (depuis les transactions Stripe)
