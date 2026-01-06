@@ -239,12 +239,44 @@ export const DashboardCalendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState<'week' | 'day' | 'list'>('week');
+
+  // Détecter la taille d'écran
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth < 768) {
+        setViewMode('list');
+      } else {
+        setViewMode('week');
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (user) {
       fetchBookings();
     }
   }, [user]);
+
+  // Détecter la taille d'écran
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth < 768) {
+        setViewMode('list');
+      } else {
+        setViewMode('week');
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const fetchBookings = async () => {
     if (!user) return;
@@ -277,10 +309,17 @@ export const DashboardCalendar: React.FC = () => {
         console.log('Bookings data:', data);
         setBookings(data || []);
         
-        // Transformer en événements
+        // Transformer en événements avec heures précises
         const calendarEvents: CalendarEvent[] = (data || []).map((booking) => {
+          // S'assurer que les dates sont bien des objets Date avec heures
           const start = new Date(booking.date_debut);
           const end = new Date(booking.date_fin);
+          
+          // Vérifier que les dates sont valides
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            console.error('Invalid date for booking:', booking.id);
+            return null;
+          }
           
           const title = booking.flash_id
             ? `${booking.client_name || 'Client'} • ${booking.flashs?.title || 'Flash'}`
@@ -289,12 +328,12 @@ export const DashboardCalendar: React.FC = () => {
           return {
             id: booking.id,
             title,
-            start,
-            end,
+            start, // Date complète avec heure
+            end,   // Date complète avec heure
             booking,
             type: booking.flash_id ? 'flash' : 'project',
           };
-        });
+        }).filter((e): e is CalendarEvent => e !== null);
 
         setEvents(calendarEvents);
       }
@@ -420,10 +459,65 @@ export const DashboardCalendar: React.FC = () => {
       </header>
 
       {/* Calendar Grid */}
-      <div className="flex-1 overflow-y-auto p-6 relative">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 relative pb-20 md:pb-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="animate-spin text-amber-400" size={32} />
+          </div>
+        ) : isMobile ? (
+          /* Mobile List View */
+          <div className="space-y-3">
+            {events.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <Calendar className="mx-auto mb-4 text-slate-600" size={48} />
+                <p className="text-lg font-medium">Aucun rendez-vous</p>
+                <p className="text-sm mt-2">Vos rendez-vous confirmés apparaîtront ici</p>
+              </div>
+            ) : (
+              events.map((event) => {
+                const start = new Date(event.start);
+                const end = new Date(event.end);
+                return (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => handleEventClick(event)}
+                    className={`rounded-xl p-4 border cursor-pointer ${
+                      event.type === 'flash'
+                        ? 'bg-amber-400/10 border-amber-400/30'
+                        : 'bg-blue-500/10 border-blue-400/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className={`text-sm font-bold mb-1 ${
+                          event.type === 'flash' ? 'text-amber-400' : 'text-blue-400'
+                        }`}>
+                          {event.booking?.flashs?.title || event.booking?.projects?.body_part || 'Rendez-vous'}
+                        </div>
+                        <div className="text-white font-medium">{event.booking?.client_name || 'Client'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-slate-400 mb-1">
+                          {start.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        </div>
+                        <div className="text-sm font-bold text-white">
+                          {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {' - '}
+                          {end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                    {event.booking?.flashs?.prix && (
+                      <div className="text-sm text-slate-300">
+                        {Math.round(event.booking.flashs.prix / 100).toLocaleString('fr-FR')}€
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         ) : (
           <div className="bg-slate-800/20 rounded-2xl border border-slate-800 min-w-[800px]">

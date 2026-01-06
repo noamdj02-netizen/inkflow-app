@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,6 +22,7 @@ export const DashboardRequests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'bookings' | 'projects'>('bookings');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -76,6 +77,8 @@ export const DashboardRequests: React.FC = () => {
     }
   };
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: 'confirmed' | 'rejected') => {
     if (!user) return;
 
@@ -93,11 +96,22 @@ export const DashboardRequests: React.FC = () => {
 
       if (error) throw error;
 
-      // Rafraîchir la liste
+      // Mise à jour immédiate de l'état local
+      setBookings(prev => prev.filter(b => b.id !== bookingId));
+      
+      // Afficher un toast de succès
+      setToast({ 
+        message: newStatus === 'confirmed' ? 'Réservation acceptée !' : 'Réservation refusée.', 
+        type: 'success' 
+      });
+      setTimeout(() => setToast(null), 3000);
+
+      // Rafraîchir la liste pour avoir les données à jour
       await fetchData();
     } catch (err: any) {
       console.error('Error updating booking status:', err);
-      alert(`Erreur: ${err.message}`);
+      setToast({ message: `Erreur: ${err.message}`, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setUpdating(null);
     }
@@ -121,11 +135,24 @@ export const DashboardRequests: React.FC = () => {
 
       if (error) throw error;
 
-      // Rafraîchir la liste
+      // Mise à jour immédiate de l'état local
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      
+      // Afficher un toast de succès
+      const messages = {
+        approved: 'Projet approuvé !',
+        rejected: 'Projet refusé.',
+        quoted: 'Devis envoyé !',
+      };
+      setToast({ message: messages[newStatus], type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+
+      // Rafraîchir la liste pour avoir les données à jour
       await fetchData();
     } catch (err: any) {
       console.error('Error updating project status:', err);
-      alert(`Erreur: ${err.message}`);
+      setToast({ message: `Erreur: ${err.message}`, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setUpdating(null);
     }
@@ -194,13 +221,13 @@ export const DashboardRequests: React.FC = () => {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
         {/* Tabs */}
         <div className="border-b border-slate-800 sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md">
           <div className="flex">
             <button
               onClick={() => setActiveTab('bookings')}
-              className={`flex-1 px-6 py-4 font-bold transition-colors relative ${
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 font-bold transition-colors relative text-sm md:text-base ${
                 activeTab === 'bookings'
                   ? 'text-white'
                   : 'text-slate-400 hover:text-white'
@@ -225,7 +252,7 @@ export const DashboardRequests: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('projects')}
-              className={`flex-1 px-6 py-4 font-bold transition-colors relative ${
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 font-bold transition-colors relative text-sm md:text-base ${
                 activeTab === 'projects'
                   ? 'text-white'
                   : 'text-slate-400 hover:text-white'
@@ -252,7 +279,7 @@ export const DashboardRequests: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="animate-spin text-amber-400" size={32} />
@@ -278,11 +305,11 @@ export const DashboardRequests: React.FC = () => {
                         key={booking.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-slate-500 transition-colors"
+                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 md:p-6 hover:border-slate-500 transition-colors w-full"
                       >
-                        <div className="flex gap-4">
+                        <div className="flex flex-col md:flex-row gap-4">
                           {/* Image du flash */}
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-900 flex-shrink-0 border border-slate-700">
+                          <div className="w-full md:w-20 h-32 md:h-20 rounded-xl overflow-hidden bg-slate-900 flex-shrink-0 border border-slate-700">
                             {booking.flashs?.image_url ? (
                               <img
                                 src={booking.flashs.image_url}
@@ -354,7 +381,7 @@ export const DashboardRequests: React.FC = () => {
                                 <button
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'confirmed')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-green-500/20 text-green-400 px-4 py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                  className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={16} />
@@ -368,7 +395,7 @@ export const DashboardRequests: React.FC = () => {
                                 <button
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'rejected')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-red-500/20 text-red-400 px-4 py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                  className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={16} />
@@ -441,7 +468,7 @@ export const DashboardRequests: React.FC = () => {
                             <button
                               onClick={() => handleProjectStatusUpdate(project.id, 'approved')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-green-500/20 text-green-400 px-4 py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -455,7 +482,7 @@ export const DashboardRequests: React.FC = () => {
                             <button
                               onClick={() => handleProjectStatusUpdate(project.id, 'quoted')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg font-bold hover:bg-blue-500/30 transition-colors border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              className="flex-1 bg-blue-500/20 text-blue-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-blue-500/30 transition-colors border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -469,7 +496,7 @@ export const DashboardRequests: React.FC = () => {
                             <button
                               onClick={() => handleProjectStatusUpdate(project.id, 'rejected')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-red-500/20 text-red-400 px-4 py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -491,6 +518,32 @@ export const DashboardRequests: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-6 right-6 z-50 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+              toast.type === 'success'
+                ? 'bg-green-500/90 text-white'
+                : 'bg-red-500/90 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle size={20} />
+            ) : (
+              <XCircle size={20} />
+            )}
+            <span className="font-medium">{toast.message}</span>
+            <button onClick={() => setToast(null)}>
+              <X size={18} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

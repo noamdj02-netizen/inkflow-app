@@ -48,6 +48,7 @@ export const DashboardLayout: React.FC = () => {
   };
 
   const handleResendWaiver = () => {
+    alert('Fonctionnalité bientôt disponible');
       alert("📧 Rappel de décharge envoyé par SMS et Email aux 2 clients.");
   };
 
@@ -133,7 +134,7 @@ export const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* CENTER & RIGHT CONTENT WRAPPER */}
-      <main className="flex-1 flex overflow-hidden relative">
+      <main className="flex-1 flex overflow-hidden relative pb-16 md:pb-0">
         
         {/* COLUMN 2: Central Main View (Dynamic Content via Outlet) */}
         <div className="flex-1 flex flex-col min-w-0 bg-slate-900/30">
@@ -231,10 +232,11 @@ export const DashboardLayout: React.FC = () => {
                             </div>
                         </div>
                         <button 
-                            onClick={handleResendWaiver}
+                            onClick={() => alert('Fonctionnalité bientôt disponible')}
                             className="w-full py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-bold rounded-lg transition-colors border border-red-500/20"
                         >
                             Renvoyer Rappel SMS
+                        </button>
                         </button>
                     </div>
                 </div>
@@ -268,6 +270,70 @@ export const DashboardLayout: React.FC = () => {
 
         </aside>
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50 md:hidden">
+        <div className="grid grid-cols-5 h-16">
+          <NavLink
+            to="/dashboard/overview"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-amber-400' : 'text-slate-400'
+              }`
+            }
+          >
+            <LayoutGrid size={20} />
+            <span className="text-[10px] font-medium">Accueil</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/calendar"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-amber-400' : 'text-slate-400'
+              }`
+            }
+          >
+            <Calendar size={20} />
+            <span className="text-[10px] font-medium">Agenda</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/requests"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 transition-colors relative ${
+                isActive ? 'text-amber-400' : 'text-slate-400'
+              }`
+            }
+          >
+            <MessageSquare size={20} />
+            {pendingProjects.length > 0 && (
+              <span className="absolute top-1 right-1/2 translate-x-2 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
+            <span className="text-[10px] font-medium">Demandes</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/flashs"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-amber-400' : 'text-slate-400'
+              }`
+            }
+          >
+            <Clock size={20} />
+            <span className="text-[10px] font-medium">Flashs</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/settings"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-amber-400' : 'text-slate-400'
+              }`
+            }
+          >
+            <Settings size={20} />
+            <span className="text-[10px] font-medium">Profil</span>
+          </NavLink>
+        </div>
+      </nav>
     </div>
   );
 };

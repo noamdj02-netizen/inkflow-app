@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   DollarSign, Calendar, AlertCircle, Clock, TrendingUp, Plus, Share2, 
-  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User
+  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User, X
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -219,18 +220,23 @@ export const DashboardOverview: React.FC = () => {
     if (!profile?.slug_profil) return;
     
     const url = `${window.location.origin}/p/${profile.slug_profil}`;
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: `${profile.nom_studio} - InkFlow`,
           text: `Découvrez mes flashs disponibles`,
           url: url,
         });
-      } catch (err) {
-        navigator.clipboard.writeText(url);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setToast('Lien copié !');
+        setTimeout(() => setToast(null), 3000);
       }
-    } else {
-      navigator.clipboard.writeText(url);
+    } catch (err) {
+      // Si l'utilisateur annule le partage, on copie quand même
+      await navigator.clipboard.writeText(url);
+      setToast('Lien copié !');
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
@@ -263,35 +269,39 @@ export const DashboardOverview: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-6 z-10 flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <TrendingUp className="text-amber-400" size={20}/> 
-            Tableau de Bord
+      <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-4">
+          <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 text-white">
+            <TrendingUp className="text-amber-400" size={18}/> 
+            <span className="hidden sm:inline">Tableau de Bord</span>
+            <span className="sm:hidden">Dashboard</span>
           </h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 md:gap-3">
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
+            className="hidden md:flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
           >
             <Share2 size={16} /> Partager mon lien
           </button>
           <button
             onClick={() => navigate('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-amber-400 text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20"
+            className="flex items-center gap-2 bg-amber-400 text-black px-3 md:px-4 py-2 rounded-lg text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20"
           >
-            <Plus size={16}/> Nouveau Flash
+            <Plus size={16}/> <span className="hidden sm:inline">Nouveau Flash</span>
           </button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
         {/* KPIs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* CA Mensuel */}
-          <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl p-6">
+          <button
+            onClick={() => navigate('/dashboard/finance')}
+            className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-colors text-left cursor-pointer"
+          >
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
                 <DollarSign className="text-amber-400" size={24} />
@@ -305,7 +315,7 @@ export const DashboardOverview: React.FC = () => {
               </p>
             </div>
             <p className="text-xs text-slate-500">Ce mois-ci</p>
-          </div>
+          </button>
 
           {/* RDV à venir */}
           <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-2xl p-6">
@@ -327,11 +337,14 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           {/* Demandes en attente */}
-          <div className={`rounded-2xl p-6 border ${
-            pendingRequests > 0
-              ? 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border-red-500/30'
-              : 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30'
-          }`}>
+          <button
+            onClick={() => navigate('/dashboard/requests')}
+            className={`rounded-2xl p-6 border text-left cursor-pointer hover:opacity-90 transition-opacity ${
+              pendingRequests > 0
+                ? 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border-red-500/30 hover:border-red-500/50'
+                : 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 hover:border-green-500/50'
+            }`}
+          >
             <div className="flex items-center justify-between mb-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                 pendingRequests > 0 ? 'bg-red-500/20' : 'bg-green-500/20'
@@ -348,14 +361,11 @@ export const DashboardOverview: React.FC = () => {
               </p>
             </div>
             {pendingRequests > 0 && (
-              <button
-                onClick={() => navigate('/dashboard/requests')}
-                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 mt-2"
-              >
+              <div className="text-xs text-red-400 flex items-center gap-1 mt-2">
                 Traiter maintenant <ArrowRight size={12} />
-              </button>
+              </div>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Bento Grid */}
@@ -504,6 +514,24 @@ export const DashboardOverview: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 z-50 px-6 py-4 rounded-xl shadow-lg bg-green-500/90 text-white flex items-center gap-3"
+          >
+            <CheckCircle size={20} />
+            <span className="font-medium">{toast}</span>
+            <button onClick={() => setToast(null)}>
+              <X size={18} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
