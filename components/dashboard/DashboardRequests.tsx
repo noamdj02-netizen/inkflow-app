@@ -77,8 +77,6 @@ export const DashboardRequests: React.FC = () => {
     }
   };
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: 'confirmed' | 'rejected') => {
     if (!user) return;
 

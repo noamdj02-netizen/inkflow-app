@@ -237,7 +237,6 @@ export const DashboardLayout: React.FC = () => {
                         >
                             Renvoyer Rappel SMS
                         </button>
-                        </button>
                     </div>
                 </div>
             </div>
