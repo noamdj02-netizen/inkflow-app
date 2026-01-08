@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
 import { Zap, Clock, CheckCircle } from 'lucide-react';
 import { FlashDesign } from '../types';
+import { EXAMPLE_FLASHS } from '../constants/flashExamples';
 
-const MOCK_FLASHS: FlashDesign[] = [
-  { id: '1', title: 'Serpent Floral', price: 150, size: '10x5 cm', style: 'Fine Line', available: true, imageUrl: 'https://picsum.photos/400/400?random=1' },
-  { id: '2', title: 'Dague Old School', price: 200, size: '15x8 cm', style: 'Traditionnel', available: true, imageUrl: 'https://picsum.photos/400/400?random=2' },
-  { id: '3', title: 'Papillon Abstrait', price: 120, size: '8x8 cm', style: 'Abstrait', available: true, imageUrl: 'https://picsum.photos/400/400?random=3' },
-  { id: '4', title: 'Crâne Géométrique', price: 250, size: '12x12 cm', style: 'Géométrique', available: false, imageUrl: 'https://picsum.photos/400/400?random=4' },
-  { id: '5', title: 'Rose Noir', price: 180, size: '10x10 cm', style: 'Blackwork', available: true, imageUrl: 'https://picsum.photos/400/400?random=5' },
-  { id: '6', title: 'Œil Mystique', price: 140, size: '7x7 cm', style: 'Dotwork', available: true, imageUrl: 'https://picsum.photos/400/400?random=6' },
-];
+// Interface étendue pour inclure la durée
+interface ExtendedFlashDesign extends FlashDesign {
+  duration?: number; // Durée en minutes
+}
+
+// Convertir les exemples de flashs au format FlashDesign
+const MOCK_FLASHS: ExtendedFlashDesign[] = EXAMPLE_FLASHS.map((flash) => ({
+  id: flash.id,
+  title: flash.title,
+  price: flash.price / 100, // Convertir centimes en euros
+  size: flash.size,
+  style: flash.style,
+  available: flash.status !== 'sold_out',
+  imageUrl: flash.imageUrl,
+  duration: flash.duration
+}));
 
 export const FlashGallery: React.FC = () => {
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
@@ -59,7 +68,10 @@ export const FlashGallery: React.FC = () => {
                 </div>
                 
                 <div className="flex gap-4 text-sm text-slate-400 mb-4">
-                    <span className="flex items-center gap-1"><Clock size={14} /> 2h approx</span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={14} /> 
+                      {flash.duration ? `${Math.floor(flash.duration / 60)}h${flash.duration % 60 > 0 ? ` ${flash.duration % 60}min` : ''}` : '2h'} approx
+                    </span>
                     <span className="border border-slate-600 px-2 rounded text-xs py-0.5">{flash.size}</span>
                     <span className="border border-slate-600 px-2 rounded text-xs py-0.5">{flash.style}</span>
                 </div>

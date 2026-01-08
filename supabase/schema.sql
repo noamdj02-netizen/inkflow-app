@@ -205,6 +205,7 @@ ALTER TABLE stripe_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Supprimer les politiques existantes avant de les recréer (pour éviter les erreurs de duplication)
 DROP POLICY IF EXISTS "Artists can view own data" ON artists;
+DROP POLICY IF EXISTS "Artists can insert own data" ON artists;
 DROP POLICY IF EXISTS "Artists can update own data" ON artists;
 DROP POLICY IF EXISTS "Flashs are public for reading" ON flashs;
 DROP POLICY IF EXISTS "Artists can manage own flashs" ON flashs;
@@ -218,8 +219,19 @@ DROP POLICY IF EXISTS "Artists can view own transactions" ON stripe_transactions
 CREATE POLICY "Artists can view own data" ON artists
     FOR SELECT USING (auth.uid()::text = id::text);
 
+CREATE POLICY "Artists can insert own data" ON artists
+    FOR INSERT 
+    WITH CHECK (
+        -- L'utilisateur doit être authentifié
+        auth.uid() IS NOT NULL
+        -- L'ID de l'artiste doit correspondre à l'ID de l'utilisateur authentifié
+        AND id::text = auth.uid()::text
+    );
+
 CREATE POLICY "Artists can update own data" ON artists
-    FOR UPDATE USING (auth.uid()::text = id::text);
+    FOR UPDATE 
+    USING (auth.uid()::text = id::text)
+    WITH CHECK (auth.uid()::text = id::text);
 
 -- Policy: Les flashs sont publics en lecture, mais seul l'artiste peut les modifier
 CREATE POLICY "Flashs are public for reading" ON flashs

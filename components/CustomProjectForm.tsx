@@ -151,9 +151,10 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
       setClientEmail('');
       setClientName('');
       setAnalysis(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error submitting project:', err);
-      alert(`Erreur lors de l'envoi: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
+      alert(`Erreur lors de l'envoi: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

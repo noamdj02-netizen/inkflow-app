@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond transparent pour intégration flexible -->
+  <!-- Forme principale : goutte/flamme pointant vers le haut -->
+  <path d="M256 64C256 64 192 128 192 192C192 256 256 384 256 384C256 384 320 256 320 192C320 128 256 64 256 64Z" fill="#FBBF24" stroke="#FBBF24" stroke-width="8"/>
+  
+  <!-- Éclair intégré dans la partie supérieure gauche -->
+  <path d="M224 160L240 200L208 200L224 240" stroke="#000000" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Lignes ondulées dans la partie inférieure droite -->
+  <path d="M288 280C288 280 304 300 320 280C336 260 352 300 368 280" stroke="#000000" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <path d="M288 320C288 320 304 340 320 320C336 300 352 340 368 320" stroke="#000000" stroke-width="16" stroke-linecap="round" fill="none"/>
+</svg>
+

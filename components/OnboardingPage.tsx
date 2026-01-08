@@ -133,9 +133,10 @@ export const OnboardingPage: React.FC = () => {
 
       // Rediriger vers le dashboard
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating artist profile:', err);
-      setError(err.message || 'Erreur lors de la création du profil');
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création du profil';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -182,9 +183,6 @@ export const OnboardingPage: React.FC = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center transform rotate-3 shadow-[0_0_20px_rgba(251,191,36,0.3)]">
-              <PenTool className="text-black" size={24} />
-            </div>
             <span className="text-3xl font-black tracking-tighter text-white">
               INK<span className="text-amber-400">FLOW</span>
             </span>

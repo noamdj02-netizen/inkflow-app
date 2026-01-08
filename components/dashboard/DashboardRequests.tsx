@@ -109,7 +109,7 @@ export const DashboardRequests: React.FC = () => {
     setUpdating(bookingId);
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('bookings')
         .update({ 
           statut_booking: newStatus,
@@ -126,14 +126,14 @@ export const DashboardRequests: React.FC = () => {
         type: 'success' 
       });
       setTimeout(() => setToast(null), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating booking status:', err);
       
       // En cas d'erreur, recharger les données pour restaurer l'état
       await fetchData();
       
       setToast({ 
-        message: `Erreur: ${err.message || 'Impossible de mettre à jour la réservation'}`, 
+        message: `Erreur: ${err instanceof Error ? err.message : 'Impossible de mettre à jour la réservation'}`, 
         type: 'error' 
       });
       setTimeout(() => setToast(null), 3000);
@@ -171,14 +171,14 @@ export const DashboardRequests: React.FC = () => {
       };
       setToast({ message: messages[newStatus], type: 'success' });
       setTimeout(() => setToast(null), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating project status:', err);
       
       // En cas d'erreur, recharger les données pour restaurer l'état
       await fetchData();
       
       setToast({ 
-        message: `Erreur: ${err.message || 'Impossible de mettre à jour le projet'}`, 
+        message: `Erreur: ${err instanceof Error ? err.message : 'Impossible de mettre à jour le projet'}`, 
         type: 'error' 
       });
       setTimeout(() => setToast(null), 3000);

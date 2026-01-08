@@ -80,8 +80,9 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         } else {
           throw new Error('Failed to create payment intent');
         }
-      } catch (err: any) {
-        setError(err.message || 'Erreur lors de l\'initialisation du paiement');
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'initialisation du paiement';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -119,8 +120,9 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         onSuccess(paymentIntent.id);
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du traitement du paiement');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du traitement du paiement';
+      setError(errorMessage);
     } finally {
       setProcessing(false);
     }

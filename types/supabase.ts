@@ -22,6 +22,8 @@ export interface Database {
           stripe_connected: boolean
           deposit_percentage: number
           accent_color: string
+          theme_color: 'amber' | 'red' | 'blue' | 'emerald' | 'violet' | null
+          avatar_url: string | null
           bio_instagram: string | null
           created_at: string
           updated_at: string

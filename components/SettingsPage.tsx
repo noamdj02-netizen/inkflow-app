@@ -129,8 +129,9 @@ export const SettingsPage: React.FC = () => {
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }

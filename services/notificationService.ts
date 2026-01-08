@@ -41,10 +41,6 @@ const sendEmail = async (options: NotificationOptions) => {
 
   if (error) {
     console.error('Error sending email:', error);
-    // Fallback: Log pour développement
-    console.log('Email would be sent to:', options.to);
-    console.log('Subject:', options.subject);
-    console.log('Message:', options.message);
     return { success: false, error };
   }
 
@@ -66,9 +62,6 @@ const sendSMS = async (options: NotificationOptions) => {
 
   if (error) {
     console.error('Error sending SMS:', error);
-    // Fallback: Log pour développement
-    console.log('SMS would be sent to:', options.to);
-    console.log('Message:', options.message);
     return { success: false, error };
   }
 

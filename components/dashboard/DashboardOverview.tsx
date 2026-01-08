@@ -44,7 +44,15 @@ export const DashboardOverview: React.FC = () => {
   const [monthlyRevenues, setMonthlyRevenues] = useState<MonthlyRevenue[]>([]);
   
   // Activité récente
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  interface Activity {
+    id: string;
+    type: 'booking' | 'project' | 'flash';
+    title: string;
+    client?: string;
+    date: string;
+    status?: string;
+  }
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -171,7 +179,7 @@ export const DashboardOverview: React.FC = () => {
           .limit(2),
       ]);
 
-      const activities: any[] = [];
+      const activities: Activity[] = [];
       
       recentBookings.data?.forEach(booking => {
         activities.push({

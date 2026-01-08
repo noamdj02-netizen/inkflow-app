@@ -5,7 +5,6 @@ import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { OnboardingPage } from './components/OnboardingPage';
-import { ArtistDashboard } from './components/ArtistDashboard';
 import { PublicArtistPage } from './components/PublicArtistPage';
 import { ClientHome } from './components/ClientHome';
 import { FlashGallery } from './components/FlashGallery';

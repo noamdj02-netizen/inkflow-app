@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { 
   Calendar, DollarSign, Users, MessageSquare, 
-  FileSignature, PieChart, LayoutGrid, Settings, 
-  Search, Bell, MoreVertical, CheckCircle, XCircle, 
-  Megaphone, Clock, MapPin, ChevronRight, FileText,
+  PieChart, LayoutGrid, Settings, 
+  MoreVertical, CheckCircle, 
+  Megaphone, Clock, 
   AlertTriangle, ArrowUpRight, Instagram, Plus,
   Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut, Loader2
 } from 'lucide-react';
@@ -304,9 +304,6 @@ export const ArtistDashboard: React.FC = () => {
       <aside className="w-64 bg-slate-900 border-r border-slate-800 hidden md:flex flex-col flex-shrink-0 z-20">
         <div className="p-6 border-b border-slate-800">
            <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                <LayoutGrid className="text-black" size={18} />
-            </div>
             <span className="text-xl font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
           </div>
         </div>

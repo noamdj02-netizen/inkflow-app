@@ -27,9 +27,10 @@ export const PaymentSuccess: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error verifying payment:', err);
-        setError(err.message);
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la vérification du paiement';
+        setError(errorMessage);
         setLoading(false);
       }
     };

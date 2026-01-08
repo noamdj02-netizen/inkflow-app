@@ -29,7 +29,7 @@ export const DashboardSettings: React.FC = () => {
       setFormData({
         nom_studio: profile.nom_studio || '',
         bio_instagram: profile.bio_instagram || '',
-        theme_color: (profile as any).theme_color || profile.accent_color || 'amber',
+        theme_color: profile.theme_color || profile.accent_color || 'amber',
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
         avatarUrl: profile.avatar_url || '',
@@ -41,23 +41,32 @@ export const DashboardSettings: React.FC = () => {
     if (!user) throw new Error('User not authenticated');
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `avatar.${fileExt}`;
+    // Cache busting : nom unique avec timestamp pour forcer le rafraîchissement
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
     const filePath = `${user.id}/${fileName}`;
 
     setUploadingAvatar(true);
 
     try {
-      // Supprimer l'ancien avatar s'il existe
+      // Supprimer les anciens avatars s'ils existent (nettoyage optionnel)
       const { data: existingFiles } = await supabase.storage
         .from('avatars')
         .list(`${user.id}/`, {
-          search: 'avatar',
+          search: `${user.id}-`,
         });
 
       if (existingFiles && existingFiles.length > 0) {
-        await supabase.storage
-          .from('avatars')
-          .remove(existingFiles.map(f => `${user.id}/${f.name}`));
+        // Supprimer les anciens avatars (garder seulement les 3 plus récents pour éviter l'accumulation)
+        const filesToDelete = existingFiles
+          .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+          .slice(3)
+          .map(f => `${user.id}/${f.name}`);
+        
+        if (filesToDelete.length > 0) {
+          await supabase.storage
+            .from('avatars')
+            .remove(filesToDelete);
+        }
       }
 
       // Uploader le nouvel avatar
@@ -65,19 +74,22 @@ export const DashboardSettings: React.FC = () => {
         .from('avatars')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false, // Pas d'upsert car le nom est unique
         });
 
       if (uploadError) throw uploadError;
 
-      // Obtenir l'URL publique
+      // Obtenir l'URL publique avec cache busting
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
-      return urlData.publicUrl;
+      // Ajouter un paramètre de cache busting à l'URL pour forcer le rafraîchissement
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      return publicUrl;
     } finally {
       setUploadingAvatar(false);
     }
@@ -108,7 +120,15 @@ export const DashboardSettings: React.FC = () => {
       let avatarUrl = formData.avatarUrl;
 
       if (formData.avatarFile) {
+        // Uploader et obtenir la nouvelle URL
         avatarUrl = await uploadAvatar(formData.avatarFile);
+        
+        // IMPORTANT : Mettre à jour l'état local immédiatement pour forcer le rafraîchissement
+        setFormData(prev => ({
+          ...prev,
+          avatarUrl: avatarUrl,
+          avatarFile: null, // Réinitialiser le fichier après upload
+        }));
       }
 
       await updateProfile({
@@ -117,12 +137,13 @@ export const DashboardSettings: React.FC = () => {
         theme_color: formData.theme_color,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
-      } as any);
+      });
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -293,6 +314,26 @@ export const DashboardSettings: React.FC = () => {
                     >
                       <X size={14} />
                     </button>
+                  </div>
+                ) : formData.avatarUrl ? (
+                  <div className="relative">
+                    <img
+                      src={formData.avatarUrl}
+                      alt="Avatar actuel"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-slate-600"
+                      onError={(e) => {
+                        // Si l'image ne charge pas, afficher le placeholder
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'w-20 h-20 rounded-full bg-slate-700 border-2 border-dashed border-slate-600 flex items-center justify-center';
+                          placeholder.innerHTML = '<svg class="text-slate-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+                          parent.appendChild(placeholder);
+                        }
+                      }}
+                    />
                   </div>
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-slate-700 border-2 border-dashed border-slate-600 flex items-center justify-center">

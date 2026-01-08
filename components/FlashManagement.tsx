@@ -49,8 +49,9 @@ export const FlashManagement: React.FC = () => {
 
       if (fetchError) throw fetchError;
       setFlashs(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du chargement des flashs');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des flashs';
+      setError(errorMessage);
       console.error('Error fetching flashs:', err);
     } finally {
       setLoading(false);
@@ -125,7 +126,7 @@ export const FlashManagement: React.FC = () => {
           statut: 'available',
         };
 
-        const { error: updateError } = await (supabase as any)
+        const { error: updateError } = await supabase
           .from('flashs')
           .update(updateData)
           .eq('id', editingFlash.id);
@@ -145,7 +146,7 @@ export const FlashManagement: React.FC = () => {
           statut: 'available',
         };
 
-        const { error: insertError } = await (supabase as any)
+        const { error: insertError } = await supabase
           .from('flashs')
           .insert(insertData);
 
@@ -156,8 +157,9 @@ export const FlashManagement: React.FC = () => {
       resetForm();
       setIsModalOpen(false);
       fetchFlashs();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la sauvegarde');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+      setError(errorMessage);
       console.error('Error saving flash:', err);
     }
   };
@@ -173,8 +175,9 @@ export const FlashManagement: React.FC = () => {
 
       if (error) throw error;
       fetchFlashs();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la suppression');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      setError(errorMessage);
       console.error('Error deleting flash:', err);
     }
   };

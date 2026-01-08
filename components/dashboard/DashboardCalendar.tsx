@@ -43,7 +43,7 @@ const EventModal: React.FC<EventModalProps> = ({ event, isOpen, onClose, onStatu
 
     setUpdating(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('bookings')
         .update({
           statut_booking: newStatus,
@@ -55,9 +55,10 @@ const EventModal: React.FC<EventModalProps> = ({ event, isOpen, onClose, onStatu
       if (error) throw error;
       onStatusUpdate();
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating booking status:', err);
-      alert(`Erreur: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
+      alert(`Erreur: ${errorMessage}`);
     } finally {
       setUpdating(false);
     }
@@ -295,7 +296,6 @@ export const DashboardCalendar: React.FC = () => {
       if (error) {
         console.error('Error fetching bookings:', error);
       } else {
-        console.log('Bookings data:', data);
         setBookings(data || []);
         
         // Transformer en événements avec heures précises

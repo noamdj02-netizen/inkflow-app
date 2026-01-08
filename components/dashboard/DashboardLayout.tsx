@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
 
 // Mock Data for Revenue Sparkline
 const REVENUE_DATA = [
@@ -87,6 +88,8 @@ export const DashboardLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#0f172a] text-slate-50 font-sans overflow-hidden">
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
       
       {/* Mobile Header */}
       <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 z-50 md:hidden flex items-center justify-between px-4">
@@ -96,10 +99,7 @@ export const DashboardLayout: React.FC = () => {
         >
           <Menu className="text-white" size={24} />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-amber-400 rounded-md flex items-center justify-center transform rotate-3">
-            <LayoutGrid className="text-black" size={14} />
-          </div>
+        <div className="flex items-center gap-3">
           <span className="text-base font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
         </div>
         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">
@@ -197,6 +197,7 @@ export const DashboardLayout: React.FC = () => {
                     icon={Settings} 
                     label="Paramètres"
                   />
+                  <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
                   <button
                     onClick={async () => {
                       await handleSignOut();
@@ -231,9 +232,6 @@ export const DashboardLayout: React.FC = () => {
       <aside className="w-64 bg-slate-900 border-r border-slate-800 hidden md:flex flex-col flex-shrink-0 z-20">
         <div className="p-6 border-b border-slate-800">
            <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                <LayoutGrid className="text-black" size={18} />
-            </div>
             <span className="text-xl font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
           </div>
         </div>
