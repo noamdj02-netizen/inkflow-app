@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   PenTool, Instagram, Zap, ArrowLeft, Loader2, X, CheckCircle, Clock, 
   Mail, User, MessageSquare, Share2, Phone, Calendar, Euro, MapPin,
@@ -9,6 +11,7 @@ import {
 import { supabase } from '../services/supabase';
 import type { Artist, Flash } from '../types/supabase';
 import { CustomProjectForm } from './CustomProjectForm';
+import { bookingFormSchema, type BookingFormData } from '../utils/validation';
 
 interface BookingDrawerProps {
   flash: Flash;
@@ -20,24 +23,40 @@ interface BookingDrawerProps {
 }
 
 const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, onClose, onSuccess, theme }) => {
-  const [formData, setFormData] = useState({
-    client_name: '',
-    client_email: '',
-    client_phone: '',
-    date_souhaitee: '',
-    commentaire: '',
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    watch,
+  } = useForm<BookingFormData>({
+    resolver: zodResolver(bookingFormSchema),
+    defaultValues: {
+      client_name: '',
+      client_email: '',
+      client_phone: '',
+      date_souhaitee: '',
+      commentaire: '',
+    },
   });
-  const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Reset form when drawer opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      reset();
+      setError(null);
+      setSuccess(false);
+    }
+  }, [isOpen, reset]);
+
+  const onSubmit = async (data: BookingFormData) => {
     setError(null);
-    setLoading(true);
 
     try {
-      const dateDebut = new Date(formData.date_souhaitee);
+      const dateDebut = new Date(data.date_souhaitee);
       const dateFin = new Date(dateDebut.getTime() + flash.duree_minutes * 60000);
       const depositPercentage = artist.deposit_percentage || 30;
       const depositAmount = Math.round((flash.prix * depositPercentage) / 100); // En centimes (prix est déjà en centimes)
@@ -48,9 +67,9 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
         .insert({
           artist_id: artist.id,
           flash_id: flash.id,
-          client_email: formData.client_email,
-          client_name: formData.client_name,
-          client_phone: formData.client_phone || null,
+          client_email: data.client_email,
+          client_name: data.client_name,
+          client_phone: data.client_phone || null,
           date_debut: dateDebut.toISOString(),
           date_fin: dateFin.toISOString(),
           duree_minutes: flash.duree_minutes,
@@ -77,8 +96,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
         body: {
           amount: depositAmount, // En centimes
           flash_title: flash.title,
-          client_email: formData.client_email,
-          client_name: formData.client_name,
+          client_email: data.client_email,
+          client_name: data.client_name,
           booking_id: bookingData.id,
           artist_id: artist.id,
           success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -96,7 +115,6 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
     } catch (err: any) {
       console.error('Error creating booking:', err);
       setError(err.message || 'Erreur lors de la réservation');
-      setLoading(false);
     }
   };
 
@@ -187,7 +205,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-300 text-sm">
                     {error}
@@ -200,12 +218,15 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   </label>
                   <input
                     type="text"
-                    required
-                    value={formData.client_name}
-                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
+                    {...register('client_name')}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white focus:outline-none ${
+                      errors.client_name ? 'border-red-500' : 'border-slate-700 ' + theme.inputFocus
+                    }`}
                     placeholder="Jean Dupont"
                   />
+                  {errors.client_name && (
+                    <p className="text-red-400 text-xs mt-1">{errors.client_name.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -214,12 +235,15 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   </label>
                   <input
                     type="email"
-                    required
-                    value={formData.client_email}
-                    onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
-                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
+                    {...register('client_email')}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white focus:outline-none ${
+                      errors.client_email ? 'border-red-500' : 'border-slate-700 ' + theme.inputFocus
+                    }`}
                     placeholder="jean.dupont@example.com"
                   />
+                  {errors.client_email && (
+                    <p className="text-red-400 text-xs mt-1">{errors.client_email.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -228,11 +252,15 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   </label>
                   <input
                     type="tel"
-                    value={formData.client_phone}
-                    onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
-                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
+                    {...register('client_phone')}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white focus:outline-none ${
+                      errors.client_phone ? 'border-red-500' : 'border-slate-700 ' + theme.inputFocus
+                    }`}
                     placeholder="06 12 34 56 78"
                   />
+                  {errors.client_phone && (
+                    <p className="text-red-400 text-xs mt-1">{errors.client_phone.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -241,12 +269,15 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   </label>
                   <input
                     type="datetime-local"
-                    required
-                    value={formData.date_souhaitee}
-                    onChange={(e) => setFormData({ ...formData, date_souhaitee: e.target.value })}
+                    {...register('date_souhaitee')}
                     min={new Date().toISOString().slice(0, 16)}
-                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white focus:outline-none ${
+                      errors.date_souhaitee ? 'border-red-500' : 'border-slate-700 ' + theme.inputFocus
+                    }`}
                   />
+                  {errors.date_souhaitee && (
+                    <p className="text-red-400 text-xs mt-1">{errors.date_souhaitee.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -255,19 +286,23 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   </label>
                   <textarea
                     rows={3}
-                    value={formData.commentaire}
-                    onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400 resize-none"
+                    {...register('commentaire')}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white focus:outline-none resize-none ${
+                      errors.commentaire ? 'border-red-500' : 'border-slate-700 ' + theme.inputFocus
+                    }`}
                     placeholder="Précisions, préférences..."
                   />
+                  {errors.commentaire && (
+                    <p className="text-red-400 text-xs mt-1">{errors.commentaire.message}</p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className={`w-full ${theme.primary} text-black font-bold py-4 rounded-xl ${theme.primaryHover} transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg`}
                 >
-                  {loading ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="animate-spin" size={20} />
                       Traitement...
@@ -367,6 +402,60 @@ export const PublicArtistPage: React.FC = () => {
   // Obtenir les classes du thème (doit être après que artist soit chargé)
   const themeColor = artist ? ((artist as any)?.theme_color || (artist as any)?.accent_color || 'amber') : 'amber';
   const theme = getThemeClasses(themeColor);
+
+  // Meta tags SEO dynamiques
+  useEffect(() => {
+    if (!artist) return;
+
+    const updateMetaTags = () => {
+      const title = `Réservez un tatouage avec ${artist.nom_studio} - InkFlow`;
+      const description = artist.bio_instagram || `Découvrez mes flashs et projets sur InkFlow.`;
+      const image = (artist as any)?.avatar_url || `${typeof window !== 'undefined' ? window.location.origin : ''}/og-default.jpg`;
+      const url = typeof window !== 'undefined' ? window.location.href : '';
+
+      // Mettre à jour ou créer les meta tags
+      const setMetaTag = (property: string, content: string, isProperty = true) => {
+        const selector = isProperty ? `meta[property="${property}"]` : `meta[name="${property}"]`;
+        let meta = document.querySelector(selector) as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement('meta');
+          if (isProperty) {
+            meta.setAttribute('property', property);
+          } else {
+            meta.setAttribute('name', property);
+          }
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      // Title
+      document.title = title;
+
+      // Meta description
+      setMetaTag('description', description, false);
+
+      // Open Graph
+      setMetaTag('og:title', title);
+      setMetaTag('og:description', description);
+      setMetaTag('og:image', image);
+      setMetaTag('og:url', url);
+      setMetaTag('og:type', 'website');
+
+      // Twitter Card
+      setMetaTag('twitter:card', 'summary_large_image', false);
+      setMetaTag('twitter:title', title, false);
+      setMetaTag('twitter:description', description, false);
+      setMetaTag('twitter:image', image, false);
+    };
+
+    updateMetaTags();
+
+    // Cleanup function
+    return () => {
+      // Optionnel: remettre les meta tags par défaut
+    };
+  }, [artist]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -744,10 +833,41 @@ export const PublicArtistPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
-          <p>&copy; 2024 InkFlow SaaS. Page publique de {artist.nom_studio}</p>
+      {/* Footer Légal */}
+      <footer className="border-t border-slate-800 py-6 mt-12 bg-slate-950/50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-1">
+              <span>Propulsé par</span>
+              <span className="font-bold text-slate-400">InkFlow</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('CGV - Fonctionnalité à venir');
+                }}
+                className="hover:text-slate-300 transition-colors"
+              >
+                CGV
+              </a>
+              <span className="text-slate-600">•</span>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('Mentions Légales - Fonctionnalité à venir');
+                }}
+                className="hover:text-slate-300 transition-colors"
+              >
+                Mentions Légales
+              </a>
+            </div>
+            <div className="text-slate-600">
+              &copy; 2024 InkFlow SaaS
+            </div>
+          </div>
         </div>
       </footer>
     </div>

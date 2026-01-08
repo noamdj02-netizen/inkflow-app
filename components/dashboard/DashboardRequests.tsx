@@ -3,7 +3,9 @@ import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro,
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
+import { InvoiceButton } from './InvoiceButton';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
   flashs?: {
@@ -17,6 +19,7 @@ type Project = Database['public']['Tables']['projects']['Row'];
 
 export const DashboardRequests: React.FC = () => {
   const { user } = useAuth();
+  const { profile } = useArtistProfile();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -422,8 +425,11 @@ export const DashboardRequests: React.FC = () => {
                                 <span className="font-bold text-amber-400">{Math.round(booking.deposit_amount / 100)}€</span>
                                 <span className="text-slate-500">({booking.deposit_percentage}%)</span>
                               </div>
-                              <div className="ml-auto">
+                              <div className="ml-auto flex items-center gap-2">
                                 {getStatusBadge(booking.statut_paiement, 'booking')}
+                                {booking.statut_booking === 'confirmed' && booking.statut_paiement === 'deposit_paid' && profile && (
+                                  <InvoiceButton booking={booking} artist={profile} />
+                                )}
                               </div>
                             </div>
 
