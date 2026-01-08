@@ -240,12 +240,18 @@ export const DashboardRequests: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-6 z-10 flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <MessageSquare className="text-amber-400" size={20}/> 
-            Demandes & Réservations
-          </h2>
+      <header className="h-14 md:h-16 border-b border-slate-800 bg-slate-900/95 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
+        <div className="flex items-center gap-3 md:gap-4">
+          <motion.h2 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-lg md:text-xl font-bold flex items-center gap-2 text-white"
+          >
+            <MessageSquare className="text-amber-400" size={18}/> 
+            <span className="hidden sm:inline">Demandes & Réservations</span>
+            <span className="sm:hidden">Demandes</span>
+          </motion.h2>
         </div>
       </header>
 
@@ -323,7 +329,7 @@ export const DashboardRequests: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="animate-spin text-amber-400" size={32} />
@@ -355,12 +361,14 @@ export const DashboardRequests: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    bookings.map((booking) => (
+                    bookings.map((booking, index) => (
                       <motion.div
                         key={booking.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 md:p-6 hover:border-slate-500 transition-colors w-full"
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 md:p-6 hover:border-slate-500 hover:shadow-lg transition-all w-full cursor-pointer"
                       >
                         <div className="flex flex-col md:flex-row gap-4">
                           {/* Image du flash */}
@@ -436,10 +444,11 @@ export const DashboardRequests: React.FC = () => {
                             {/* Actions */}
                             {(booking.statut_booking === 'pending' || booking.statut_paiement === 'pending') && (
                               <div className="flex gap-2 pt-4 border-t border-slate-700">
-                                <button
+                                <motion.button
+                                  whileTap={{ scale: 0.95 }}
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'confirmed')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                                  className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 hover:shadow-lg hover:shadow-green-500/20 transition-all border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={16} />
@@ -449,11 +458,12 @@ export const DashboardRequests: React.FC = () => {
                                       Accepter
                                     </>
                                   )}
-                                </button>
-                                <button
+                                </motion.button>
+                                <motion.button
+                                  whileTap={{ scale: 0.95 }}
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'rejected')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                                  className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 hover:shadow-lg hover:shadow-red-500/20 transition-all border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={16} />
@@ -463,7 +473,7 @@ export const DashboardRequests: React.FC = () => {
                                       Refuser
                                     </>
                                   )}
-                                </button>
+                                </motion.button>
                               </div>
                             )}
                           </div>
@@ -497,12 +507,14 @@ export const DashboardRequests: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    projects.map((project) => (
+                    projects.map((project, index) => (
                       <motion.div
                         key={project.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-slate-500 transition-colors"
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 md:p-6 hover:border-slate-500 hover:shadow-lg transition-all cursor-pointer"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
@@ -534,10 +546,11 @@ export const DashboardRequests: React.FC = () => {
 
                         {project.statut === 'pending' && (
                           <div className="flex gap-2 pt-4 border-t border-slate-700">
-                            <button
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleProjectStatusUpdate(project.id, 'approved')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                              className="flex-1 bg-green-500/20 text-green-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-green-500/30 hover:shadow-lg hover:shadow-green-500/20 transition-all border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -547,11 +560,12 @@ export const DashboardRequests: React.FC = () => {
                                   Approuver
                                 </>
                               )}
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleProjectStatusUpdate(project.id, 'quoted')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-blue-500/20 text-blue-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-blue-500/30 transition-colors border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                              className="flex-1 bg-blue-500/20 text-blue-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-blue-500/30 hover:shadow-lg hover:shadow-blue-500/20 transition-all border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -561,11 +575,12 @@ export const DashboardRequests: React.FC = () => {
                                   Envoyer Devis
                                 </>
                               )}
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleProjectStatusUpdate(project.id, 'rejected')}
                               disabled={updating === project.id}
-                              className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+                              className="flex-1 bg-red-500/20 text-red-400 px-4 py-3 md:py-2 rounded-lg font-bold hover:bg-red-500/30 hover:shadow-lg hover:shadow-red-500/20 transition-all border border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={16} />
@@ -575,7 +590,7 @@ export const DashboardRequests: React.FC = () => {
                                   Refuser
                                 </>
                               )}
-                            </button>
+                            </motion.button>
                           </div>
                         )}
                       </motion.div>

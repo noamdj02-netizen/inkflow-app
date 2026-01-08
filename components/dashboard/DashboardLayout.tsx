@@ -92,7 +92,7 @@ export const DashboardLayout: React.FC = () => {
       <PWAInstallPrompt />
       
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 z-50 md:hidden flex items-center justify-between px-4">
+      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900/95 backdrop-blur-lg border-b border-slate-800/50 z-50 md:hidden flex items-center justify-between px-4">
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className="p-2 -ml-2"
@@ -410,66 +410,76 @@ export const DashboardLayout: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800/50 z-50 md:hidden">
         <div className="grid grid-cols-5 h-16">
-          <NavLink
-            to="/dashboard/overview"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 transition-colors ${
-                isActive ? 'text-amber-400' : 'text-slate-400'
-              }`
-            }
-          >
-            <LayoutGrid size={20} />
-            <span className="text-[10px] font-medium">Accueil</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/calendar"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 transition-colors ${
-                isActive ? 'text-amber-400' : 'text-slate-400'
-              }`
-            }
-          >
-            <Calendar size={20} />
-            <span className="text-[10px] font-medium">Agenda</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/requests"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 transition-colors relative ${
-                isActive ? 'text-amber-400' : 'text-slate-400'
-              }`
-            }
-          >
-            <MessageSquare size={20} />
-            {pendingProjects.length > 0 && (
-              <span className="absolute top-1 right-1/2 translate-x-2 w-2 h-2 bg-red-500 rounded-full"></span>
-            )}
-            <span className="text-[10px] font-medium">Demandes</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/flashs"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 transition-colors ${
-                isActive ? 'text-amber-400' : 'text-slate-400'
-              }`
-            }
-          >
-            <Clock size={20} />
-            <span className="text-[10px] font-medium">Flashs</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/settings"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 transition-colors ${
-                isActive ? 'text-amber-400' : 'text-slate-400'
-              }`
-            }
-          >
-            <Settings size={20} />
-            <span className="text-[10px] font-medium">Profil</span>
-          </NavLink>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <NavLink
+              to="/dashboard/overview"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? 'text-amber-400' : 'text-slate-400'
+                }`
+              }
+            >
+              <LayoutGrid size={20} />
+              <span className="text-[10px] font-medium">Accueil</span>
+            </NavLink>
+          </motion.div>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <NavLink
+              to="/dashboard/calendar"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? 'text-amber-400' : 'text-slate-400'
+                }`
+              }
+            >
+              <Calendar size={20} />
+              <span className="text-[10px] font-medium">Agenda</span>
+            </NavLink>
+          </motion.div>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <NavLink
+              to="/dashboard/requests"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 transition-colors relative ${
+                  isActive ? 'text-amber-400' : 'text-slate-400'
+                }`
+              }
+            >
+              <MessageSquare size={20} />
+              {pendingProjects.length > 0 && (
+                <span className="absolute top-1 right-1/2 translate-x-2 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
+              <span className="text-[10px] font-medium">Demandes</span>
+            </NavLink>
+          </motion.div>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <NavLink
+              to="/dashboard/flashs"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? 'text-amber-400' : 'text-slate-400'
+                }`
+              }
+            >
+              <Clock size={20} />
+              <span className="text-[10px] font-medium">Flashs</span>
+            </NavLink>
+          </motion.div>
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <NavLink
+              to="/dashboard/settings"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? 'text-amber-400' : 'text-slate-400'
+                }`
+              }
+            >
+              <Settings size={20} />
+              <span className="text-[10px] font-medium">Profil</span>
+            </NavLink>
+          </motion.div>
         </div>
       </nav>
     </div>

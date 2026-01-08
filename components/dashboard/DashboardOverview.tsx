@@ -286,80 +286,96 @@ export const DashboardOverview: React.FC = () => {
       {/* Header (Desktop only - Mobile header is in DashboardLayout) */}
       <header className="hidden md:flex h-14 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm items-center justify-between px-6 z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold text-white">
+          <motion.h2 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-lg font-bold text-white"
+          >
             Tableau de Bord
-          </h2>
+          </motion.h2>
         </div>
         <div className="flex gap-2">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={handleShare}
-            className="flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 hover:shadow-lg transition-all"
           >
             <Share2 size={16} /> Partager mon lien
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-amber-400 text-black px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20"
+            className="flex items-center gap-2 bg-amber-400 text-black px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20 transition-all"
           >
             <Plus size={16}/> Nouveau Flash
-          </button>
+          </motion.button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 pt-4 md:pt-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 pb-20 md:pb-6 pt-3 md:pt-6">
         {/* KPIs Horizontal Scroll (Mobile) */}
-        <div className="md:hidden mb-6">
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-4 px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="md:hidden mb-6"
+        >
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-3 px-3">
             {/* CA Mensuel */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/dashboard/finance')}
-              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-5 hover:border-amber-500/70 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm"
+              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-4 hover:border-amber-500/70 hover:shadow-lg hover:shadow-amber-500/20 transition-all text-left cursor-pointer snap-start backdrop-blur-sm"
             >
-              <DollarSign className="text-amber-400 mb-3" size={20} />
+              <DollarSign className="text-amber-400 mb-2" size={18} />
               <p className="text-xs text-amber-200/80 mb-1 font-medium">Chiffre d'affaires</p>
-              <p className="text-2xl font-bold text-white leading-tight">
+              <p className="text-xl font-bold text-white leading-tight">
                 {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
               </p>
               <p className="text-[10px] text-amber-200/60 mt-1">Ce mois-ci</p>
-            </button>
+            </motion.button>
 
             {/* RDV à venir */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/dashboard/calendar')}
-              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-5 hover:border-blue-500/70 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm"
+              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-4 hover:border-blue-500/70 hover:shadow-lg hover:shadow-blue-500/20 transition-all text-left cursor-pointer snap-start backdrop-blur-sm"
             >
-              <Calendar className="text-blue-400 mb-3" size={20} />
+              <Calendar className="text-blue-400 mb-2" size={18} />
               <p className="text-xs text-blue-200/80 mb-1 font-medium">RDV à venir</p>
-              <p className="text-2xl font-bold text-white leading-tight">{upcomingBookings}</p>
+              <p className="text-xl font-bold text-white leading-tight">{upcomingBookings}</p>
               <p className="text-[10px] text-blue-200/60 mt-1">Confirmés</p>
-            </button>
+            </motion.button>
 
             {/* Demandes en attente */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/dashboard/requests')}
-              className={`flex-shrink-0 w-44 h-36 rounded-2xl p-5 transition-colors text-left cursor-pointer snap-start backdrop-blur-sm ${
+              className={`flex-shrink-0 w-44 h-36 rounded-2xl p-4 transition-all text-left cursor-pointer snap-start backdrop-blur-sm ${
                 pendingRequests > 0
-                  ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border border-red-500/50 hover:border-red-500/70'
-                  : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-emerald-500/50 hover:border-emerald-500/70'
+                  ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border border-red-500/50 hover:border-red-500/70 hover:shadow-lg hover:shadow-red-500/20'
+                  : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-emerald-500/50 hover:border-emerald-500/70 hover:shadow-lg hover:shadow-emerald-500/20'
               }`}
             >
-              <AlertCircle className={`mb-3 ${pendingRequests > 0 ? 'text-red-400' : 'text-emerald-400'}`} size={20} />
+              <AlertCircle className={`mb-2 ${pendingRequests > 0 ? 'text-red-400' : 'text-emerald-400'}`} size={18} />
               <p className={`text-xs mb-1 font-medium ${pendingRequests > 0 ? 'text-red-200/80' : 'text-emerald-200/80'}`}>Demandes</p>
-              <p className="text-2xl font-bold text-white leading-tight">{pendingRequests}</p>
+              <p className="text-xl font-bold text-white leading-tight">{pendingRequests}</p>
               <p className={`text-[10px] mt-1 ${pendingRequests > 0 ? 'text-red-200/60' : 'text-emerald-200/60'}`}>
                 {pendingRequests > 0 ? 'En attente' : 'Tout est OK'}
               </p>
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* KPIs Grid (Desktop) */}
         <div className="hidden md:grid md:grid-cols-3 gap-4 mb-6">
           {/* CA Mensuel */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/finance')}
-            className="bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/70 transition-colors text-left cursor-pointer backdrop-blur-sm"
+            className="bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/70 hover:shadow-lg hover:shadow-amber-500/20 transition-all text-left cursor-pointer backdrop-blur-sm"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
@@ -372,12 +388,13 @@ export const DashboardOverview: React.FC = () => {
               {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
             </p>
             <p className="text-xs text-amber-200/60 mt-1">Ce mois-ci</p>
-          </button>
+          </motion.button>
 
           {/* RDV à venir */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/calendar')}
-            className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-6 hover:border-blue-500/70 transition-colors text-left cursor-pointer backdrop-blur-sm"
+            className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-6 hover:border-blue-500/70 hover:shadow-lg hover:shadow-blue-500/20 transition-all text-left cursor-pointer backdrop-blur-sm"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
@@ -392,15 +409,16 @@ export const DashboardOverview: React.FC = () => {
             >
               Voir le calendrier <ArrowRight size={12} />
             </button>
-          </button>
+          </motion.button>
 
           {/* Demandes en attente */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/requests')}
-            className={`rounded-2xl p-6 border transition-colors text-left cursor-pointer backdrop-blur-sm ${
+            className={`rounded-2xl p-6 border transition-all text-left cursor-pointer backdrop-blur-sm ${
               pendingRequests > 0
-                ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border-red-500/50 hover:border-red-500/70'
-                : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border-emerald-500/50 hover:border-emerald-500/70'
+                ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border-red-500/50 hover:border-red-500/70 hover:shadow-lg hover:shadow-red-500/20'
+                : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border-emerald-500/50 hover:border-emerald-500/70 hover:shadow-lg hover:shadow-emerald-500/20'
             }`}
           >
             <div className="flex items-center justify-between mb-4">
@@ -417,42 +435,55 @@ export const DashboardOverview: React.FC = () => {
                 Traiter maintenant <ArrowRight size={12} />
               </div>
             )}
-          </button>
+          </motion.button>
         </div>
 
         {/* Actions Rapides (Mobile) */}
-        <div className="md:hidden mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="md:hidden mb-6"
+        >
           <div className="flex gap-3 justify-center">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={() => navigate('/dashboard/flashs')}
-              className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center hover:bg-amber-400/20 transition-colors"
+              className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center hover:bg-amber-400/20 hover:shadow-lg hover:shadow-amber-400/20 transition-all"
               title="Créer Flash"
             >
               <Plus className="text-amber-400" size={24} />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={() => alert('Fonctionnalité bientôt disponible')}
-              className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center hover:bg-blue-500/20 transition-colors"
+              className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center hover:bg-blue-500/20 hover:shadow-lg hover:shadow-blue-500/20 transition-all"
               title="Scan QR"
             >
               <QrCode className="text-blue-400" size={24} />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               onClick={handleShare}
-              className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center hover:bg-purple-500/20 transition-colors"
+              className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center hover:bg-purple-500/20 hover:shadow-lg hover:shadow-purple-500/20 transition-all"
               title="Lien"
             >
               <Link className="text-purple-400" size={24} />
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Ma Journée - Focus Card */}
-        <div className="mb-6">
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Clock className="text-amber-400" size={20} />
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="mb-6"
+        >
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+                <Clock className="text-amber-400" size={18} />
                 Ma Journée
               </h3>
               <button
@@ -464,22 +495,27 @@ export const DashboardOverview: React.FC = () => {
             </div>
 
             {nextBooking ? (
-              <div className="bg-slate-900/50 rounded-xl p-6 border border-amber-400/20">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="bg-slate-900/50 rounded-xl p-4 md:p-6 border border-amber-400/20"
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-amber-400/20 rounded-xl flex items-center justify-center">
-                        <Clock className="text-amber-400" size={24} />
+                    <div className="flex items-center gap-2 md:gap-3 mb-3">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-400/20 rounded-xl flex items-center justify-center">
+                        <Clock className="text-amber-400" size={20} />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-xl md:text-2xl font-bold text-white">
                           {formatTime(nextBooking.date_debut)}
                         </p>
-                        <p className="text-sm text-slate-400">Prochain RDV</p>
+                        <p className="text-xs md:text-sm text-slate-400">Prochain RDV</p>
                       </div>
                     </div>
-                    <div className="ml-16">
-                      <p className="text-xl font-bold text-white mb-2">
+                    <div className="ml-12 md:ml-16">
+                      <p className="text-lg md:text-xl font-bold text-white mb-2">
                         {nextBooking.client_name || 'Client'}
                       </p>
                       <p className="text-slate-300 mb-3">
@@ -499,25 +535,35 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div className="bg-slate-900/50 rounded-xl p-12 text-center border border-slate-700">
-                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="text-slate-500" size={32} />
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="bg-slate-900/50 rounded-xl p-8 md:p-12 text-center border border-slate-700"
+              >
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="text-slate-500" size={24} />
                 </div>
-                <p className="text-lg font-bold text-white mb-2">Aucun RDV prévu aujourd'hui</p>
-                <p className="text-slate-400">Profitez-en pour dessiner ! 🎨</p>
-              </div>
+                <p className="text-base md:text-lg font-bold text-white mb-2">Aucun RDV prévu aujourd'hui</p>
+                <p className="text-sm md:text-base text-slate-400">Profitez-en pour dessiner ! 🎨</p>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Graphique et Activité - Desktop Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4"
+        >
           {/* Graphique - Medium */}
-          <div className="lg:col-span-1 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-              <TrendingUp className="text-amber-400" size={20} />
+          <div className="lg:col-span-1 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
+            <h3 className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 md:mb-6 flex items-center gap-2">
+              <TrendingUp className="text-amber-400" size={18} />
               Revenus (6 mois)
             </h3>
             {monthlyRevenues.length > 0 ? (
@@ -553,17 +599,21 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           {/* Activité Récente - Full Width */}
-          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-              <Clock className="text-amber-400" size={20} />
+          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
+            <h3 className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 md:mb-6 flex items-center gap-2">
+              <Clock className="text-amber-400" size={18} />
               Activité Récente
             </h3>
             {recentActivity.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {recentActivity.map((activity, index) => (
-                  <div
+                  <motion.div
                     key={`${activity.type}-${activity.id}-${index}`}
-                    className="flex items-start gap-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-slate-900/50 rounded-xl border border-slate-700 hover:border-slate-600 hover:shadow-lg transition-all cursor-pointer"
                   >
                     <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
                       {getActivityIcon(activity.type)}
@@ -584,16 +634,16 @@ export const DashboardOverview: React.FC = () => {
                         })}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8 text-slate-500">
-                <p>Aucune activité récente</p>
+                <p className="text-sm">Aucune activité récente</p>
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Toast Notification */}
