@@ -195,7 +195,7 @@ export interface Database {
           statut_paiement: 'pending' | 'deposit_paid' | 'fully_paid' | 'refunded' | 'failed'
           stripe_payment_intent_id: string | null
           stripe_deposit_intent_id: string | null
-          statut_booking: 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+          statut_booking: 'pending' | 'confirmed' | 'rejected' | 'completed' | 'cancelled' | 'no_show'
           reminder_sent_at: string | null
           reminder_sms_sent: boolean
           created_at: string

@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     stripe_deposit_intent_id TEXT, -- ID du Payment Intent pour l'acompte
     
     -- Statut du rendez-vous
-    statut_booking TEXT DEFAULT 'confirmed' CHECK (statut_booking IN ('confirmed', 'completed', 'cancelled', 'no_show')),
+    statut_booking TEXT DEFAULT 'pending' CHECK (statut_booking IN ('pending', 'confirmed', 'rejected', 'completed', 'cancelled', 'no_show')),
     
     -- Notifications
     reminder_sent_at TIMESTAMP WITH TIME ZONE,

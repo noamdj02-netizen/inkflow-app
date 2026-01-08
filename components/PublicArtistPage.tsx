@@ -57,7 +57,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
           deposit_amount: depositAmount,
           deposit_percentage: depositPercentage,
           statut_paiement: 'pending',
-          statut_booking: 'confirmed',
+          statut_booking: 'pending',
         })
         .select()
         .single();
