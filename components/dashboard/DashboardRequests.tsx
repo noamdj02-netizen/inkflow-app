@@ -21,6 +21,7 @@ export const DashboardRequests: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'bookings' | 'projects'>('bookings');
+  const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending');
   const [updating, setUpdating] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -28,7 +29,7 @@ export const DashboardRequests: React.FC = () => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, viewMode]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -37,7 +38,8 @@ export const DashboardRequests: React.FC = () => {
       setLoading(true);
 
       // Récupérer les bookings avec jointure sur flashs
-      const { data: bookingsData, error: bookingsError } = await supabase
+      // Filtrer selon le mode d'affichage
+      let bookingsQuery = supabase
         .from('bookings')
         .select(`
           *,
@@ -47,27 +49,45 @@ export const DashboardRequests: React.FC = () => {
             prix
           )
         `)
-        .eq('artist_id', user.id)
+        .eq('artist_id', user.id);
+
+      if (viewMode === 'pending') {
+        // En attente : seulement pending
+        bookingsQuery = bookingsQuery.eq('statut_booking', 'pending');
+      } else {
+        // Historique : confirmed, rejected, completed, cancelled, no_show
+        bookingsQuery = bookingsQuery.in('statut_booking', ['confirmed', 'rejected', 'completed', 'cancelled', 'no_show']);
+      }
+
+      const { data: bookingsData, error: bookingsError } = await bookingsQuery
         .order('created_at', { ascending: false });
 
       if (bookingsError) {
         console.error('Error fetching bookings:', bookingsError);
       } else {
-        console.log('Bookings data:', bookingsData);
         setBookings(bookingsData || []);
       }
 
       // Récupérer les projects
-      const { data: projectsData, error: projectsError } = await supabase
+      let projectsQuery = supabase
         .from('projects')
         .select('*')
-        .eq('artist_id', user.id)
+        .eq('artist_id', user.id);
+
+      if (viewMode === 'pending') {
+        // En attente : seulement pending
+        projectsQuery = projectsQuery.eq('statut', 'pending');
+      } else {
+        // Historique : approved, rejected, quoted
+        projectsQuery = projectsQuery.in('statut', ['approved', 'rejected', 'quoted']);
+      }
+
+      const { data: projectsData, error: projectsError } = await projectsQuery
         .order('created_at', { ascending: false });
 
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
       } else {
-        console.log('Projects data:', projectsData);
         setProjects(projectsData || []);
       }
     } catch (err) {
@@ -80,6 +100,9 @@ export const DashboardRequests: React.FC = () => {
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: 'confirmed' | 'rejected') => {
     if (!user) return;
 
+    // OPTIMISTIC UI : Mise à jour immédiate AVANT l'appel Supabase
+    setBookings(prev => prev.filter(b => b.id !== bookingId));
+    
     setUpdating(bookingId);
 
     try {
@@ -94,21 +117,22 @@ export const DashboardRequests: React.FC = () => {
 
       if (error) throw error;
 
-      // Mise à jour immédiate de l'état local
-      setBookings(prev => prev.filter(b => b.id !== bookingId));
-      
       // Afficher un toast de succès
       setToast({ 
-        message: newStatus === 'confirmed' ? 'Réservation acceptée !' : 'Réservation refusée.', 
+        message: newStatus === 'confirmed' ? 'Réservation confirmée !' : 'Réservation refusée.', 
         type: 'success' 
       });
       setTimeout(() => setToast(null), 3000);
-
-      // Rafraîchir la liste pour avoir les données à jour
-      await fetchData();
     } catch (err: any) {
       console.error('Error updating booking status:', err);
-      setToast({ message: `Erreur: ${err.message}`, type: 'error' });
+      
+      // En cas d'erreur, recharger les données pour restaurer l'état
+      await fetchData();
+      
+      setToast({ 
+        message: `Erreur: ${err.message || 'Impossible de mettre à jour la réservation'}`, 
+        type: 'error' 
+      });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setUpdating(null);
@@ -118,6 +142,9 @@ export const DashboardRequests: React.FC = () => {
   const handleProjectStatusUpdate = async (projectId: string, newStatus: 'approved' | 'rejected' | 'quoted') => {
     if (!user) return;
 
+    // OPTIMISTIC UI : Mise à jour immédiate AVANT l'appel Supabase
+    setProjects(prev => prev.filter(p => p.id !== projectId));
+    
     setUpdating(projectId);
 
     try {
@@ -133,9 +160,6 @@ export const DashboardRequests: React.FC = () => {
 
       if (error) throw error;
 
-      // Mise à jour immédiate de l'état local
-      setProjects(prev => prev.filter(p => p.id !== projectId));
-      
       // Afficher un toast de succès
       const messages = {
         approved: 'Projet approuvé !',
@@ -144,12 +168,16 @@ export const DashboardRequests: React.FC = () => {
       };
       setToast({ message: messages[newStatus], type: 'success' });
       setTimeout(() => setToast(null), 3000);
-
-      // Rafraîchir la liste pour avoir les données à jour
-      await fetchData();
     } catch (err: any) {
       console.error('Error updating project status:', err);
-      setToast({ message: `Erreur: ${err.message}`, type: 'error' });
+      
+      // En cas d'erreur, recharger les données pour restaurer l'état
+      await fetchData();
+      
+      setToast({ 
+        message: `Erreur: ${err.message || 'Impossible de mettre à jour le projet'}`, 
+        type: 'error' 
+      });
       setTimeout(() => setToast(null), 3000);
     } finally {
       setUpdating(null);
@@ -222,6 +250,7 @@ export const DashboardRequests: React.FC = () => {
       <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
         {/* Tabs */}
         <div className="border-b border-slate-800 sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md">
+          {/* Onglets principaux */}
           <div className="flex">
             <button
               onClick={() => setActiveTab('bookings')}
@@ -234,11 +263,6 @@ export const DashboardRequests: React.FC = () => {
               <span className="flex items-center justify-center gap-2">
                 <Calendar size={18} />
                 Réservations Flash
-                {bookings.filter(b => b.statut_booking === 'pending' || b.statut_paiement === 'pending').length > 0 && (
-                  <span className="bg-amber-400 text-black text-xs font-bold px-2 py-0.5 rounded-full">
-                    {bookings.filter(b => b.statut_booking === 'pending' || b.statut_paiement === 'pending').length}
-                  </span>
-                )}
               </span>
               {activeTab === 'bookings' && (
                 <motion.div
@@ -259,11 +283,6 @@ export const DashboardRequests: React.FC = () => {
               <span className="flex items-center justify-center gap-2">
                 <MessageSquare size={18} />
                 Projets Perso
-                {projects.filter(p => p.statut === 'pending').length > 0 && (
-                  <span className="bg-amber-400 text-black text-xs font-bold px-2 py-0.5 rounded-full">
-                    {projects.filter(p => p.statut === 'pending').length}
-                  </span>
-                )}
               </span>
               {activeTab === 'projects' && (
                 <motion.div
@@ -272,6 +291,30 @@ export const DashboardRequests: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
+            </button>
+          </div>
+          
+          {/* Sous-onglets En attente / Historique */}
+          <div className="flex border-t border-slate-800/50">
+            <button
+              onClick={() => setViewMode('pending')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'pending'
+                  ? 'text-amber-400 bg-amber-400/10'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              En attente
+            </button>
+            <button
+              onClick={() => setViewMode('history')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'history'
+                  ? 'text-amber-400 bg-amber-400/10'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Historique
             </button>
           </div>
         </div>
@@ -293,9 +336,20 @@ export const DashboardRequests: React.FC = () => {
                   className="space-y-4"
                 >
                   {bookings.length === 0 ? (
-                    <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
-                      <Calendar className="text-slate-600 mx-auto mb-4" size={48} />
-                      <p className="text-slate-400">Aucune réservation pour le moment</p>
+                    <div className="text-center py-16 bg-slate-800/50 rounded-2xl border border-slate-700">
+                      {viewMode === 'pending' ? (
+                        <>
+                          <CheckCircle className="text-emerald-500 mx-auto mb-4" size={56} />
+                          <p className="text-xl font-bold text-white mb-2">Tout est à jour !</p>
+                          <p className="text-slate-400">Aucune demande en attente</p>
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="text-slate-600 mx-auto mb-4" size={56} />
+                          <p className="text-xl font-bold text-white mb-2">Aucun historique</p>
+                          <p className="text-slate-400">Aucune réservation dans l'historique</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     bookings.map((booking) => (
@@ -421,9 +475,20 @@ export const DashboardRequests: React.FC = () => {
                   className="space-y-4"
                 >
                   {projects.length === 0 ? (
-                    <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
-                      <MessageSquare className="text-slate-600 mx-auto mb-4" size={48} />
-                      <p className="text-slate-400">Aucun projet personnalisé pour le moment</p>
+                    <div className="text-center py-16 bg-slate-800/50 rounded-2xl border border-slate-700">
+                      {viewMode === 'pending' ? (
+                        <>
+                          <CheckCircle className="text-emerald-500 mx-auto mb-4" size={56} />
+                          <p className="text-xl font-bold text-white mb-2">Tout est à jour !</p>
+                          <p className="text-slate-400">Aucune demande en attente</p>
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="text-slate-600 mx-auto mb-4" size={56} />
+                          <p className="text-xl font-bold text-white mb-2">Aucun historique</p>
+                          <p className="text-slate-400">Aucun projet dans l'historique</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     projects.map((project) => (
@@ -521,23 +586,23 @@ export const DashboardRequests: React.FC = () => {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className={`fixed bottom-6 right-6 z-50 px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-20 md:bottom-6 right-4 z-50 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 backdrop-blur-md ${
               toast.type === 'success'
-                ? 'bg-green-500/90 text-white'
-                : 'bg-red-500/90 text-white'
+                ? 'bg-green-500/95 border border-green-400/30 text-white'
+                : 'bg-red-500/95 border border-red-400/30 text-white'
             }`}
           >
             {toast.type === 'success' ? (
-              <CheckCircle size={20} />
+              <CheckCircle size={18} />
             ) : (
-              <XCircle size={20} />
+              <XCircle size={18} />
             )}
-            <span className="font-medium">{toast.message}</span>
-            <button onClick={() => setToast(null)}>
-              <X size={18} />
+            <span className="font-medium text-sm">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-1">
+              <X size={16} />
             </button>
           </motion.div>
         )}
