@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { 
   Calendar, DollarSign, Users, MessageSquare, 
@@ -7,7 +8,8 @@ import {
   Search, Bell, MoreVertical, CheckCircle, XCircle, 
   Megaphone, Clock, MapPin, ChevronRight, FileText,
   AlertTriangle, ArrowUpRight, Instagram, Plus,
-  Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut, Loader2
+  Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut, Loader2,
+  Menu, X, Share2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
@@ -86,6 +88,145 @@ export const DashboardLayout: React.FC = () => {
   return (
     <div className="flex h-screen bg-[#0f172a] text-slate-50 font-sans overflow-hidden">
       
+      {/* Mobile Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 z-50 md:hidden flex items-center justify-between px-4">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 -ml-2"
+        >
+          <Menu className="text-white" size={24} />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-amber-400 rounded-md flex items-center justify-center transform rotate-3">
+            <LayoutGrid className="text-black" size={14} />
+          </div>
+          <span className="text-base font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
+        </div>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">
+          {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
+        </div>
+      </header>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            />
+            {/* Drawer */}
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 left-0 bottom-0 w-72 bg-slate-900 border-r border-slate-800 z-50 md:hidden flex flex-col"
+            >
+              {/* Drawer Header */}
+              <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center transform rotate-3">
+                    <LayoutGrid className="text-black" size={18} />
+                  </div>
+                  <span className="text-xl font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 -mr-2"
+                >
+                  <X className="text-slate-400" size={20} />
+                </button>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <button
+                  onClick={async () => {
+                    if (!profile?.slug_profil || typeof window === 'undefined') return;
+                    const url = `${window.location.origin}/p/${profile.slug_profil}`;
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.share) {
+                        await navigator.share({
+                          title: `${profile.nom_studio} - InkFlow`,
+                          text: `Découvrez mes flashs disponibles`,
+                          url: url,
+                        });
+                      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        await navigator.clipboard.writeText(url);
+                        alert('Lien copié !');
+                      }
+                    } catch (err) {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        await navigator.clipboard.writeText(url);
+                        alert('Lien copié !');
+                      }
+                    }
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-amber-400/10 border border-amber-400/30 rounded-xl text-amber-400 font-medium hover:bg-amber-400/20 transition-colors"
+                >
+                  <Share2 size={18} />
+                  <span>Partager mon lien</span>
+                </button>
+                <button
+                  onClick={() => {
+                    navigate('/dashboard/flashs');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-medium hover:bg-slate-800 transition-colors"
+                >
+                  <Plus size={18} />
+                  <span>Nouveau Flash</span>
+                </button>
+                <div className="pt-4 border-t border-slate-800 space-y-1">
+                  <SidebarItem to="/dashboard/overview" icon={LayoutGrid} label="Dashboard" />
+                  <SidebarItem to="/dashboard/calendar" icon={Calendar} label="Calendrier" />
+                  <SidebarItem to="/dashboard/requests" icon={MessageSquare} label="Demandes" count={pendingProjects.length} />
+                  <SidebarItem to="/dashboard/flashs" icon={Clock} label="Mes Flashs" />
+                  <SidebarItem to="/dashboard/clients" icon={Users} label="Clients & Docs" />
+                  <SidebarItem to="/dashboard/finance" icon={PieChart} label="Finance" />
+                </div>
+                <div className="pt-4 border-t border-slate-800">
+                  <SidebarItem 
+                    to="/dashboard/settings" 
+                    icon={Settings} 
+                    label="Paramètres"
+                  />
+                  <button
+                    onClick={async () => {
+                      await handleSignOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    <LogOut size={18} />
+                    <span>Déconnexion</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-4 border-t border-slate-800">
+                <div className="flex items-center gap-3 px-4 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">
+                    {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
+                  </div>
+                  <div className="text-sm overflow-hidden flex-1">
+                    <div className="font-bold truncate">{profile?.nom_studio || user?.email || 'Artiste'}</div>
+                    <div className="text-xs text-green-400 flex items-center gap-1">● En ligne</div>
+                  </div>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+      
       {/* COLUMN 1: Left Navigation Sidebar */}
       <aside className="w-64 bg-slate-900 border-r border-slate-800 hidden md:flex flex-col flex-shrink-0 z-20">
         <div className="p-6 border-b border-slate-800">
@@ -134,7 +275,7 @@ export const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* CENTER & RIGHT CONTENT WRAPPER */}
-      <main className="flex-1 flex overflow-hidden relative pb-16 md:pb-0">
+      <main className="flex-1 flex overflow-hidden relative pb-16 md:pb-0 pt-14 md:pt-0">
         
         {/* COLUMN 2: Central Main View (Dynamic Content via Outlet) */}
         <div className="flex-1 flex flex-col min-w-0 bg-slate-900/30">
