@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS artists (
     stripe_account_id TEXT, -- ID du compte Stripe Connect
     stripe_connected BOOLEAN DEFAULT FALSE,
     deposit_percentage INTEGER DEFAULT 30, -- Pourcentage d'acompte (30%)
-    accent_color TEXT DEFAULT 'gold', -- Couleur d'accent (gold, red, blue, etc.)
+    accent_color TEXT DEFAULT 'gold', -- Couleur d'accent (gold, red, blue, etc.) - DEPRECATED, utiliser theme_color
+    theme_color TEXT DEFAULT 'amber', -- Thème de couleur (amber, red, blue, emerald, violet)
+    avatar_url TEXT, -- URL de l'avatar uploadé
     bio_instagram TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

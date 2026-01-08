@@ -18,7 +18,7 @@ export const DashboardSettings: React.FC = () => {
   const [formData, setFormData] = useState({
     nom_studio: '',
     bio_instagram: '',
-    accent_color: 'gold',
+    theme_color: 'amber',
     deposit_percentage: 30,
     avatarFile: null as File | null,
     avatarUrl: '',
@@ -29,10 +29,10 @@ export const DashboardSettings: React.FC = () => {
       setFormData({
         nom_studio: profile.nom_studio || '',
         bio_instagram: profile.bio_instagram || '',
-        accent_color: profile.accent_color || 'gold',
+        theme_color: (profile as any).theme_color || profile.accent_color || 'amber',
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
-        avatarUrl: '',
+        avatarUrl: profile.avatar_url || '',
       });
     }
   }, [profile]);
@@ -47,20 +47,22 @@ export const DashboardSettings: React.FC = () => {
     setUploadingAvatar(true);
 
     try {
+      // Supprimer l'ancien avatar s'il existe
       const { data: existingFiles } = await supabase.storage
-        .from('flash-images')
+        .from('avatars')
         .list(`${user.id}/`, {
           search: 'avatar',
         });
 
       if (existingFiles && existingFiles.length > 0) {
         await supabase.storage
-          .from('flash-images')
+          .from('avatars')
           .remove(existingFiles.map(f => `${user.id}/${f.name}`));
       }
 
+      // Uploader le nouvel avatar
       const { data, error: uploadError } = await supabase.storage
-        .from('flash-images')
+        .from('avatars')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: true,
@@ -68,8 +70,9 @@ export const DashboardSettings: React.FC = () => {
 
       if (uploadError) throw uploadError;
 
+      // Obtenir l'URL publique
       const { data: urlData } = supabase.storage
-        .from('flash-images')
+        .from('avatars')
         .getPublicUrl(filePath);
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
@@ -102,7 +105,7 @@ export const DashboardSettings: React.FC = () => {
     setSaving(true);
 
     try {
-      let avatarUrl = profile?.bio_instagram || '';
+      let avatarUrl = formData.avatarUrl;
 
       if (formData.avatarFile) {
         avatarUrl = await uploadAvatar(formData.avatarFile);
@@ -111,9 +114,10 @@ export const DashboardSettings: React.FC = () => {
       await updateProfile({
         nom_studio: formData.nom_studio,
         bio_instagram: formData.bio_instagram,
-        accent_color: formData.accent_color,
+        theme_color: formData.theme_color,
+        avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
-      });
+      } as any);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -124,12 +128,12 @@ export const DashboardSettings: React.FC = () => {
     }
   };
 
-  const colorOptions = [
-    { name: 'Or', value: 'gold', hex: '#fbbf24' },
-    { name: 'Rouge', value: 'red', hex: '#ef4444' },
-    { name: 'Bleu', value: 'blue', hex: '#3b82f6' },
-    { name: 'Vert', value: 'green', hex: '#22c55e' },
-    { name: 'Violet', value: 'purple', hex: '#a855f7' },
+  const themeOptions = [
+    { name: 'Gold', value: 'amber', hex: '#fbbf24', tailwind: 'amber' },
+    { name: 'Blood', value: 'red', hex: '#ef4444', tailwind: 'red' },
+    { name: 'Ocean', value: 'blue', hex: '#3b82f6', tailwind: 'blue' },
+    { name: 'Nature', value: 'emerald', hex: '#10b981', tailwind: 'emerald' },
+    { name: 'Lavender', value: 'violet', hex: '#8b5cf6', tailwind: 'violet' },
   ];
 
   if (authLoading || profileLoading) {
@@ -329,24 +333,33 @@ export const DashboardSettings: React.FC = () => {
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-300 mb-3">
-                Couleur d'accentuation
+                Thème de couleur (Page publique)
               </label>
-              <div className="flex gap-3">
-                {colorOptions.map((color) => (
+              <div className="flex gap-3 flex-wrap">
+                {themeOptions.map((theme) => (
                   <button
-                    key={color.value}
+                    key={theme.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, accent_color: color.value })}
-                    className={`w-12 h-12 rounded-full border-2 transition-all ${
-                      formData.accent_color === color.value
+                    onClick={() => setFormData({ ...formData, theme_color: theme.value })}
+                    className={`w-14 h-14 rounded-full border-2 transition-all relative ${
+                      formData.theme_color === theme.value
                         ? 'border-white scale-110 shadow-lg shadow-white/20'
-                        : 'border-transparent opacity-70 hover:opacity-100'
+                        : 'border-transparent opacity-70 hover:opacity-100 hover:scale-105'
                     }`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  />
+                    style={{ backgroundColor: theme.hex }}
+                    title={theme.name}
+                  >
+                    {formData.theme_color === theme.value && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Sélectionné: <span className="font-medium text-white">{themeOptions.find(t => t.value === formData.theme_color)?.name || 'Gold'}</span>
+              </p>
             </div>
 
             <div>

@@ -16,9 +16,10 @@ interface BookingDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  theme: ReturnType<typeof getThemeClasses>;
 }
 
-const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, onClose, onSuccess }) => {
+const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, onClose, onSuccess, theme }) => {
   const [formData, setFormData] = useState({
     client_name: '',
     client_email: '',
@@ -202,7 +203,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                     required
                     value={formData.client_name}
                     onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
                     placeholder="Jean Dupont"
                   />
                 </div>
@@ -216,7 +217,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                     required
                     value={formData.client_email}
                     onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
                     placeholder="jean.dupont@example.com"
                   />
                 </div>
@@ -229,7 +230,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                     type="tel"
                     value={formData.client_phone}
                     onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
                     placeholder="06 12 34 56 78"
                   />
                 </div>
@@ -244,7 +245,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                     value={formData.date_souhaitee}
                     onChange={(e) => setFormData({ ...formData, date_souhaitee: e.target.value })}
                     min={new Date().toISOString().slice(0, 16)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none ${theme.inputFocus}`}
                   />
                 </div>
 
@@ -264,7 +265,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-amber-400 text-black font-bold py-4 rounded-xl hover:bg-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                  className={`w-full ${theme.primary} text-black font-bold py-4 rounded-xl ${theme.primaryHover} transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg`}
                 >
                   {loading ? (
                     <>
@@ -286,6 +287,73 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
   );
 };
 
+// Fonction pour obtenir les classes Tailwind selon le thème
+const getThemeClasses = (themeColor: string = 'amber') => {
+  const themes: Record<string, {
+    primary: string;
+    primaryHover: string;
+    primaryText: string;
+    primaryBg: string;
+    primaryBorder: string;
+    icon: string;
+    badge: string;
+    inputFocus: string;
+  }> = {
+    amber: {
+      primary: 'bg-amber-400',
+      primaryHover: 'hover:bg-amber-300',
+      primaryText: 'text-amber-400',
+      primaryBg: 'bg-amber-400/10',
+      primaryBorder: 'border-amber-400',
+      icon: 'text-amber-400',
+      badge: 'bg-green-500/90',
+      inputFocus: 'focus:border-amber-400',
+    },
+    red: {
+      primary: 'bg-red-500',
+      primaryHover: 'hover:bg-red-400',
+      primaryText: 'text-red-500',
+      primaryBg: 'bg-red-500/10',
+      primaryBorder: 'border-red-500',
+      icon: 'text-red-500',
+      badge: 'bg-green-500/90',
+      inputFocus: 'focus:border-red-500',
+    },
+    blue: {
+      primary: 'bg-blue-500',
+      primaryHover: 'hover:bg-blue-400',
+      primaryText: 'text-blue-500',
+      primaryBg: 'bg-blue-500/10',
+      primaryBorder: 'border-blue-500',
+      icon: 'text-blue-500',
+      badge: 'bg-green-500/90',
+      inputFocus: 'focus:border-blue-500',
+    },
+    emerald: {
+      primary: 'bg-emerald-500',
+      primaryHover: 'hover:bg-emerald-400',
+      primaryText: 'text-emerald-500',
+      primaryBg: 'bg-emerald-500/10',
+      primaryBorder: 'border-emerald-500',
+      icon: 'text-emerald-500',
+      badge: 'bg-green-500/90',
+      inputFocus: 'focus:border-emerald-500',
+    },
+    violet: {
+      primary: 'bg-violet-500',
+      primaryHover: 'hover:bg-violet-400',
+      primaryText: 'text-violet-500',
+      primaryBg: 'bg-violet-500/10',
+      primaryBorder: 'border-violet-500',
+      icon: 'text-violet-500',
+      badge: 'bg-green-500/90',
+      inputFocus: 'focus:border-violet-500',
+    },
+  };
+
+  return themes[themeColor] || themes.amber;
+};
+
 export const PublicArtistPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [artist, setArtist] = useState<Artist | null>(null);
@@ -295,6 +363,10 @@ export const PublicArtistPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'flashs' | 'project'>('flashs');
   const [selectedFlash, setSelectedFlash] = useState<Flash | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  
+  // Obtenir les classes du thème (doit être après que artist soit chargé)
+  const themeColor = artist ? ((artist as any)?.theme_color || (artist as any)?.accent_color || 'amber') : 'amber';
+  const theme = getThemeClasses(themeColor);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -437,11 +509,11 @@ export const PublicArtistPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center transform rotate-3">
+            <div className={`w-8 h-8 ${theme.primary} rounded-lg flex items-center justify-center transform rotate-3`}>
               <PenTool className="text-black" size={18} />
             </div>
             <span className="text-lg font-black tracking-tighter text-white">
-              INK<span className="text-amber-400">FLOW</span>
+              INK<span className={theme.primaryText}>FLOW</span>
             </span>
           </Link>
           <button
@@ -461,14 +533,30 @@ export const PublicArtistPage: React.FC = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', delay: 0.1 }}
-            className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(251,191,36,0.3)]"
+            className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden ${
+              (artist as any)?.avatar_url 
+                ? '' 
+                : `bg-gradient-to-br ${theme.primary} shadow-[0_0_30px_rgba(0,0,0,0.3)]`
+            }`}
           >
-            {artist.bio_instagram ? (
+            {(artist as any)?.avatar_url ? (
+              <img
+                src={(artist as any).avatar_url}
+                alt={artist.nom_studio}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  const parent = (e.target as HTMLImageElement).parentElement;
+                  if (parent) {
+                    parent.innerHTML = `<span class="text-3xl font-black text-black">${artist.nom_studio[0]?.toUpperCase()}</span>`;
+                    parent.className += ` bg-gradient-to-br ${theme.primary}`;
+                  }
+                }}
+              />
+            ) : (
               <span className="text-3xl font-black text-black">
                 {artist.nom_studio[0]?.toUpperCase()}
               </span>
-            ) : (
-              <PenTool className="text-black" size={48} />
             )}
           </motion.div>
 
@@ -502,7 +590,7 @@ export const PublicArtistPage: React.FC = () => {
             className="flex items-center justify-center gap-6 text-slate-400"
           >
             <div className="flex items-center gap-2">
-              <Zap size={18} className="text-amber-400" />
+              <Zap size={18} className={theme.icon} />
               <span className="text-sm font-medium">{flashs.length} Flashs disponibles</span>
             </div>
           </motion.div>
@@ -528,7 +616,7 @@ export const PublicArtistPage: React.FC = () => {
               {activeTab === 'flashs' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400"
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${theme.primary}`}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -548,7 +636,7 @@ export const PublicArtistPage: React.FC = () => {
               {activeTab === 'project' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400"
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${theme.primary}`}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -602,14 +690,14 @@ export const PublicArtistPage: React.FC = () => {
                             <PenTool size={48} />
                           </div>
                         )}
-                        <div className="absolute top-2 right-2 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full">
+                        <div className={`absolute top-2 right-2 ${theme.badge} backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full`}>
                           Disponible
                         </div>
                       </div>
                       <div className="p-4">
                         <h3 className="font-bold text-white mb-2 line-clamp-1">{flash.title}</h3>
                         <div className="flex items-center justify-between">
-                          <span className="text-amber-400 font-mono font-bold text-lg">
+                          <span className={`${theme.primaryText} font-mono font-bold text-lg`}>
                             {Math.round(flash.prix / 100)}€
                           </span>
                           <span className="text-slate-400 text-sm flex items-center gap-1">
@@ -651,6 +739,7 @@ export const PublicArtistPage: React.FC = () => {
               setTimeout(() => setSelectedFlash(null), 300);
             }}
             onSuccess={handleBookingSuccess}
+            theme={theme}
           />
         )}
       </AnimatePresence>
