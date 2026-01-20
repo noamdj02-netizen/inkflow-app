@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -214,7 +215,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                   {flash.image_url && (
                     <img
                       src={flash.image_url}
-                      alt={flash.title}
+                      alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
+                      loading="lazy"
                       className="w-20 h-20 rounded-xl object-cover border-2 border-amber-400/30"
                     />
                   )}
@@ -442,59 +444,15 @@ export const PublicArtistPage: React.FC = () => {
   const themeColor = artist ? (artist.theme_color || artist.accent_color || 'amber') : 'amber';
   const theme = getThemeClasses(themeColor);
 
-  // Meta tags SEO dynamiques
-  useEffect(() => {
-    if (!artist) return;
-
-    const updateMetaTags = () => {
-      const title = `Réservez un tatouage avec ${artist.nom_studio} - InkFlow`;
-      const description = artist.bio_instagram || `Découvrez mes flashs et projets sur InkFlow.`;
-      const image = artist.avatar_url || `${typeof window !== 'undefined' ? window.location.origin : ''}/og-default.jpg`;
-      const url = typeof window !== 'undefined' ? window.location.href : '';
-
-      // Mettre à jour ou créer les meta tags
-      const setMetaTag = (property: string, content: string, isProperty = true) => {
-        const selector = isProperty ? `meta[property="${property}"]` : `meta[name="${property}"]`;
-        let meta = document.querySelector(selector) as HTMLMetaElement;
-        if (!meta) {
-          meta = document.createElement('meta');
-          if (isProperty) {
-            meta.setAttribute('property', property);
-          } else {
-            meta.setAttribute('name', property);
-          }
-          document.head.appendChild(meta);
-        }
-        meta.setAttribute('content', content);
-      };
-
-      // Title
-      document.title = title;
-
-      // Meta description
-      setMetaTag('description', description, false);
-
-      // Open Graph
-      setMetaTag('og:title', title);
-      setMetaTag('og:description', description);
-      setMetaTag('og:image', image);
-      setMetaTag('og:url', url);
-      setMetaTag('og:type', 'website');
-
-      // Twitter Card
-      setMetaTag('twitter:card', 'summary_large_image', false);
-      setMetaTag('twitter:title', title, false);
-      setMetaTag('twitter:description', description, false);
-      setMetaTag('twitter:image', image, false);
-    };
-
-    updateMetaTags();
-
-    // Cleanup function
-    return () => {
-      // Optionnel: remettre les meta tags par défaut
-    };
-  }, [artist]);
+  // Préparer les données SEO
+  const seoTitle = artist 
+    ? `${artist.nom_studio} - Tatoueur${artist.ville ? ` à ${artist.ville}` : ''} | InkFlow`
+    : 'Artiste InkFlow';
+  const seoDescription = artist?.bio_instagram || 'Découvrez mes flashs et projets sur InkFlow. Réservez votre créneau de tatouage en ligne.';
+  const seoImage = artist?.avatar_url 
+    ? (artist.avatar_url.startsWith('http') ? artist.avatar_url : `${typeof window !== 'undefined' ? window.location.origin : ''}${artist.avatar_url}`)
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}/inkflow-logo-v2.png`;
+  const seoUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -667,7 +625,7 @@ export const PublicArtistPage: React.FC = () => {
             {artist.avatar_url ? (
               <img
                 src={`${artist.avatar_url}${artist.avatar_url.includes('?') ? '&' : '?'}v=${new Date().getTime()}`}
-                alt={artist.nom_studio}
+                alt={`Avatar de ${artist.nom_studio} - Tatoueur professionnel`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
@@ -819,7 +777,7 @@ export const PublicArtistPage: React.FC = () => {
                           {flash.image_url ? (
                             <img
                               src={flash.image_url}
-                              alt={flash.title}
+                              alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
                               className="object-cover w-full h-full transition-transform duration-500 group-active:scale-110"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231e293b" width="400" height="400"/%3E%3Ctext fill="%23475569" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';

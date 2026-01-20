@@ -1,78 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Filter, CreditCard, Check, ArrowRight, Star, PenTool, LayoutGrid, Calendar, ChevronLeft, ChevronRight, Clock, User, CheckCircle, XCircle, TrendingUp, Euro } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
+import { ArrowRight, Star, ChevronLeft, ChevronRight, Check, Shield, Users, Calendar, CreditCard, LayoutGrid, Filter, BarChart3, Clock, MapPin, Instagram, Sparkles, Zap, TrendingUp, Eye, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LandingPageProps {
-  onNavigate?: (view: any) => void; // Gardé pour compatibilité mais non utilisé
+  onNavigate?: (view: any) => void;
 }
 
 interface Testimonial {
   id: number;
   quote: string;
   highlight: string;
-  location: string;
-  followers: string;
+  author: string;
+  role: string;
 }
-
-// Constante pour les images de démonstration locales
-const DEMO_FLASHES = {
-  serpent: '/images/demo-flashs/serpent-floral.jpg',
-  dague: '/images/demo-flashs/dague-oldschool.jpg',
-  papillon: '/images/demo-flashs/papillon-abstrait.jpg',
-  rose: '/images/demo-flashs/rose-realiste.jpg',
-  geometrique: '/images/demo-flashs/geometrique.jpg',
-  blackwork: '/images/demo-flashs/bras-complet.jpg'
-};
 
 const testimonials: Testimonial[] = [
   {
     id: 1,
-    quote: "Depuis que j'utilise InkFlow, je gagne",
+    quote: "InkFlow a transformé ma gestion quotidienne. Je gagne",
     highlight: "5 heures par semaine",
-    location: "Tatoueur à Lyon",
-    followers: "48k abonnés"
+    author: "Marie D.",
+    role: "Tatoueur indépendant, Lyon"
   },
   {
     id: 2,
-    quote: "Fini les messages Instagram à gérer. Mes clients réservent directement et paient l'acompte. Je gagne",
+    quote: "Plus de messages Instagram à trier. Mes clients réservent et paient directement. J'ai récupéré",
     highlight: "3 heures par jour",
-    location: "Tatoueur à Paris",
-    followers: "32k abonnés"
+    author: "Thomas L.",
+    role: "Artiste tatoueur, Paris"
   },
   {
     id: 3,
-    quote: "L'analyse IA des projets perso est incroyable. Je reçois uniquement des demandes réalisables. Ça m'a fait gagner",
-    highlight: "10 heures par semaine",
-    location: "Tatoueur à Marseille",
-    followers: "25k abonnés"
-  },
-  {
-    id: 4,
-    quote: "Les flashs se vendent tout seuls maintenant. Plus besoin de poster sur Instagram tous les jours. J'ai récupéré",
-    highlight: "2 heures par jour",
-    location: "Tatoueur à Bordeaux",
-    followers: "18k abonnés"
-  },
-  {
-    id: 5,
-    quote: "Le système d'acomptes Stripe a changé ma vie. Plus de no-show, mes revenus sont sécurisés.",
-    highlight: "Zéro no-show",
-    location: "Tatoueur à Toulouse",
-    followers: "41k abonnés"
+    quote: "Le système d'acomptes Stripe a éliminé les no-shows. Résultat :",
+    highlight: "Zéro rendez-vous manqué",
+    author: "Sophie M.",
+    role: "Studio Encre Noire, Marseille"
   }
 ];
+
+// Animation variants
+const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: "easeOut" } }
+};
 
 export const LandingPage: React.FC<LandingPageProps> = () => {
   const navigate = useNavigate();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
-  // Auto-rotation du carrousel
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000); // Change toutes les 5 secondes
-
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -85,700 +76,722 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-50 font-sans selection:bg-amber-400 selection:text-black overflow-x-hidden">
+    <div className="min-h-screen bg-[#050505] text-white font-sans antialiased overflow-x-hidden">
+      <Helmet>
+        <title>InkFlow | La Plateforme Premium pour Tatoueurs</title>
+        <meta 
+          name="description" 
+          content="InkFlow - La solution élégante de gestion et réservation pour tatoueurs professionnels. Gérez vos flashs, projets personnalisés et paiements avec style." 
+        />
+        <meta name="keywords" content="logiciel tatoueur, réservation tatouage, gestion studio tatouage, flash tattoo, booking tattoo" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="InkFlow | La Plateforme Premium pour Tatoueurs" />
+        <meta property="og:description" content="La solution élégante de gestion et réservation pour tatoueurs professionnels." />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
       
-      {/* Marketing Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0f172a]/80 backdrop-blur-lg border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse-glow" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+      </div>
+
+      {/* Navigation - Glass Effect */}
+      <motion.nav 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="fixed top-0 left-0 right-0 z-50 glass"
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
+            <span className="text-xl md:text-2xl font-display font-bold tracking-tight">
+              INK<span className="text-zinc-500">FLOW</span>
+            </span>
           </div>
           
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
-            <a href="/login" className="hover:text-white transition-colors">Connexion</a>
-            <button 
-                onClick={() => navigate('/register')}
-                className="bg-amber-400 text-black px-6 py-2.5 rounded-full font-bold hover:bg-amber-300 transition-all shadow-[0_0_20px_rgba(251,191,36,0.3)] hover:shadow-[0_0_30px_rgba(251,191,36,0.5)]"
+          <div className="hidden md:flex items-center gap-10">
+            <a href="#features" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+              Fonctionnalités
+            </a>
+            <a href="#showcase" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+              Portfolio
+            </a>
+            <a href="#pricing" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+              Tarifs
+            </a>
+            <a href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+              Connexion
+            </a>
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/register')}
+              className="bg-white text-black px-6 py-2.5 text-sm font-semibold hover:bg-zinc-100 transition-all min-h-[44px]"
             >
-              Essayer Gratuitement
-            </button>
+              Commencer
+            </motion.button>
           </div>
+
+          <motion.button 
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/register')}
+            className="md:hidden bg-white text-black px-5 py-2.5 text-sm font-semibold min-h-[44px]"
+          >
+            Commencer
+          </motion.button>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* Abstract Background Glows */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/20 rounded-full blur-[120px] -z-10"></div>
-        <div className="absolute top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-400/10 rounded-full blur-[100px] -z-10"></div>
-
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 backdrop-blur-md text-amber-400 text-xs font-bold tracking-wider mb-8 uppercase animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                Nouveau : Module IA Disponible
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tight animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-                Gérez votre art,<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-200 via-amber-200 to-amber-500">pas vos DMs.</span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-                La première plateforme tout-en-un pour tatoueurs. Réservations de flashs instantanées, filtrage de projets perso, et sécurisation des acomptes via Stripe. Zéro No-Show.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-                <button 
-                    onClick={() => navigate('/register')}
-                    className="h-14 px-8 rounded-full bg-white text-black font-bold text-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
-                >
-                    Commencer maintenant <ArrowRight size={20}/>
-                </button>
-                 <button 
-                    onClick={() => navigate('/client')}
-                    className="h-14 px-8 rounded-full bg-slate-800/50 border border-slate-700 text-white font-bold text-lg hover:bg-slate-800 transition-colors backdrop-blur-md"
-                >
-                    Voir une démo client
-                </button>
-            </div>
-
-            {/* Visual Representation of the App (3 floating screens) */}
-            <div className="relative max-w-5xl mx-auto h-[300px] md:h-[500px] mt-10 perspective-1000">
-                {/* Left Card - Flash Gallery */}
-                <div className="absolute left-0 md:left-10 top-10 w-48 md:w-72 aspect-[9/19] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl transform -rotate-12 translate-y-10 opacity-60 hover:opacity-100 hover:z-20 hover:scale-105 transition-all duration-500 overflow-hidden">
-                    <div className="p-3 border-b border-slate-800 flex items-center gap-2 bg-slate-950/50">
-                        <LayoutGrid size={14} className="text-blue-400"/> 
-                        <span className="text-xs font-bold text-white">Mes Flashs</span>
-                    </div>
-                    <div className="p-3 flex-1 overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-2">
-                            {/* Flash 1 */}
-                            <div className="relative aspect-square rounded-lg overflow-hidden border border-slate-700">
-                                <img 
-                                    src={DEMO_FLASHES.serpent} 
-                                    alt="Serpent Floral" 
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute bottom-1 right-1 bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                    150€
-                                </div>
-                            </div>
-                            {/* Flash 2 */}
-                            <div className="relative aspect-square rounded-lg overflow-hidden border border-slate-700">
-                                <img 
-                                    src={DEMO_FLASHES.dague} 
-                                    alt="Dague Old School" 
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute bottom-1 right-1 bg-green-500/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                    Dispo
-                                </div>
-                            </div>
-                            {/* Flash 3 */}
-                            <div className="relative aspect-square rounded-lg overflow-hidden border border-slate-700">
-                                <img 
-                                    src={DEMO_FLASHES.papillon} 
-                                    alt="Papillon Abstrait" 
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            {/* Flash 4 */}
-                            <div className="relative aspect-square rounded-lg overflow-hidden border border-slate-700">
-                                <img 
-                                    src={DEMO_FLASHES.rose} 
-                                    alt="Rose Réaliste" 
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute bottom-1 right-1 bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                    180€
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-slate-800">
-                            <button className="w-full bg-blue-500/20 text-blue-400 text-[10px] font-bold py-2 rounded-lg border border-blue-500/30">
-                                + Ajouter un flash
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Card - Revenue Dashboard */}
-                <div className="absolute right-0 md:right-10 top-10 w-48 md:w-72 aspect-[9/19] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl transform rotate-12 translate-y-10 opacity-60 hover:opacity-100 hover:z-20 hover:scale-105 transition-all duration-500 overflow-hidden">
-                    <div className="p-3 border-b border-slate-800 flex items-center gap-2 bg-slate-950/50">
-                        <Calendar size={14} className="text-green-400"/> 
-                        <span className="text-xs font-bold text-white">Revenus</span>
-                    </div>
-                     <div className="p-4 space-y-4 flex-1 flex flex-col">
-                        {/* Main Revenue */}
-                        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/20">
-                            <div className="text-[10px] text-slate-400 mb-1">Chiffre d'affaires</div>
-                            <div className="text-2xl md:text-3xl font-black text-white mb-1">2 450€</div>
-                            <div className="text-[10px] text-slate-400">Septembre 2024</div>
-                        </div>
-
-                        {/* Growth Indicator */}
-                        <div className="flex items-center gap-2 bg-green-500/10 rounded-lg px-2.5 py-1.5 border border-green-500/20">
-                            <TrendingUp size={12} className="text-green-400" />
-                            <span className="text-[10px] font-bold text-green-400">+15% vs août</span>
-                        </div>
-
-                        {/* Secondary Stat */}
-                        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                            <div className="text-[10px] text-slate-400 mb-1">Tatouages réalisés</div>
-                            <div className="text-lg font-bold text-white">12</div>
-                        </div>
-
-                        {/* Simple Chart */}
-                        <div className="flex-1 flex items-end gap-1 pt-2">
-                            <div className="flex-1 bg-slate-800 rounded-t h-8"></div>
-                            <div className="flex-1 bg-slate-800 rounded-t h-12"></div>
-                            <div className="flex-1 bg-green-500/30 rounded-t h-16 border-t-2 border-green-400"></div>
-                            <div className="flex-1 bg-green-500/50 rounded-t h-20 border-t-2 border-green-400"></div>
-                            <div className="flex-1 bg-green-500/70 rounded-t h-24 border-t-2 border-green-400"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Center Card - New Client Request (Main) */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-0 w-56 md:w-80 aspect-[9/19] bg-slate-950 border border-amber-500/30 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.2)] z-10 overflow-hidden flex flex-col">
-                     <div className="p-4 bg-slate-900/50 backdrop-blur border-b border-slate-800 flex items-center justify-between">
-                         <span className="text-xs font-bold text-white">Nouvelle Demande</span>
-                         <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
-                     </div>
-                     <div className="p-5 flex-1 flex flex-col justify-between">
-                        {/* Client Info */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm border-2 border-slate-700">
-                                    SM
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-sm font-bold text-white">Sophie Martin</div>
-                                    <div className="text-[10px] text-slate-400">Nouveau client</div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                                <div className="text-[10px] text-slate-400 mb-1">Projet</div>
-                                <div className="text-sm font-bold text-white mb-2">Bras complet - Floral</div>
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Euro size={12} className="text-amber-400" />
-                                    <span className="text-amber-400 font-mono font-bold">450€</span>
-                                    <span className="text-slate-500 ml-auto">Estimé</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="space-y-2 pt-4 border-t border-slate-800">
-                            <motion.button 
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-black font-bold rounded-xl text-sm shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 animate-pulse"
-                            >
-                                <CheckCircle size={16} />
-                                Accepter
-                            </motion.button>
-                            <button className="w-full py-2.5 bg-slate-800 text-slate-300 font-medium rounded-xl text-sm border border-slate-700 flex items-center justify-center gap-2">
-                                <XCircle size={14} />
-                                Refuser
-                            </button>
-                        </div>
-                     </div>
-                </div>
-            </div>
-        </div>
-      </section>
-
-      {/* Features Bento Grid */}
-      <section id="features" className="py-24 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-4">Conçu pour les artistes débordés.</h2>
-            <p className="text-slate-400">Tout ce dont vous avez besoin pour professionnaliser votre business.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
-            {/* Card 1: Flashs (Large) */}
-            <div className="md:col-span-2 relative group bg-slate-800/30 border border-white/5 rounded-3xl p-8 overflow-hidden backdrop-blur-sm hover:bg-slate-800/50 transition-colors">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Zap size={200} />
-                </div>
-                <div className="relative z-10 h-full flex flex-col justify-between">
-                    <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 mb-4">
-                        <LayoutGrid size={24} />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Flashs Instantanés</h3>
-                        <p className="text-slate-400 text-lg max-w-md">Le client réserve et paie l'acompte en un clic. Votre agenda se remplit seul 24/7. Plus de "dispo ?" en DM.</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Card 2: Filter (Regular) */}
-            <div className="md:col-span-1 relative group bg-slate-800/30 border border-white/5 rounded-3xl p-8 overflow-hidden backdrop-blur-sm hover:bg-slate-800/50 transition-colors">
-                <div className="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-6">
-                    <Filter size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">Filtrage Intelligent</h3>
-                <p className="text-slate-400">Fini les projets irréalisables. Recevez des demandes qualifiées avec taille, emplacement et budget.</p>
-            </div>
-
-            {/* Card 3: Deposits (Regular) */}
-            <div className="md:col-span-1 relative group bg-slate-800/30 border border-white/5 rounded-3xl p-8 overflow-hidden backdrop-blur-sm hover:bg-slate-800/50 transition-colors">
-                 <div className="w-12 h-12 bg-green-500/20 rounded-2xl flex items-center justify-center text-green-400 mb-6">
-                    <CreditCard size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">Acomptes Auto</h3>
-                <p className="text-slate-400">Intégration Stripe native. Sécurisez vos revenus avant même de commencer à dessiner.</p>
-            </div>
-
-             {/* Card 4: Dashboard (Large) */}
-             <div className="md:col-span-2 relative group bg-slate-800/30 border border-white/5 rounded-3xl p-8 overflow-hidden backdrop-blur-sm hover:bg-slate-800/50 transition-colors flex items-center">
-                 <div className="flex-1">
-                    <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center text-purple-400 mb-6">
-                        <Calendar size={24} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Agenda Synchronisé</h3>
-                    <p className="text-slate-400">Une vue claire sur votre semaine, vos revenus et vos projets en attente.</p>
-                 </div>
-                 <div className="hidden md:block w-1/3 bg-slate-900 rounded-xl h-32 border border-slate-700 opacity-50 rotate-3 transform translate-x-4"></div>
-            </div>
-        </div>
-      </section>
-
-      {/* Flashs Disponibles - Démonstration Premium */}
-      <section className="py-24 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
-            Flashs Disponibles
-          </h2>
-          <p className="text-slate-400 text-lg">
-            Premier arrivé, premier servi. Réservez votre créneau instantanément.
-          </p>
-        </div>
-
-        {/* Filtres Simulés */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {['Tous', 'Blackwork', 'Couleur', 'Japonais', 'Fine Line'].map((filter) => (
-            <button
-              key={filter}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                filter === 'Tous'
-                  ? 'bg-amber-400 text-black'
-                  : 'bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600'
-              }`}
+      <section className="min-h-screen flex flex-col justify-center px-4 md:px-6 pt-20 md:pt-24 pb-8 relative">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            {/* Left - Text */}
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
             >
-              {filter}
-            </button>
-          ))}
-        </div>
+              <motion.div 
+                variants={fadeInUp}
+                className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full glass text-[10px] md:text-xs text-zinc-400 tracking-wider uppercase mb-6 md:mb-8"
+              >
+                <Sparkles size={12} className="text-amber-400" />
+                Pour les artistes exigeants
+              </motion.div>
+              
+              <motion.h1 
+                variants={fadeInUp}
+                className="text-4xl md:text-5xl lg:text-7xl font-display font-bold leading-[1.1] md:leading-[1.05] mb-6 md:mb-8 tracking-tight"
+              >
+                <span className="gradient-text">Maîtrisez</span>
+                <br />
+                votre art.
+                <br />
+                <span className="text-zinc-600">Simplifiez</span>
+                <br />
+                le reste.
+              </motion.h1>
+              
+              <motion.p 
+                variants={fadeInUp}
+                className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8 md:mb-10 max-w-md"
+              >
+                Une plateforme élégante pour gérer vos réservations, 
+                présenter vos flashs et recevoir vos paiements. 
+                Sans friction.
+              </motion.p>
+              
+              <motion.div 
+                variants={fadeInUp}
+                className="flex flex-col sm:flex-row gap-3 md:gap-4"
+              >
+                <motion.button 
+                  whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.1)" }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/register')}
+                  className="group bg-white text-black px-6 md:px-8 py-3.5 md:py-4 font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 min-h-[48px]"
+                >
+                  Essai gratuit
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/client')}
+                  className="glass px-6 md:px-8 py-3.5 md:py-4 font-semibold text-zinc-300 hover:text-white transition-all min-h-[48px]"
+                >
+                  Voir une démo
+                </motion.button>
+              </motion.div>
 
-        {/* Grille de Flashs Premium */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Flash 1: Serpent Floral */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.serpent}
-                alt="Serpent Floral"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Dispo
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Serpent Floral</h3>
-                <span className="text-amber-400 font-mono font-black text-xl">150€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600">
-                  Fine Line
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                Réserver (Acompte 30%)
-              </button>
-            </div>
-          </motion.div>
+              {/* Trust badges */}
+              <motion.div 
+                variants={fadeInUp}
+                className="mt-10 md:mt-16 flex flex-wrap items-center gap-4 md:gap-8"
+              >
+                <div className="flex items-center gap-2 text-zinc-500 text-xs md:text-sm">
+                  <Shield size={14} />
+                  <span>Paiements sécurisés</span>
+                </div>
+                <div className="flex items-center gap-2 text-zinc-500 text-xs md:text-sm">
+                  <Users size={14} />
+                  <span>+500 artistes</span>
+                </div>
+              </motion.div>
+            </motion.div>
 
-          {/* Flash 2: Dague Old School */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.dague}
-                alt="Dague Old School"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Dispo
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Dague Old School</h3>
-                <span className="text-amber-400 font-mono font-black text-xl">200€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600">
-                  Traditionnel
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                Réserver (Acompte 30%)
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Flash 3: Papillon Abstrait */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.papillon}
-                alt="Papillon Abstrait"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Dispo
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Papillon Abstrait</h3>
-                <span className="text-amber-400 font-mono font-black text-xl">120€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600">
-                  Fine Line
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                Réserver (Acompte 30%)
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Flash 4: Rose Réaliste */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.rose}
-                alt="Rose Réaliste"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Dispo
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Rose Réaliste</h3>
-                <span className="text-amber-400 font-mono font-black text-xl">180€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600">
-                  Réalisme
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                Réserver (Acompte 30%)
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Flash 5: Géométrique */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300 opacity-60"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.geometrique}
-                alt="Géométrique"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105 grayscale"
-              />
-              <div className="absolute top-3 right-3 bg-slate-800/90 backdrop-blur-sm text-slate-400 text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Vendu
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Géométrique</h3>
-                <span className="text-slate-500 font-mono font-black text-xl line-through">250€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-400 px-2.5 py-1 rounded-full border border-slate-600">
-                  Géométrique
-                </span>
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-slate-700 text-slate-500 font-bold rounded-xl cursor-not-allowed" disabled>
-                Indisponible
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Flash 6: Jambe/Bras complet */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-            className="group relative bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-amber-500/50 transition-all duration-300"
-          >
-            <div className="aspect-[4/5] relative overflow-hidden bg-slate-900">
-              <img
-                src={DEMO_FLASHES.blackwork}
-                alt="Jambe/Bras complet"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                Dispo
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-lg text-white">Paysage Blackwork</h3>
-                <span className="text-amber-400 font-mono font-black text-xl">140€</span>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600">
-                  Blackwork
-                </span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock size={12} /> 2h
-                </span>
-              </div>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                Réserver (Acompte 30%)
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Social Proof - Carrousel */}
-      <section className="py-16 border-y border-white/5 bg-slate-900/50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="relative">
-            {/* Carrousel Container */}
-            <div className="relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                {testimonials.map((testimonial, index) => {
-                  if (index !== currentTestimonial) return null;
-                  
-                  return (
+            {/* Right - Visual Dashboard Preview */}
+            <motion.div 
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+              className="relative hidden lg:block"
+            >
+              {/* Main Dashboard Card */}
+              <motion.div 
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="glass rounded-3xl p-8 relative z-10"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <p className="text-zinc-500 text-xs tracking-wider uppercase mb-1">Revenus du mois</p>
+                    <p className="text-4xl font-display font-bold">2 450€</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <TrendingUp size={14} className="text-emerald-400" />
+                      <span className="text-emerald-400 text-sm font-medium">+12%</span>
+                    </div>
+                  </div>
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                    <BarChart3 size={24} className="text-zinc-300" />
+                  </div>
+                </div>
+                
+                {/* Mini Chart */}
+                <div className="h-20 flex items-end gap-1 mb-8">
+                  {[40, 65, 45, 80, 55, 90, 70, 85, 95, 75, 88, 92].map((height, i) => (
                     <motion.div
-                      key={testimonial.id}
-                      initial={{ opacity: 0, x: 50 }}
+                      key={i}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${height}%` }}
+                      transition={{ duration: 0.8, delay: 0.8 + i * 0.05 }}
+                      className="flex-1 bg-gradient-to-t from-zinc-700 to-zinc-600 rounded-sm"
+                    />
+                  ))}
+                </div>
+                
+                {/* Upcoming Appointments */}
+                <div className="space-y-3">
+                  <p className="text-zinc-500 text-xs tracking-wider uppercase mb-4">Prochains RDV</p>
+                  {[
+                    { name: "Marie D.", flash: "Serpent floral", time: "14h00", price: "150€" },
+                    { name: "Lucas M.", flash: "Dague vintage", time: "17h00", price: "200€" },
+                  ].map((booking, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -50 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-center"
+                      transition={{ duration: 0.5, delay: 1.2 + i * 0.15 }}
+                      className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors group"
                     >
-                      {/* Stars */}
-                      <div className="flex justify-center gap-1 mb-6">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={20} className="fill-amber-400 text-amber-400"/>
-                        ))}
+                      <div className={`w-1 h-12 rounded-full ${i === 0 ? 'bg-white' : 'bg-zinc-600'}`} />
+                      <div className="flex-1">
+                        <p className="font-medium">{booking.name}</p>
+                        <p className="text-zinc-500 text-sm">{booking.flash} • {booking.time}</p>
                       </div>
-                      
-                      {/* Quote */}
-                      <blockquote className="text-2xl md:text-3xl font-medium text-white mb-6 px-4">
-                        {testimonial.id === 5 ? (
-                          <>"{testimonial.quote} <span className="text-amber-400">{testimonial.highlight}</span>. C'est un game changer."</>
-                        ) : (
-                          <>"{testimonial.quote} <span className="text-amber-400">{testimonial.highlight}</span> sur ma gestion administrative. C'est un game changer."</>
-                        )}
-                      </blockquote>
-                      
-                      {/* Author Info */}
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-                          <PenTool size={20} className="text-slate-400" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-bold text-white">{testimonial.location}</div>
-                          <div className="text-sm text-slate-500">{testimonial.followers}</div>
-                        </div>
-                      </div>
+                      <p className="text-zinc-400 font-medium group-hover:text-white transition-colors">{booking.price}</p>
                     </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
+                  ))}
+                </div>
+              </motion.div>
 
-            {/* Navigation Buttons */}
-            <button
-              onClick={prevTestimonial}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-colors"
-              aria-label="Avis précédent"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            
-            <button
-              onClick={nextTestimonial}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-colors"
-              aria-label="Avis suivant"
-            >
-              <ChevronRight size={20} />
-            </button>
+              {/* Floating Stats Cards */}
+              <motion.div 
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute -bottom-8 -left-8 glass rounded-2xl p-5 z-20"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                    <Check size={20} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-2xl">8</p>
+                    <p className="text-zinc-500 text-xs">RDV confirmés</p>
+                  </div>
+                </div>
+              </motion.div>
 
-            {/* Dots Indicator */}
-            <div className="flex justify-center gap-2 mt-8">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentTestimonial(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentTestimonial
-                      ? 'bg-amber-400 w-8'
-                      : 'bg-slate-600 hover:bg-slate-500'
-                  }`}
-                  aria-label={`Aller à l'avis ${index + 1}`}
-                />
-              ))}
-            </div>
+              <motion.div 
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                className="absolute -top-4 -right-4 glass rounded-2xl p-5 z-20"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Eye size={20} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-2xl">342</p>
+                    <p className="text-zinc-500 text-xs">Vues portfolio</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6 max-w-7xl mx-auto">
-         <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-4">Des tarifs simples qui s'autofinancent.</h2>
-            <p className="text-slate-400">Un seul no-show évité rembourse votre abonnement.</p>
-        </div>
+      {/* Features Section */}
+      <section id="features" className="py-16 md:py-32 px-4 md:px-6 relative">
+        <div className="max-w-7xl mx-auto">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+            className="text-center mb-12 md:mb-20"
+          >
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
+              Fonctionnalités
+            </motion.p>
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
+              Tout ce qu'il vous faut
+            </motion.h2>
+          </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Starter */}
-            <div className="bg-slate-800/20 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm flex flex-col hover:border-slate-500 transition-colors">
-                <h3 className="text-xl font-bold text-white mb-2">Starter</h3>
-                <div className="text-4xl font-black text-white mb-6">29€<span className="text-lg text-slate-500 font-medium">/mois</span></div>
-                <p className="text-slate-400 text-sm mb-8">Parfait pour lancer son activité digitale.</p>
-                <a 
-                    href="https://buy.stripe.com/9B6eV6cuG4qDe0e4NSfUQ06"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 rounded-xl border border-slate-600 text-white font-bold hover:bg-slate-800 mb-8 transition-colors text-center"
-                >
-                    Commencer
-                </a>
-                <ul className="space-y-4 text-sm text-slate-300 flex-1">
-                    <li className="flex items-center gap-3"><Check size={16} className="text-slate-500"/> 1 Artiste</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Flashs illimités</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Acomptes Stripe (2% frais)</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Support email</li>
-                </ul>
-            </div>
-
-            {/* Pro (Highlighted) */}
-            <div className="relative bg-slate-900/40 border border-amber-400 rounded-3xl p-8 backdrop-blur-md flex flex-col shadow-[0_0_30px_rgba(245,158,11,0.1)] transform md:-translate-y-4">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-400 text-black px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                    Le Best-Seller
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+          >
+            {[
+              { icon: LayoutGrid, title: "Galerie de Flashs", desc: "Présentez vos designs dans une galerie élégante. Réservation et paiement en un clic.", color: "purple" },
+              { icon: CreditCard, title: "Paiements Stripe", desc: "Acomptes automatiques, factures générées. Vos revenus sont sécurisés.", color: "emerald" },
+              { icon: Calendar, title: "Agenda intelligent", desc: "Vue claire sur vos rendez-vous, synchronisation automatique, rappels clients.", color: "cyan" },
+              { icon: Filter, title: "Demandes filtrées", desc: "Formulaire structuré. Recevez uniquement des demandes qualifiées.", color: "amber" },
+              { icon: Users, title: "Gestion clients", desc: "Base de données complète, historique des rendez-vous, notes personnalisées.", color: "pink" },
+              { icon: BarChart3, title: "Analytics", desc: "Suivez vos revenus, analysez vos performances, prenez les bonnes décisions.", color: "blue" },
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                variants={scaleIn}
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass rounded-xl md:rounded-2xl p-6 md:p-8 hover:bg-white/5 active:bg-white/10 transition-all group cursor-pointer"
+              >
+                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-${feature.color}-500/10 flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 transition-transform`}>
+                  <feature.icon size={20} className={`text-${feature.color}-400 md:w-6 md:h-6`} />
                 </div>
-                <h3 className="text-xl font-bold text-amber-400 mb-2">Pro</h3>
-                <div className="text-4xl font-black text-white mb-6">49€<span className="text-lg text-slate-500 font-medium">/mois</span></div>
-                <p className="text-slate-400 text-sm mb-8">Pour les artistes qui veulent tout automatiser.</p>
-                <a 
-                    href="https://buy.stripe.com/14A7sE52eaP13lA6W0fUQ07"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 rounded-xl bg-amber-400 text-black font-bold hover:bg-amber-300 mb-8 transition-colors shadow-lg shadow-amber-400/20 text-center block"
-                >
-                    Choisir le Pro
-                </a>
-                <ul className="space-y-4 text-sm text-slate-300 flex-1">
-                    <li className="flex items-center gap-3"><Check size={16} className="text-amber-400"/> <strong>Tout du Starter</strong></li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Formulaire Projet IA</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Acomptes Stripe <strong>(0% frais)</strong></li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Agenda Synchronisé</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Support Prioritaire</li>
-                </ul>
+                <h3 className="text-lg md:text-xl font-display font-semibold mb-2 md:mb-3">{feature.title}</h3>
+                <p className="text-zinc-500 text-xs md:text-sm leading-relaxed">{feature.desc}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Showcase Section - Portfolio Preview */}
+      <section id="showcase" className="py-16 md:py-32 px-4 md:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-transparent" />
+        
+        <div className="max-w-7xl mx-auto relative">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="text-center mb-12 md:mb-20"
+          >
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
+              Vitrine
+            </motion.p>
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
+              Votre portfolio en ligne
+            </motion.h2>
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-sm md:text-base mt-4 md:mt-6 max-w-2xl mx-auto px-4">
+              Une page publique élégante où vos clients découvrent vos flashs, 
+              réservent et paient — sans effort de votre part.
+            </motion.p>
+          </motion.div>
+
+          {/* Showcase Preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            viewport={{ once: true }}
+            className="max-w-5xl mx-auto"
+          >
+            <div className="glass rounded-2xl md:rounded-3xl overflow-hidden">
+              {/* Browser Bar - Hidden on mobile */}
+              <div className="hidden md:flex items-center gap-3 px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-zinc-700 hover:bg-red-500 transition-colors" />
+                  <div className="w-3 h-3 rounded-full bg-zinc-700 hover:bg-yellow-500 transition-colors" />
+                  <div className="w-3 h-3 rounded-full bg-zinc-700 hover:bg-green-500 transition-colors" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="px-6 py-2 bg-white/5 rounded-full text-xs text-zinc-500 font-medium">
+                    inkflow.app/marie-studio
+                  </div>
+                </div>
+              </div>
+
+              {/* Page Content */}
+              <div className="p-4 md:p-8 lg:p-12">
+                {/* Artist Header */}
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 mb-8 md:mb-12 pb-6 md:pb-8 border-b border-white/5">
+                  <motion.div 
+                    whileHover={{ scale: 1.05, rotate: 2 }}
+                    className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl font-display font-bold shadow-lg"
+                  >
+                    MS
+                  </motion.div>
+                  <div className="flex-1">
+                    <h3 className="text-xl md:text-2xl font-display font-bold mb-2">Marie's Studio</h3>
+                    <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm text-zinc-500">
+                      <span className="flex items-center gap-1"><MapPin size={12} /> Lyon</span>
+                      <span className="flex items-center gap-1"><Instagram size={12} /> @marie_studio</span>
+                      <span className="flex items-center gap-1">
+                        <Star size={12} className="text-amber-400 fill-amber-400" /> 4.9
+                      </span>
+                    </div>
+                  </div>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full md:w-auto bg-white text-black px-6 md:px-8 py-3 text-sm font-semibold hover:bg-zinc-100 transition-colors min-h-[48px]"
+                  >
+                    Réserver
+                  </motion.button>
+                </div>
+
+                {/* Flash Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="font-display font-semibold text-lg">Flashs Disponibles</h4>
+                    <span className="text-sm text-zinc-500 font-medium">12 designs</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { emoji: "🐍", title: "Serpent", price: 180, views: 234 },
+                      { emoji: "🦋", title: "Papillon", price: 150, views: 189 },
+                      { emoji: "🌿", title: "Fougère", price: 120, views: 156 },
+                      { emoji: "🌙", title: "Lune", price: 200, views: 312 },
+                    ].map((flash, index) => (
+                      <motion.div 
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.03, y: -5 }}
+                        className="group cursor-pointer"
+                      >
+                        <div className="aspect-[4/5] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center text-5xl mb-3 border border-white/5 group-hover:border-white/20 transition-all relative overflow-hidden">
+                          <span className="group-hover:scale-110 transition-transform">{flash.emoji}</span>
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                            <div className="flex items-center gap-1 text-white text-xs">
+                              <Eye size={14} />
+                              {flash.views}
+                            </div>
+                            <div className="flex items-center gap-1 text-white text-xs">
+                              <Heart size={14} />
+                              {Math.floor(flash.views * 0.3)}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="font-medium text-sm">{flash.title}</p>
+                        <p className="text-zinc-500 text-sm font-medium">{flash.price}€</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 md:py-32 px-4 md:px-6">
+        <div className="max-w-4xl mx-auto">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="text-center mb-10 md:mb-16"
+          >
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
+              Témoignages
+            </motion.p>
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
+              Ce qu'en disent les artistes
+            </motion.h2>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="glass rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12"
+          >
+            <AnimatePresence mode="wait">
+              {testimonials.map((testimonial, index) => {
+                if (index !== currentTestimonial) return null;
+                
+                return (
+                  <motion.div
+                    key={testimonial.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center"
+                  >
+                    <div className="flex justify-center gap-1 mb-8">
+                      {[...Array(5)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: i * 0.1 }}
+                        >
+                          <Star size={20} className="fill-amber-400 text-amber-400"/>
+                        </motion.div>
+                      ))}
+                    </div>
+                    
+                    <blockquote className="text-lg md:text-xl lg:text-2xl font-display leading-relaxed mb-6 md:mb-8">
+                      "{testimonial.quote} <span className="text-white font-bold">{testimonial.highlight}</span>."
+                    </blockquote>
+                    
+                    <div className="flex items-center justify-center gap-3 md:gap-4">
+                      <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-full flex items-center justify-center font-display font-bold text-base md:text-lg">
+                        {testimonial.author.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-sm md:text-base">{testimonial.author}</p>
+                        <p className="text-zinc-500 text-xs md:text-sm">{testimonial.role}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
+            {/* Navigation */}
+            <div className="flex justify-center items-center gap-3 md:gap-4 mt-8 md:mt-10">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={prevTestimonial}
+                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
+              >
+                <ChevronLeft size={18} />
+              </motion.button>
+              
+              <div className="flex gap-2">
+                {testimonials.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentTestimonial(index)}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      index === currentTestimonial
+                        ? 'bg-white w-8'
+                        : 'bg-zinc-700 hover:bg-zinc-600 w-2'
+                    }`}
+                  />
+                ))}
+              </div>
+              
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={nextTestimonial}
+                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
+              >
+                <ChevronRight size={18} />
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="py-16 md:py-32 px-4 md:px-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/50 to-transparent" />
+        
+        <div className="max-w-6xl mx-auto relative">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="text-center mb-12 md:mb-20"
+          >
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
+              Tarifs
+            </motion.p>
+            <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
+              Simple et transparent
+            </motion.h2>
+            <motion.p variants={fadeInUp} className="text-zinc-500 text-sm md:text-base mt-4 md:mt-6">
+              Un seul no-show évité rembourse votre abonnement.
+            </motion.p>
+          </motion.div>
+
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
+          >
+            {/* Starter */}
+            <motion.div 
+              variants={scaleIn}
+              whileHover={{ y: -10 }}
+              whileTap={{ scale: 0.98 }}
+              className="glass rounded-xl md:rounded-2xl p-6 md:p-8 hover:bg-white/5 active:bg-white/10 transition-all"
+            >
+              <div className="mb-6 md:mb-8">
+                <h3 className="text-lg md:text-xl font-display font-semibold mb-2">Starter</h3>
+                <p className="text-zinc-500 text-xs md:text-sm">Pour démarrer</p>
+              </div>
+              <div className="mb-6 md:mb-8">
+                <span className="text-4xl md:text-5xl font-display font-bold">29€</span>
+                <span className="text-zinc-500 text-sm">/mois</span>
+              </div>
+              <a 
+                href="https://buy.stripe.com/9B6eV6cuG4qDe0e4NSfUQ06"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3.5 md:py-4 border border-white/10 text-center font-semibold hover:bg-white/5 transition-colors mb-6 md:mb-8 text-sm md:text-base min-h-[48px] flex items-center justify-center"
+              >
+                Commencer
+              </a>
+              <ul className="space-y-3 md:space-y-4 text-xs md:text-sm">
+                {["1 artiste", "Flashs illimités", "Acomptes Stripe (2%)", "Support email"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 md:gap-3 text-zinc-400">
+                    <Check size={14} className="text-zinc-600 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            {/* Pro - Highlighted */}
+            <motion.div 
+              variants={scaleIn}
+              whileHover={{ y: -10 }}
+              whileTap={{ scale: 0.98 }}
+              className="glass rounded-xl md:rounded-2xl p-6 md:p-8 border-2 border-white/20 relative order-first md:order-none"
+            >
+              <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2 bg-white text-black px-4 md:px-5 py-1 md:py-1.5 text-[10px] md:text-xs font-bold tracking-wider">
+                POPULAIRE
+              </div>
+              <div className="mb-6 md:mb-8 mt-2 md:mt-0">
+                <h3 className="text-lg md:text-xl font-display font-semibold mb-2">Pro</h3>
+                <p className="text-zinc-500 text-xs md:text-sm">Pour les établis</p>
+              </div>
+              <div className="mb-6 md:mb-8">
+                <span className="text-4xl md:text-5xl font-display font-bold">49€</span>
+                <span className="text-zinc-500 text-sm">/mois</span>
+              </div>
+              <motion.a 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                href="https://buy.stripe.com/14A7sE52eaP13lA6W0fUQ07"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3.5 md:py-4 bg-white text-black text-center font-bold hover:bg-zinc-100 transition-colors mb-6 md:mb-8 text-sm md:text-base min-h-[48px] flex items-center justify-center"
+              >
+                Choisir Pro
+              </motion.a>
+              <ul className="space-y-3 md:space-y-4 text-xs md:text-sm">
+                {["Tout du Starter", "Formulaire projet IA", "Acomptes Stripe (0%)", "Agenda synchronisé", "Support prioritaire"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 md:gap-3 text-zinc-300">
+                    <Check size={14} className="text-white flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
 
             {/* Studio */}
-            <div className="bg-slate-800/20 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm flex flex-col hover:border-slate-500 transition-colors">
-                <h3 className="text-xl font-bold text-white mb-2">Studio</h3>
-                <div className="text-4xl font-black text-white mb-6">99€<span className="text-lg text-slate-500 font-medium">/mois</span></div>
-                <p className="text-slate-400 text-sm mb-8">Pour les shops avec plusieurs résidents.</p>
-                <a 
-                    href="https://buy.stripe.com/00wcMY8eq3mz6xM1BGfUQ08"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 rounded-xl border border-slate-600 text-white font-bold hover:bg-slate-800 mb-8 transition-colors text-center"
-                >
-                    Choisir Studio
-                </a>
-                <ul className="space-y-4 text-sm text-slate-300 flex-1">
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Jusqu'à 3 Artistes</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Multi-calendriers</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Dashboard Studio</li>
-                    <li className="flex items-center gap-3"><Check size={16} className="text-white"/> Marque Blanche</li>
-                </ul>
-            </div>
+            <motion.div 
+              variants={scaleIn}
+              whileHover={{ y: -10 }}
+              whileTap={{ scale: 0.98 }}
+              className="glass rounded-xl md:rounded-2xl p-6 md:p-8 hover:bg-white/5 active:bg-white/10 transition-all"
+            >
+              <div className="mb-6 md:mb-8">
+                <h3 className="text-lg md:text-xl font-display font-semibold mb-2">Studio</h3>
+                <p className="text-zinc-500 text-xs md:text-sm">Pour les équipes</p>
+              </div>
+              <div className="mb-6 md:mb-8">
+                <span className="text-4xl md:text-5xl font-display font-bold">99€</span>
+                <span className="text-zinc-500 text-sm">/mois</span>
+              </div>
+              <a 
+                href="https://buy.stripe.com/00wcMY8eq3mz6xM1BGfUQ08"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3.5 md:py-4 border border-white/10 text-center font-semibold hover:bg-white/5 transition-colors mb-6 md:mb-8 text-sm md:text-base min-h-[48px] flex items-center justify-center"
+              >
+                Choisir Studio
+              </a>
+              <ul className="space-y-3 md:space-y-4 text-xs md:text-sm">
+                {["Jusqu'à 3 artistes", "Multi-calendriers", "Dashboard studio", "Marque blanche"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 md:gap-3 text-zinc-400">
+                    <Check size={14} className="text-zinc-600 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </motion.div>
         </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-16 md:py-32 px-4 md:px-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto text-center"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 4, repeat: Infinity }}
+          >
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold gradient-text mb-4 md:mb-6">
+              Prêt à transformer votre activité ?
+            </h2>
+          </motion.div>
+          <p className="text-zinc-500 text-base md:text-lg mb-8 md:mb-10 px-4">
+            Rejoignez +500 artistes qui utilisent InkFlow chaque jour.
+          </p>
+          <motion.button 
+            whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(255,255,255,0.15)" }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/register')}
+            className="group bg-white text-black px-8 md:px-12 py-4 md:py-5 font-bold text-base md:text-lg hover:bg-zinc-100 transition-all inline-flex items-center gap-3 min-h-[52px]"
+          >
+            Commencer gratuitement
+            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </motion.button>
+          <p className="text-xs md:text-sm text-zinc-600 mt-4 md:mt-6">
+            14 jours gratuits • Sans carte bancaire
+          </p>
+        </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 px-6 bg-slate-950">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
-                <span className="text-xl font-black tracking-tighter text-white">INK<span className="text-amber-400">FLOW</span></span>
-            </div>
-            <div className="text-slate-500 text-sm">
-                &copy; 2024 InkFlow SaaS. Tous droits réservés.
-            </div>
-            <div className="flex gap-6 text-sm text-slate-400">
-                <a href="#" className="hover:text-white">Mentions Légales</a>
-                <a href="#" className="hover:text-white">Contact</a>
-                <a href="#" className="hover:text-white">Instagram</a>
-            </div>
+      <footer className="border-t border-white/5 py-8 md:py-12 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+          <div className="text-xl md:text-2xl font-display font-bold tracking-tight">
+            INK<span className="text-zinc-500">FLOW</span>
+          </div>
+          <div className="text-zinc-600 text-xs md:text-sm">
+            © 2025 InkFlow. Tous droits réservés.
+          </div>
+          <div className="flex gap-6 md:gap-8 text-xs md:text-sm text-zinc-500">
+            <a href="#" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center">Mentions légales</a>
+            <a href="#" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center">Contact</a>
+          </div>
         </div>
       </footer>
     </div>

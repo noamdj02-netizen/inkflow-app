@@ -1,6 +1,5 @@
-import React from 'react';
-import { FileText, Download } from 'lucide-react';
-import jsPDF from 'jspdf';
+import React, { useState } from 'react';
+import { FileText, Download, Loader2 } from 'lucide-react';
 import type { Database } from '../../types/supabase';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
@@ -21,8 +20,14 @@ interface InvoiceButtonProps {
 }
 
 export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ booking, artist }) => {
-  const generateInvoice = () => {
-    const doc = new jsPDF();
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generateInvoice = async () => {
+    setIsGenerating(true);
+    try {
+      // Lazy load jspdf uniquement au clic (réduction bundle ~200KB)
+      const { default: jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     let yPos = 20;
@@ -167,24 +172,40 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ booking, artist })
     doc.text(`Date d'émission: ${new Date().toLocaleDateString('fr-FR')}`, 20, yPos + 5);
     doc.text('InkFlow SaaS - Reçu généré automatiquement', pageWidth - 20, yPos + 5, { align: 'right' });
 
-    // Ouvrir le PDF dans un nouvel onglet
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
-    
-    // Nettoyer l'URL après un délai
-    setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
+      // Ouvrir le PDF dans un nouvel onglet
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
+      
+      // Nettoyer l'URL après un délai
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
     <button
       onClick={generateInvoice}
-      className="flex items-center gap-2 bg-slate-800/50 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition-colors text-sm font-medium"
+      disabled={isGenerating}
+      className="flex items-center gap-2 bg-slate-800/50 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg hover:bg-slate-800 hover:text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
       title="Générer le reçu d'acompte"
     >
-      <FileText size={16} />
-      <span className="hidden sm:inline">Reçu PDF</span>
-      <Download size={14} className="sm:hidden" />
+      {isGenerating ? (
+        <>
+          <Loader2 size={16} className="animate-spin" />
+          <span className="hidden sm:inline">Génération...</span>
+        </>
+      ) : (
+        <>
+          <FileText size={16} />
+          <span className="hidden sm:inline">Reçu PDF</span>
+          <Download size={14} className="sm:hidden" />
+        </>
+      )}
     </button>
   );
 };

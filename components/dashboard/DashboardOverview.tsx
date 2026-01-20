@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   DollarSign, Calendar, AlertCircle, Clock, TrendingUp, Plus, Share2, 
-  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User, X, Link, QrCode
+  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User, X, Link, QrCode, Sparkles
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -25,6 +25,17 @@ interface MonthlyRevenue {
   month: string;
   revenue: number;
 }
+
+// Animation variants
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuth();
@@ -242,7 +253,6 @@ export const DashboardOverview: React.FC = () => {
         setTimeout(() => setToast(null), 3000);
       }
     } catch (err) {
-      // Si l'utilisateur annule le partage ou erreur, on copie quand même si possible
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         try {
           await navigator.clipboard.writeText(url);
@@ -263,50 +273,54 @@ export const DashboardOverview: React.FC = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'booking':
-        return <Calendar className="text-green-400" size={16} />;
+        return <Calendar className="text-emerald-400" size={16} />;
       case 'project':
-        return <MessageSquare className="text-blue-400" size={16} />;
+        return <MessageSquare className="text-cyan-400" size={16} />;
       case 'flash':
         return <Zap className="text-amber-400" size={16} />;
       default:
-        return <CheckCircle className="text-slate-400" size={16} />;
+        return <CheckCircle className="text-zinc-400" size={16} />;
     }
   };
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto flex items-center justify-center">
-        <Loader2 className="animate-spin text-amber-400" size={32} />
+      <div className="flex-1 overflow-y-auto flex items-center justify-center bg-[#050505]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Sparkles className="text-white" size={32} />
+        </motion.div>
       </div>
     );
   }
 
   return (
     <>
-      {/* Header (Desktop only - Mobile header is in DashboardLayout) */}
-      <header className="hidden md:flex h-14 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm items-center justify-between px-6 z-10 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <motion.h2 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-lg font-bold text-white"
-          >
-            Tableau de Bord
-          </motion.h2>
-        </div>
-        <div className="flex gap-2">
+      {/* Header (Desktop only) */}
+      <header className="hidden md:flex h-16 border-b border-white/5 bg-[#0a0a0a] items-center justify-between px-6 z-10 flex-shrink-0">
+        <motion.h2 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-lg font-display font-bold text-white"
+        >
+          Tableau de Bord
+        </motion.h2>
+        <div className="flex gap-3">
           <motion.button
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleShare}
-            className="flex items-center gap-2 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 hover:shadow-lg transition-all"
+            className="flex items-center gap-2 glass text-zinc-300 px-4 py-2 rounded-xl text-sm font-medium hover:text-white transition-all"
           >
             <Share2 size={16} /> Partager mon lien
           </motion.button>
           <motion.button
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-amber-400 text-black px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-300 shadow-lg shadow-amber-400/20 transition-all"
+            className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-semibold hover:bg-zinc-100 transition-all"
           >
             <Plus size={16}/> Nouveau Flash
           </motion.button>
@@ -314,331 +328,255 @@ export const DashboardOverview: React.FC = () => {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-6 pb-20 md:pb-6 pt-3 md:pt-6">
-        {/* KPIs Horizontal Scroll (Mobile) */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+        {/* KPIs Grid */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="md:hidden mb-6"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+          className="grid grid-cols-3 gap-3 md:gap-4 mb-6"
         >
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-3 px-3">
-            {/* CA Mensuel */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/dashboard/finance')}
-              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-4 hover:border-amber-500/70 hover:shadow-lg hover:shadow-amber-500/20 transition-all text-left cursor-pointer snap-start backdrop-blur-sm"
-            >
-              <DollarSign className="text-amber-400 mb-2" size={18} />
-              <p className="text-xs text-amber-200/80 mb-1 font-medium">Chiffre d'affaires</p>
-              <p className="text-xl font-bold text-white leading-tight">
-                {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
-              </p>
-              <p className="text-[10px] text-amber-200/60 mt-1">Ce mois-ci</p>
-            </motion.button>
-
-            {/* RDV à venir */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/dashboard/calendar')}
-              className="flex-shrink-0 w-44 h-36 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-4 hover:border-blue-500/70 hover:shadow-lg hover:shadow-blue-500/20 transition-all text-left cursor-pointer snap-start backdrop-blur-sm"
-            >
-              <Calendar className="text-blue-400 mb-2" size={18} />
-              <p className="text-xs text-blue-200/80 mb-1 font-medium">RDV à venir</p>
-              <p className="text-xl font-bold text-white leading-tight">{upcomingBookings}</p>
-              <p className="text-[10px] text-blue-200/60 mt-1">Confirmés</p>
-            </motion.button>
-
-            {/* Demandes en attente */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/dashboard/requests')}
-              className={`flex-shrink-0 w-44 h-36 rounded-2xl p-4 transition-all text-left cursor-pointer snap-start backdrop-blur-sm ${
-                pendingRequests > 0
-                  ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border border-red-500/50 hover:border-red-500/70 hover:shadow-lg hover:shadow-red-500/20'
-                  : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-emerald-500/50 hover:border-emerald-500/70 hover:shadow-lg hover:shadow-emerald-500/20'
-              }`}
-            >
-              <AlertCircle className={`mb-2 ${pendingRequests > 0 ? 'text-red-400' : 'text-emerald-400'}`} size={18} />
-              <p className={`text-xs mb-1 font-medium ${pendingRequests > 0 ? 'text-red-200/80' : 'text-emerald-200/80'}`}>Demandes</p>
-              <p className="text-xl font-bold text-white leading-tight">{pendingRequests}</p>
-              <p className={`text-[10px] mt-1 ${pendingRequests > 0 ? 'text-red-200/60' : 'text-emerald-200/60'}`}>
-                {pendingRequests > 0 ? 'En attente' : 'Tout est OK'}
-              </p>
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* KPIs Grid (Desktop) */}
-        <div className="hidden md:grid md:grid-cols-3 gap-4 mb-6">
           {/* CA Mensuel */}
           <motion.button
+            variants={fadeInUp}
+            whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/finance')}
-            className="bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/70 hover:shadow-lg hover:shadow-amber-500/20 transition-all text-left cursor-pointer backdrop-blur-sm"
+            className="glass rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all text-left cursor-pointer group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                <DollarSign className="text-amber-400" size={24} />
-              </div>
-              <TrendingUp className="text-amber-400" size={20} />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3 md:mb-4 group-hover:bg-white/10 transition-colors">
+              <DollarSign className="text-zinc-400" size={20} />
             </div>
-            <p className="text-sm text-amber-200/80 mb-1 font-medium">Chiffre d'affaires</p>
-            <p className="text-3xl font-bold text-white">
+            <p className="text-xs text-zinc-500 mb-1 font-medium">CA mensuel</p>
+            <p className="text-xl md:text-2xl font-display font-bold text-white">
               {Math.round(monthlyRevenue / 100).toLocaleString('fr-FR')}€
             </p>
-            <p className="text-xs text-amber-200/60 mt-1">Ce mois-ci</p>
           </motion.button>
 
           {/* RDV à venir */}
           <motion.button
+            variants={fadeInUp}
+            whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/calendar')}
-            className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/50 rounded-2xl p-6 hover:border-blue-500/70 hover:shadow-lg hover:shadow-blue-500/20 transition-all text-left cursor-pointer backdrop-blur-sm"
+            className="glass rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-all text-left cursor-pointer group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <Calendar className="text-blue-400" size={24} />
-              </div>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3 md:mb-4 group-hover:bg-white/10 transition-colors">
+              <Calendar className="text-zinc-400" size={20} />
             </div>
-            <p className="text-sm text-blue-200/80 mb-1 font-medium">RDV à venir</p>
-            <p className="text-3xl font-bold text-white">{upcomingBookings}</p>
-            <button
-              onClick={() => navigate('/dashboard/calendar')}
-              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-2"
-            >
-              Voir le calendrier <ArrowRight size={12} />
-            </button>
+            <p className="text-xs text-zinc-500 mb-1 font-medium">RDV à venir</p>
+            <p className="text-xl md:text-2xl font-display font-bold text-white">{upcomingBookings}</p>
           </motion.button>
 
-          {/* Demandes en attente */}
+          {/* Demandes */}
           <motion.button
+            variants={fadeInUp}
+            whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/requests')}
-            className={`rounded-2xl p-6 border transition-all text-left cursor-pointer backdrop-blur-sm ${
-              pendingRequests > 0
-                ? 'bg-gradient-to-br from-red-500/20 to-orange-600/20 border-red-500/50 hover:border-red-500/70 hover:shadow-lg hover:shadow-red-500/20'
-                : 'bg-gradient-to-br from-emerald-500/20 to-green-600/20 border-emerald-500/50 hover:border-emerald-500/70 hover:shadow-lg hover:shadow-emerald-500/20'
+            className={`glass rounded-2xl p-4 md:p-6 transition-all text-left cursor-pointer group ${
+              pendingRequests > 0 ? 'border-amber-500/30' : ''
             }`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                pendingRequests > 0 ? 'bg-red-500/20' : 'bg-emerald-500/20'
-              }`}>
-                <AlertCircle className={pendingRequests > 0 ? 'text-red-400' : 'text-emerald-400'} size={24} />
-              </div>
+            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-3 md:mb-4 transition-colors ${
+              pendingRequests > 0 ? 'bg-amber-500/10' : 'bg-white/5 group-hover:bg-white/10'
+            }`}>
+              <AlertCircle className={pendingRequests > 0 ? 'text-amber-400' : 'text-zinc-400'} size={20} />
             </div>
-            <p className={`text-sm mb-1 font-medium ${pendingRequests > 0 ? 'text-red-200/80' : 'text-emerald-200/80'}`}>Demandes en attente</p>
-            <p className="text-3xl font-bold text-white">{pendingRequests}</p>
-            {pendingRequests > 0 && (
-              <div className="text-xs text-red-400 flex items-center gap-1 mt-2">
-                Traiter maintenant <ArrowRight size={12} />
-              </div>
-            )}
+            <p className="text-xs text-zinc-500 mb-1 font-medium">Demandes</p>
+            <p className="text-xl md:text-2xl font-display font-bold text-white">{pendingRequests}</p>
           </motion.button>
-        </div>
+        </motion.div>
 
         {/* Actions Rapides (Mobile) */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          transition={{ delay: 0.2 }}
           className="md:hidden mb-6"
         >
           <div className="flex gap-3 justify-center">
             <motion.button
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => navigate('/dashboard/flashs')}
-              className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center hover:bg-amber-400/20 hover:shadow-lg hover:shadow-amber-400/20 transition-all"
-              title="Créer Flash"
+              className="w-14 h-14 rounded-2xl glass flex items-center justify-center hover:bg-white/10 transition-all"
             >
-              <Plus className="text-amber-400" size={24} />
+              <Plus className="text-white" size={22} />
             </motion.button>
             <motion.button
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => alert('Fonctionnalité bientôt disponible')}
-              className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center hover:bg-blue-500/20 hover:shadow-lg hover:shadow-blue-500/20 transition-all"
-              title="Scan QR"
+              className="w-14 h-14 rounded-2xl glass flex items-center justify-center hover:bg-white/10 transition-all"
             >
-              <QrCode className="text-blue-400" size={24} />
+              <QrCode className="text-zinc-400" size={22} />
             </motion.button>
             <motion.button
-              whileTap={{ scale: 0.92 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handleShare}
-              className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center hover:bg-purple-500/20 hover:shadow-lg hover:shadow-purple-500/20 transition-all"
-              title="Lien"
+              className="w-14 h-14 rounded-2xl glass flex items-center justify-center hover:bg-white/10 transition-all"
             >
-              <Link className="text-purple-400" size={24} />
+              <Link className="text-zinc-400" size={22} />
             </motion.button>
           </div>
         </motion.div>
 
-        {/* Ma Journée - Focus Card */}
+        {/* Ma Journée */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
+          transition={{ delay: 0.3 }}
           className="mb-6"
         >
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
-                <Clock className="text-amber-400" size={18} />
+          <div className="glass rounded-2xl p-5 md:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Clock className="text-zinc-500" size={16} />
                 Ma Journée
               </h3>
               <button
                 onClick={() => navigate('/dashboard/calendar')}
-                className="text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                className="text-xs text-zinc-500 hover:text-white flex items-center gap-1 transition-colors"
               >
-                Voir tout <ArrowRight size={14} />
+                Voir tout <ArrowRight size={12} />
               </button>
             </div>
 
             {nextBooking ? (
               <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="bg-slate-900/50 rounded-xl p-4 md:p-6 border border-amber-400/20"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white/5 rounded-xl p-5 border border-white/10"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 md:gap-3 mb-3">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-400/20 rounded-xl flex items-center justify-center">
-                        <Clock className="text-amber-400" size={20} />
-                      </div>
-                      <div>
-                        <p className="text-xl md:text-2xl font-bold text-white">
-                          {formatTime(nextBooking.date_debut)}
-                        </p>
-                        <p className="text-xs md:text-sm text-slate-400">Prochain RDV</p>
-                      </div>
-                    </div>
-                    <div className="ml-12 md:ml-16">
-                      <p className="text-lg md:text-xl font-bold text-white mb-2">
-                        {nextBooking.client_name || 'Client'}
-                      </p>
-                      <p className="text-slate-300 mb-3">
-                        {nextBooking.flash_id
-                          ? `Flash: ${nextBooking.flashs?.title || 'Flash'}`
-                          : `Projet: ${nextBooking.projects?.body_part || 'Projet'} • ${nextBooking.projects?.style || ''}`
-                        }
-                      </p>
-                      <div className="flex items-center gap-4 text-sm text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} /> {nextBooking.duree_minutes} min
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <DollarSign size={14} /> {Math.round(nextBooking.prix_total / 100)}€
-                        </span>
-                      </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Clock className="text-white" size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-display font-bold text-white mb-1">
+                      {formatTime(nextBooking.date_debut)}
+                    </p>
+                    <p className="text-lg font-medium text-white mb-1">
+                      {nextBooking.client_name || 'Client'}
+                    </p>
+                    <p className="text-zinc-400 text-sm mb-3">
+                      {nextBooking.flash_id
+                        ? `Flash: ${nextBooking.flashs?.title || 'Flash'}`
+                        : `Projet: ${nextBooking.projects?.body_part || 'Projet'}`
+                      }
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> {nextBooking.duree_minutes} min
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign size={12} /> {Math.round(nextBooking.prix_total / 100)}€
+                      </span>
                     </div>
                   </div>
                 </div>
               </motion.div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="bg-slate-900/50 rounded-xl p-8 md:p-12 text-center border border-slate-700"
-              >
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="text-slate-500" size={24} />
+              <div className="bg-white/5 rounded-xl p-8 text-center border border-white/5">
+                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="text-zinc-600" size={24} />
                 </div>
-                <p className="text-base md:text-lg font-bold text-white mb-2">Aucun RDV prévu aujourd'hui</p>
-                <p className="text-sm md:text-base text-slate-400">Profitez-en pour dessiner ! 🎨</p>
-              </motion.div>
+                <p className="text-white font-medium mb-1">Aucun RDV aujourd'hui</p>
+                <p className="text-zinc-500 text-sm">Profitez-en pour dessiner ! 🎨</p>
+              </div>
             )}
           </div>
         </motion.div>
 
-        {/* Graphique et Activité - Desktop Grid */}
+        {/* Graphique et Activité */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4"
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
         >
-          {/* Graphique - Medium */}
-          <div className="lg:col-span-1 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
-            <h3 className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 md:mb-6 flex items-center gap-2">
-              <TrendingUp className="text-amber-400" size={18} />
+          {/* Graphique */}
+          <div className="lg:col-span-1 glass rounded-2xl p-5 md:p-6">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <TrendingUp className="text-zinc-600" size={14} />
               Revenus (6 mois)
             </h3>
             {monthlyRevenues.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={monthlyRevenues}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                   <XAxis 
                     dataKey="month" 
-                    stroke="#94a3b8"
-                    fontSize={12}
+                    stroke="#52525b"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
                   />
                   <YAxis 
-                    stroke="#94a3b8"
-                    fontSize={12}
+                    stroke="#52525b"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
                     tickFormatter={(value) => `${value}€`}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid #334155',
-                      borderRadius: '8px',
+                      backgroundColor: '#18181b',
+                      border: '1px solid #27272a',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
                     }}
                     formatter={(value: number) => [`${value}€`, 'Revenus']}
+                    labelStyle={{ color: '#a1a1aa' }}
                   />
-                  <Bar dataKey="revenue" fill="#fbbf24" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="revenue" fill="#ffffff" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-slate-500">
+              <div className="h-[180px] flex items-center justify-center text-zinc-600">
                 <p className="text-sm">Pas encore de données</p>
               </div>
             )}
           </div>
 
-          {/* Activité Récente - Full Width */}
-          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 md:p-6 backdrop-blur-sm">
-            <h3 className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 md:mb-6 flex items-center gap-2">
-              <Clock className="text-amber-400" size={18} />
+          {/* Activité Récente */}
+          <div className="lg:col-span-2 glass rounded-2xl p-5 md:p-6">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <Clock className="text-zinc-600" size={14} />
               Activité Récente
             </h3>
             {recentActivity.length > 0 ? (
-              <div className="space-y-2 md:space-y-3">
+              <div className="space-y-3">
                 {recentActivity.map((activity, index) => (
                   <motion.div
                     key={`${activity.type}-${activity.id}-${index}`}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-slate-900/50 rounded-xl border border-slate-700 hover:border-slate-600 hover:shadow-lg transition-all cursor-pointer"
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    whileHover={{ x: 4 }}
+                    className="flex items-start gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-white/10 transition-colors">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium mb-1">{activity.title}</p>
+                      <p className="text-white text-sm font-medium truncate">{activity.title}</p>
                       {activity.client && (
-                        <p className="text-sm text-slate-400 flex items-center gap-1">
-                          <User size={12} /> {activity.client}
+                        <p className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
+                          <User size={10} /> {activity.client}
                         </p>
                       )}
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(activity.date).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'long',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
                     </div>
+                    <p className="text-[10px] text-zinc-600 flex-shrink-0">
+                      {new Date(activity.date).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </p>
                   </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-zinc-600">
                 <p className="text-sm">Aucune activité récente</p>
               </div>
             )}
@@ -650,15 +588,15 @@ export const DashboardOverview: React.FC = () => {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-20 md:bottom-6 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg bg-zinc-900/95 border border-white/10 backdrop-blur-md text-white flex items-center gap-2 text-sm font-light"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl glass text-white flex items-center gap-3 text-sm font-medium"
           >
-            <CheckCircle size={16} className="text-yellow-500/80" />
+            <CheckCircle size={16} className="text-emerald-400" />
             <span>{toast}</span>
-            <button onClick={() => setToast(null)} className="ml-1">
-              <X size={14} className="text-slate-400" />
+            <button onClick={() => setToast(null)} className="ml-1 text-zinc-500 hover:text-white transition-colors">
+              <X size={14} />
             </button>
           </motion.div>
         )}

@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PenTool, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft, Sparkles, WifiOff } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, authError } = useAuth();
   const navigate = useNavigate();
+  
+  // Vérification de la configuration Supabase
+  const isConfigured = isSupabaseConfigured();
+  const configErrors = getConfigErrors();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +25,6 @@ export const LoginPage: React.FC = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
-      // Messages d'erreur plus clairs
       let errorMessage = error.message;
       
       if (error.message.includes('Invalid login credentials') || error.message.includes('Invalid credentials')) {
@@ -33,57 +38,105 @@ export const LoginPage: React.FC = () => {
       setError(errorMessage);
       setLoading(false);
     } else {
-      // Rediriger vers le dashboard après connexion réussie
       navigate('/dashboard');
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Bouton Retour */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 group"
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-medium">Retour à l'accueil</span>
-        </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-8 group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Retour à l'accueil</span>
+          </Link>
+        </motion.div>
 
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <span className="text-3xl font-black tracking-tighter text-white">
-              INK<span className="text-amber-400">FLOW</span>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-center mb-10"
+        >
+          <div className="inline-flex items-center gap-2 mb-6">
+            <span className="text-4xl font-display font-bold tracking-tight text-white">
+              INK<span className="text-zinc-500">FLOW</span>
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Connexion</h1>
-          <p className="text-slate-400">Accédez à votre espace tatoueur</p>
-        </div>
+          <h1 className="text-2xl font-display font-bold text-white mb-2">Connexion</h1>
+          <p className="text-zinc-500">Accédez à votre espace tatoueur</p>
+        </motion.div>
 
         {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8 backdrop-blur-sm">
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+        <motion.form 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          onSubmit={handleSubmit} 
+          className="glass rounded-2xl p-8"
+        >
+          {/* Alerte si Supabase n'est pas configuré */}
+          {!isConfigured && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl"
+            >
+              <div className="flex items-start gap-3">
+                <WifiOff className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <p className="text-amber-400 font-semibold text-sm mb-1">Configuration requise</p>
+                  <p className="text-amber-300/80 text-xs mb-2">Supabase n'est pas configuré. Créez un fichier .env.local avec :</p>
+                  <div className="bg-black/30 rounded-lg p-2 text-[10px] font-mono text-zinc-400">
+                    VITE_SUPABASE_URL=https://votre-projet.supabase.co<br/>
+                    VITE_SUPABASE_ANON_KEY=votre-clé-anon
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Erreur d'authentification */}
+          {(error || authError) && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
+            >
               <AlertCircle className="text-red-400 shrink-0" size={20} />
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
+              <p className="text-red-300 text-sm">{error || authError}</p>
+            </motion.div>
           )}
 
           <div className="space-y-6">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
                   placeholder="votre@email.com"
                 />
               </div>
@@ -91,44 +144,67 @@ export const LoginPage: React.FC = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
                   placeholder="••••••••"
                 />
               </div>
             </div>
 
             {/* Submit */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-400 text-black font-bold py-3 rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
+              className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
-            </button>
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Sparkles size={18} />
+                  </motion.span>
+                  Connexion...
+                </span>
+              ) : (
+                'Se connecter'
+              )}
+            </motion.button>
           </div>
 
           {/* Link to Register */}
-          <div className="mt-6 text-center">
-            <p className="text-slate-400 text-sm">
+          <div className="mt-8 text-center">
+            <p className="text-zinc-500 text-sm">
               Pas encore de compte ?{' '}
-              <Link to="/register" className="text-amber-400 hover:text-amber-300 font-bold">
+              <Link to="/register" className="text-white hover:text-zinc-300 font-semibold transition-colors">
                 S'inscrire
               </Link>
             </p>
           </div>
-        </form>
+        </motion.form>
+
+        {/* Footer */}
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-center text-zinc-600 text-xs mt-8"
+        >
+          © 2025 InkFlow. Tous droits réservés.
+        </motion.p>
       </div>
     </div>
   );
 };
-
