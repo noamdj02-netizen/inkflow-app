@@ -120,6 +120,48 @@ export const submitProjectSchema = z.object({
 }).strict(); // Reject unknown keys
 
 /**
+ * Booking Form Schema (for Flash bookings from public profile)
+ */
+export const bookingFormSchema = z.object({
+  client_name: z
+    .string()
+    .min(2, 'Le nom doit contenir au moins 2 caractères')
+    .max(200, 'Le nom est trop long')
+    .trim(),
+  
+  client_email: z
+    .string()
+    .min(1, 'L\'email est requis')
+    .email('Format d\'email invalide')
+    .toLowerCase()
+    .trim()
+    .max(255, 'Email trop long'),
+  
+  client_phone: z
+    .string()
+    .max(20, 'Numéro de téléphone trop long')
+    .trim()
+    .optional()
+    .nullable(),
+  
+  date_souhaitee: z
+    .string()
+    .min(1, 'La date est requise'),
+  
+  commentaire: z
+    .string()
+    .max(1000, 'Le commentaire est trop long')
+    .trim()
+    .optional()
+    .nullable(),
+}).strict();
+
+/**
+ * Booking Form Data Type
+ */
+export type BookingFormData = z.infer<typeof bookingFormSchema>;
+
+/**
  * Care Instructions Schema
  */
 export const careInstructionsSchema = z.object({
