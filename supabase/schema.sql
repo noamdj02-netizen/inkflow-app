@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS artists (
     theme_color TEXT DEFAULT 'amber', -- Thème de couleur (amber, red, blue, emerald, violet)
     avatar_url TEXT, -- URL de l'avatar uploadé
     bio_instagram TEXT,
+    pre_tattoo_instructions TEXT, -- Instructions personnalisées envoyées au client avant le RDV
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

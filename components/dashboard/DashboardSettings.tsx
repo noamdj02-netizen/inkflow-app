@@ -21,6 +21,7 @@ export const DashboardSettings: React.FC = () => {
     nom_studio: '',
     slug_profil: '',
     bio_instagram: '',
+    pre_tattoo_instructions: '',
     theme_color: 'amber',
     deposit_percentage: 30,
     avatarFile: null as File | null,
@@ -36,6 +37,7 @@ export const DashboardSettings: React.FC = () => {
         nom_studio: profile.nom_studio || '',
         slug_profil: profile.slug_profil || '',
         bio_instagram: profile.bio_instagram || '',
+        pre_tattoo_instructions: profile.pre_tattoo_instructions || '',
         theme_color: profile.theme_color || profile.accent_color || 'amber',
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
@@ -214,6 +216,7 @@ export const DashboardSettings: React.FC = () => {
         nom_studio: formData.nom_studio,
         slug_profil: normalizedSlug,
         bio_instagram: formData.bio_instagram,
+        pre_tattoo_instructions: formData.pre_tattoo_instructions || null,
         theme_color: formData.theme_color,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
@@ -437,6 +440,23 @@ export const DashboardSettings: React.FC = () => {
                 />
                 <p className="text-xs text-zinc-600 mt-1">
                   {formData.bio_instagram.length}/150 caractères
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Consignes avant tatouage (email J-2)
+                </label>
+                <textarea
+                  rows={4}
+                  value={formData.pre_tattoo_instructions}
+                  onChange={(e) => setFormData({ ...formData, pre_tattoo_instructions: e.target.value })}
+                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                  placeholder={"Ex:\n- Pas d'alcool 24h avant\n- Bien manger avant le RDV\n- Hydratez votre peau\n- Dormez bien la veille"}
+                  maxLength={800}
+                />
+                <p className="text-xs text-zinc-600 mt-1">
+                  {formData.pre_tattoo_instructions.length}/800 caractères — ces consignes seront incluses dans le mail automatique envoyé 48h avant le RDV.
                 </p>
               </div>
 

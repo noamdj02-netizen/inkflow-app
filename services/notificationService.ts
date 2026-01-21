@@ -69,7 +69,7 @@ const sendSMS = async (options: NotificationOptions) => {
 };
 
 /**
- * Envoyer un rappel de rendez-vous (24h avant)
+ * Envoyer un rappel de rendez-vous (48h avant)
  */
 export const sendBookingReminder = async (bookingId: string) => {
   try {

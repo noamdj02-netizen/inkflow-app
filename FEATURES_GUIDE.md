@@ -98,7 +98,7 @@
 
 **Fonctionnalités** :
 - ✅ Envoi d'emails de confirmation de réservation
-- ✅ Envoi de rappels 24h avant le rendez-vous
+- ✅ Envoi de rappels 48h avant le rendez-vous (cron)
 - ✅ Support SMS (si numéro disponible)
 - ✅ Mise à jour automatique du statut de rappel
 
@@ -106,21 +106,26 @@
 
 #### Option A : Supabase Edge Functions (Recommandé)
 
-1. **Créer les Edge Functions** :
-   ```bash
-   supabase functions new send-email
-   supabase functions new send-sms
-   ```
+1. **Edge Functions disponibles** :
+   - `supabase/functions/send-email` (Resend)
+   - `supabase/functions/send-appointment-reminders` (cron J-2)
 
 2. **Configurer Resend pour les emails** :
    - Créer un compte sur https://resend.com
    - Récupérer la clé API
-   - Configurer dans les Edge Functions
+   - Secrets à ajouter dans Supabase (Edge Functions → Secrets) :
+     - `RESEND_API_KEY`
+     - `RESEND_FROM_EMAIL` (ex: `InkFlow <notifications@inkflow.app>`)
+     - `SUPABASE_SERVICE_ROLE_KEY` (pour accéder à la BDD en mode service dans les functions)
 
 3. **Configurer Twilio pour les SMS** :
    - Créer un compte sur https://twilio.com
    - Récupérer les credentials
    - Configurer dans les Edge Functions
+
+4. **Planifier le rappel J-2 (48h)** :
+   - Dans Supabase Dashboard → **Edge Functions** → **Schedules**
+   - Créer un schedule sur `send-appointment-reminders` (ex: toutes les heures)
 
 #### Option B : Services Externes Directs
 
@@ -129,7 +134,7 @@ Pour la production, configurez les Edge Functions ou utilisez directement les AP
 
 **Fonctions disponibles** :
 - `sendBookingConfirmation(bookingId)` - Confirmation de réservation
-- `sendBookingReminder(bookingId)` - Rappel 24h avant
+- `sendBookingReminder(bookingId)` - Rappel (logique côté client, mais en prod on privilégie le cron `send-appointment-reminders`)
 
 ## 🔧 Configuration Complète
 

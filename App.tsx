@@ -17,6 +17,8 @@ const FlashGallery = lazy(() => import('./components/FlashGallery').then(m => ({
 const CustomProjectForm = lazy(() => import('./components/CustomProjectForm').then(m => ({ default: m.CustomProjectForm })));
 const PaymentSuccess = lazy(() => import('./components/PaymentSuccess').then(m => ({ default: m.PaymentSuccess })));
 const PaymentCancel = lazy(() => import('./components/PaymentCancel').then(m => ({ default: m.PaymentCancel })));
+const AuthCallbackPage = lazy(() => import('./components/auth/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
+const UpdatePasswordPage = lazy(() => import('./components/auth/UpdatePasswordPage').then(m => ({ default: m.UpdatePasswordPage })));
 
 // Dashboard components (les plus lourds)
 const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout').then(m => ({ default: m.DashboardLayout })));
@@ -51,6 +53,8 @@ const App: React.FC = () => {
                   <Route path="/" element={<LandingPage onNavigate={() => {}} />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/auth/callback" element={<AuthCallbackPage />} />
+                  <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
                   
                   {/* Public Artist Page (Vitrine) - Lazy loaded */}
                   <Route path="/p/:slug" element={<PublicArtistPage />} />

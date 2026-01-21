@@ -25,6 +25,7 @@ export interface Database {
           theme_color: 'amber' | 'red' | 'blue' | 'emerald' | 'violet' | null
           avatar_url: string | null
           bio_instagram: string | null
+          pre_tattoo_instructions: string | null
           created_at: string
           updated_at: string
         }
@@ -40,6 +41,7 @@ export interface Database {
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
           avatar_url?: string | null
           bio_instagram?: string | null
+          pre_tattoo_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -55,6 +57,7 @@ export interface Database {
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
           avatar_url?: string | null
           bio_instagram?: string | null
+          pre_tattoo_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
