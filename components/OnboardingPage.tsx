@@ -296,7 +296,7 @@ export const OnboardingPage: React.FC = () => {
               )}
             </motion.button>
           </div>
-        </form>
+        </motion.form>
       </div>
     </div>
   );
