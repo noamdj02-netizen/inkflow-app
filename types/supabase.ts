@@ -28,6 +28,7 @@ export interface Database {
           avatar_url: string | null
           bio_instagram: string | null
           pre_tattoo_instructions: string | null
+          user_plan: 'FREE' | 'STARTER' | 'PRO' | 'STUDIO' | null
           created_at: string
           updated_at: string
         }
@@ -64,6 +65,7 @@ export interface Database {
           avatar_url?: string | null
           bio_instagram?: string | null
           pre_tattoo_instructions?: string | null
+          user_plan?: 'FREE' | 'STARTER' | 'PRO' | 'STUDIO'
           created_at?: string
           updated_at?: string
         }

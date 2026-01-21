@@ -48,7 +48,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-sans relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 -right-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -83,7 +83,7 @@ export const RegisterPage: React.FC = () => {
               INK<span className="text-zinc-500">FLOW</span>
             </span>
           </div>
-          <h1 className="text-2xl font-display font-bold text-white mb-2">Créer un compte</h1>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Créer un compte</h1>
           <p className="text-zinc-500">Rejoignez la communauté InkFlow</p>
         </motion.div>
 
@@ -141,7 +141,7 @@ export const RegisterPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                   placeholder="votre@email.com"
                 />
               </div>
@@ -159,7 +159,7 @@ export const RegisterPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                   placeholder="Minimum 6 caractères"
                 />
               </div>
@@ -187,7 +187,7 @@ export const RegisterPage: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                   placeholder="Répétez le mot de passe"
                 />
               </div>
@@ -208,7 +208,7 @@ export const RegisterPage: React.FC = () => {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-bold py-4 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

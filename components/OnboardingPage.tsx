@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PenTool, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useArtistProfile } from '../contexts/ArtistProfileContext';
 import { supabase } from '../services/supabase';
@@ -152,12 +153,17 @@ export const OnboardingPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+        </div>
+        <div className="text-center relative z-10">
           <p className="text-slate-400 mb-4">Vous devez être connecté</p>
           <button
             onClick={() => navigate('/login')}
-            className="bg-amber-400 text-black px-6 py-2 rounded-lg font-bold"
+            className="bg-gradient-to-r from-amber-400 to-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:from-amber-500 hover:to-amber-700 transition-all shadow-lg shadow-amber-400/20"
           >
             Se connecter
           </button>
@@ -167,21 +173,38 @@ export const OnboardingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-center mb-8"
+        >
           <div className="inline-flex items-center gap-2 mb-4">
-            <span className="text-3xl font-black tracking-tighter text-white">
+            <span className="text-4xl font-display font-bold tracking-tight text-white">
               INK<span className="text-amber-400">FLOW</span>
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Créer votre profil</h1>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Créer votre profil</h1>
           <p className="text-slate-400">Configurez votre identité sur InkFlow</p>
-        </div>
+        </motion.div>
 
         {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8 backdrop-blur-sm">
+        <motion.form
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          onSubmit={handleSubmit}
+          className="glass rounded-2xl p-8 border border-white/10 backdrop-blur-md"
+        >
           {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
               <AlertCircle className="text-red-400 shrink-0" size={20} />
@@ -200,7 +223,7 @@ export const OnboardingPage: React.FC = () => {
                 value={nomStudio}
                 onChange={(e) => setNomStudio(e.target.value)}
                 required
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-400 transition-colors"
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                 placeholder="Ex: Zonett Ink"
               />
             </div>
@@ -218,7 +241,7 @@ export const OnboardingPage: React.FC = () => {
                     setSlug(normalizeSlug(e.target.value, '-'));
                   }}
                   required
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-4 pr-10 py-3 text-white focus:outline-none focus:border-amber-400 transition-colors font-mono"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-4 pr-10 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all font-mono"
                   placeholder="zonett-ink"
                 />
                 {checkingSlug && (
@@ -256,13 +279,22 @@ export const OnboardingPage: React.FC = () => {
             </div>
 
             {/* Submit */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading || !slugAvailable || checkingSlug}
-              className="w-full bg-amber-400 text-black font-bold py-3 rounded-lg hover:bg-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
+              className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-bold py-4 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
             >
-              {loading ? 'Création du profil...' : 'Créer mon profil'}
-            </button>
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin" size={18} />
+                  Création du profil...
+                </span>
+              ) : (
+                'Créer mon profil'
+              )}
+            </motion.button>
           </div>
         </form>
       </div>

@@ -40,8 +40,13 @@ export const PaymentSuccess: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+        </div>
+        <div className="text-center relative z-10">
           <Loader2 className="animate-spin text-amber-400 mx-auto mb-4" size={48} />
           <p className="text-slate-400">Vérification du paiement...</p>
         </div>
@@ -51,16 +56,21 @@ export const PaymentSuccess: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-red-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+        </div>
+        <div className="text-center max-w-md relative z-10">
           <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="text-red-400" size={40} />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Erreur</h1>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Erreur</h1>
           <p className="text-slate-400 mb-6">{error}</p>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 bg-amber-400 text-black px-6 py-3 rounded-xl font-bold hover:bg-amber-300 transition-colors"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:from-amber-500 hover:to-amber-700 transition-all shadow-lg shadow-amber-400/20"
           >
             <ArrowLeft size={18} /> Retour à l'accueil
           </Link>
@@ -70,11 +80,17 @@ export const PaymentSuccess: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+      </div>
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="text-center max-w-md"
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-md relative z-10"
       >
         <motion.div
           initial={{ scale: 0 }}
@@ -85,7 +101,7 @@ export const PaymentSuccess: React.FC = () => {
           <CheckCircle className="text-green-400" size={48} />
         </motion.div>
         
-        <h1 className="text-3xl font-bold text-white mb-4">Paiement réussi !</h1>
+        <h1 className="text-3xl font-serif font-bold text-white mb-4">Paiement réussi !</h1>
         <p className="text-lg text-slate-400 mb-8">
           Votre réservation a été confirmée. Un email de confirmation vous a été envoyé avec tous les détails.
         </p>
@@ -93,7 +109,7 @@ export const PaymentSuccess: React.FC = () => {
         <div className="space-y-4">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 bg-amber-400 text-black px-6 py-3 rounded-xl font-bold hover:bg-amber-300 transition-colors"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:from-amber-500 hover:to-amber-700 transition-all shadow-lg shadow-amber-400/20"
           >
             Retour à l'accueil
           </Link>
