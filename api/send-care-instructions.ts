@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-
-type Body = {
-  project_id: string;
-  care_template_id?: string | null;
-  custom_care_instructions?: string | null;
-};
+import { careInstructionsSchema, escapeHtml, sanitizeText } from '../utils/validation';
 
 function json(res: any, status: number, body: unknown) {
   res.status(status).setHeader('Content-Type', 'application/json');
@@ -16,18 +11,9 @@ function requireEnv(name: string) {
   return v && v.trim() ? v.trim() : null;
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
 function textToHtml(text: string) {
   // Preserve line breaks safely
-  return escapeHtml(text).replaceAll('\n', '<br/>');
+  return escapeHtml(text).replace(/\n/g, '<br/>');
 }
 
 async function sendResendEmail(args: { to: string; subject: string; html: string; text: string; reply_to?: string }) {
@@ -78,8 +64,17 @@ export default async function handler(req: any, res: any) {
   const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : null;
   if (!token) return json(res, 401, { success: false, error: 'Missing Authorization token' });
 
-  const body = (req.body || {}) as Body;
-  if (!body.project_id) return json(res, 400, { success: false, error: 'Missing project_id' });
+  // Validate input with Zod (strict mode)
+  const bodyParseResult = careInstructionsSchema.safeParse(req.body);
+  if (!bodyParseResult.success) {
+    const firstError = bodyParseResult.error.errors[0];
+    return json(res, 400, {
+      success: false,
+      error: firstError?.message || 'Validation failed',
+      details: process.env.NODE_ENV === 'development' ? bodyParseResult.error.errors : undefined,
+    });
+  }
+  const body = bodyParseResult.data;
 
   // Validate the caller using anon client + JWT
   const authClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });

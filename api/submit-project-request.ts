@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, getClientIP } from '../utils/rateLimit';
 
 type SubmitProjectBody = {
   artist_id: string;
@@ -19,8 +20,17 @@ type SubmitProjectBody = {
   ai_technical_notes?: string | null;
 };
 
-function json(res: any, status: number, body: unknown) {
-  res.status(status).setHeader('Content-Type', 'application/json');
+function json(res: any, status: number, body: unknown, headers?: Record<string, string>) {
+  res.status(status);
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Add custom headers if provided
+  if (headers) {
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+  }
+  
   res.end(JSON.stringify(body));
 }
 
@@ -60,42 +70,77 @@ async function sendResendEmail(args: { to: string; subject: string; html: string
   return data;
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+// escapeHtml and sanitizeText are now imported from utils/validation
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return json(res, 405, { success: false, error: 'Method not allowed' });
 
+  // Step 1: Rate Limiting (Anti-Spam)
+  // Limit: 3 requests per IP per hour
+  const clientIP = getClientIP(req);
+  const rateLimitResult = rateLimit(clientIP, 3, 60 * 60 * 1000); // 3 requests per hour
+  
+  if (!rateLimitResult.allowed) {
+    const resetSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+    return json(
+      res,
+      429,
+      {
+        success: false,
+        error: 'Too many requests. Please try again later.',
+        retryAfter: resetSeconds,
+      },
+      {
+        'X-RateLimit-Limit': '3',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
+        'Retry-After': resetSeconds.toString(),
+      }
+    );
+  }
+
+  // Add rate limit headers to successful responses
+  const rateLimitHeaders = {
+    'X-RateLimit-Limit': '3',
+    'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+    'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
+  };
+
   const supabaseUrl = requireEnv('SUPABASE_URL') || requireEnv('VITE_SUPABASE_URL');
   const serviceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) {
-    return json(res, 500, {
-      success: false,
-      error: 'Missing server env vars (SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY)',
-    });
+    return json(
+      res,
+      500,
+      {
+        success: false,
+        error: 'Missing server env vars (SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY)',
+      },
+      rateLimitHeaders
+    );
   }
 
-  const body = (req.body || {}) as SubmitProjectBody;
-  const required = ['artist_id', 'client_email', 'client_name', 'body_part', 'style', 'description'] as const;
-  for (const k of required) {
-    if (!body[k] || String(body[k]).trim().length === 0) {
-      return json(res, 400, { success: false, error: `Missing ${k}` });
-    }
+  // Step 2: Validate and sanitize input with Zod (prevents injection attacks)
+  const validationResult = validateProjectSubmission(req.body);
+  
+  if (!validationResult.success) {
+    console.error('Validation failed:', validationResult.error, validationResult.details);
+    return json(
+      res,
+      400,
+      {
+        success: false,
+        error: validationResult.error || 'Validation failed',
+        details: process.env.NODE_ENV === 'development' ? validationResult.details : undefined,
+      },
+      rateLimitHeaders
+    );
   }
 
-  const clientEmail = String(body.client_email).trim().toLowerCase();
-  const clientName = String(body.client_name).trim();
-  const description = String(body.description).trim();
-
-  if (clientName.length < 2) return json(res, 400, { success: false, error: 'Client name too short' });
-  if (description.length < 10) return json(res, 400, { success: false, error: 'Description too short' });
-  if (description.length > 4000) return json(res, 400, { success: false, error: 'Description too long' });
+  const body = validationResult.data!; // Safe to use after validation
+  const clientEmail = body.client_email; // Already lowercased and trimmed by Zod
+  const clientName = body.client_name; // Already trimmed by Zod
+  const description = body.description; // Already trimmed by Zod
 
   const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
@@ -149,12 +194,13 @@ export default async function handler(req: any, res: any) {
   if (projectError || !project) return json(res, 500, { success: false, error: 'Failed to create project' });
 
   // 4) Email notify (non-blocking)
+  // All user input is sanitized with escapeHtml() to prevent HTML injection/XSS
   try {
     const subject = `New project request from ${clientName}`;
     const safeStudio = escapeHtml(artist.nom_studio || 'InkFlow');
     const safeClient = escapeHtml(clientName);
     const safeEmail = escapeHtml(clientEmail);
-    const safeDesc = escapeHtml(description);
+    const safeDesc = escapeHtml(description); // Prevents HTML injection in emails
 
     const html = `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.5">
@@ -173,13 +219,14 @@ export default async function handler(req: any, res: any) {
       </div>
     `.trim();
 
+    // Plain text version (sanitized)
     const text = [
       `New project request`,
-      `Studio: ${artist.nom_studio || 'InkFlow'}`,
-      `From: ${clientName} (${clientEmail})`,
+      `Studio: ${sanitizeText(artist.nom_studio || 'InkFlow')}`,
+      `From: ${sanitizeText(clientName)} (${clientEmail})`,
       '',
       `Description:`,
-      description,
+      sanitizeText(description),
       '',
       `Project ID: ${project.id}`,
     ].join('\n');
@@ -189,6 +236,11 @@ export default async function handler(req: any, res: any) {
     // ignore email failures
   }
 
-  return json(res, 200, { success: true, project_id: project.id });
+  return json(
+    res,
+    200,
+    { success: true, project_id: project.id },
+    rateLimitHeaders
+  );
 }
 

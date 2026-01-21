@@ -10,15 +10,42 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 
+// Validate webhook secret is configured
+if (!stripeWebhookSecret) {
+  console.error('STRIPE_WEBHOOK_SECRET is not configured');
+}
+
 serve(async (req) => {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
   const signature = req.headers.get('stripe-signature');
 
+  // Step 1: Verify signature is present
   if (!signature) {
-    return new Response('No signature', { status: 400 });
+    console.error('Missing stripe-signature header');
+    return new Response('No signature provided', { status: 400 });
+  }
+
+  // Step 2: Verify webhook secret is configured
+  if (!stripeWebhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured');
+    return new Response('Webhook secret not configured', { status: 500 });
   }
 
   try {
+    // Step 3: Get raw body (must be raw string, not parsed JSON)
     const body = await req.text();
+    
+    if (!body || body.length === 0) {
+      console.error('Empty request body');
+      return new Response('Empty body', { status: 400 });
+    }
+
+    // Step 4: Verify Stripe signature using webhook secret
+    // This will throw an error if signature is invalid
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
@@ -51,11 +78,25 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ received: true }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Webhook error:', error);
-    return new Response(`Webhook Error: ${error.message}`, { status: 400 });
+    // Handle signature verification errors specifically
+    if (error.type === 'StripeSignatureVerificationError') {
+      console.error('Stripe signature verification failed:', error.message);
+      return new Response('Invalid signature', { status: 401 });
+    }
+    
+    // Handle other errors
+    console.error('Webhook processing error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Webhook processing failed', message: error.message }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
 
