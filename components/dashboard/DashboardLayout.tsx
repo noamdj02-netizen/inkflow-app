@@ -8,13 +8,14 @@ import {
   Search, Bell, MoreVertical, CheckCircle, XCircle, 
   Megaphone, Clock, MapPin, ChevronRight, FileText,
   AlertTriangle, ArrowUpRight, Instagram, Plus,
-  Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut, Loader2,
+  Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut,
   Menu, X, Share2, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
+import { Skeleton } from '../common/Skeleton';
 
 // Mock Data for Revenue Sparkline
 const REVENUE_DATA = [
@@ -309,9 +310,17 @@ export const DashboardLayout: React.FC = () => {
             </div>
             <div className="space-y-3">
               {dataLoading ? (
-                <div className="text-center py-4">
-                  <Loader2 className="animate-spin text-zinc-500 mx-auto" size={20} />
-                </div>
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-start gap-3 p-3 rounded-xl glass">
+                      <Skeleton className="mt-0.5 w-4 h-4 rounded" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                    </div>
+                  ))}
+                </>
               ) : pendingProjects.length === 0 ? (
                 <div className="text-center py-4 text-zinc-600 text-sm">
                   Aucun projet en attente

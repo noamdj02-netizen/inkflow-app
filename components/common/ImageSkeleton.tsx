@@ -6,6 +6,7 @@ interface ImageSkeletonProps {
   alt: string;
   className?: string;
   aspectRatio?: string;
+  fallbackSrc?: string;
   onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   onLoad?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
@@ -15,11 +16,13 @@ export const ImageSkeleton: React.FC<ImageSkeletonProps> = ({
   alt,
   className = '',
   aspectRatio = 'aspect-square',
+  fallbackSrc,
   onError,
   onLoad,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [didFallback, setDidFallback] = useState(false);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     setIsLoading(false);
@@ -30,6 +33,15 @@ export const ImageSkeleton: React.FC<ImageSkeletonProps> = ({
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     setIsLoading(false);
+    if (fallbackSrc && !didFallback) {
+      setDidFallback(true);
+      (e.target as HTMLImageElement).src = fallbackSrc;
+      if (onError) {
+        onError(e);
+      }
+      return;
+    }
+
     setHasError(true);
     if (onError) {
       onError(e);

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon, X, Sparkles } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon, X, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
 import { InvoiceButton } from './InvoiceButton';
+import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '../common/EmptyState';
+import { Skeleton } from '../common/Skeleton';
+import { ImageSkeleton } from '../common/ImageSkeleton';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
   flashs?: {
@@ -26,6 +30,7 @@ const fadeInUp = {
 export const DashboardRequests: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useArtistProfile();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +102,85 @@ export const DashboardRequests: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShareLink = async () => {
+    if (!profile?.slug_profil || typeof window === 'undefined') {
+      setToast({ message: 'Ajoutez un slug de profil pour pouvoir partager votre lien.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    const url = `${window.location.origin}/p/${profile.slug_profil}`;
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: `${profile.nom_studio || 'Mon studio'} - InkFlow`,
+          text: `Découvrez mes flashs disponibles et réservez votre créneau.`,
+          url,
+        });
+        setToast({ message: 'Lien partagé.', type: 'success' });
+        setTimeout(() => setToast(null), 2500);
+        return;
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setToast({ message: 'Lien copié !', type: 'success' });
+        setTimeout(() => setToast(null), 2500);
+        return;
+      }
+
+      setToast({ message: 'Impossible de partager automatiquement sur cet appareil.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast({ message: 'Erreur lors du partage.', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const RequestsSkeleton: React.FC<{ showImage?: boolean }> = ({ showImage = true }) => {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="glass rounded-2xl p-4 md:p-5">
+            <div className="flex flex-col md:flex-row gap-4">
+              {showImage && (
+                <Skeleton className="w-full md:w-20 h-28 md:h-20 rounded-xl" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-4 w-2/3" />
+                    <div className="flex flex-wrap gap-3">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+
+                <div className="flex items-center gap-3 mb-3">
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+
+                <div className="flex items-center gap-4 mb-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-white/5">
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 flex-1" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const handleBookingStatusUpdate = async (bookingId: string, newStatus: 'confirmed' | 'rejected') => {
@@ -305,14 +389,7 @@ export const DashboardRequests: React.FC = () => {
         {/* Content Area */}
         <div className="p-4 md:p-6">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <Sparkles className="text-white" size={28} />
-              </motion.div>
-            </div>
+            <RequestsSkeleton showImage={activeTab === 'bookings'} />
           ) : (
             <AnimatePresence mode="wait">
               {activeTab === 'bookings' ? (
@@ -325,26 +402,22 @@ export const DashboardRequests: React.FC = () => {
                   className="space-y-3"
                 >
                   {bookings.length === 0 ? (
-                    <motion.div 
-                      variants={fadeInUp}
-                      className="text-center py-16 glass rounded-2xl"
-                    >
+                    <motion.div variants={fadeInUp}>
                       {viewMode === 'pending' ? (
-                        <>
-                          <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle className="text-emerald-400" size={28} />
-                          </div>
-                          <p className="text-lg font-display font-bold text-white mb-2">Tout est à jour !</p>
-                          <p className="text-zinc-500 text-sm">Aucune demande en attente</p>
-                        </>
+                        <EmptyState
+                          icon={CheckCircle}
+                          title="Tout est à jour !"
+                          description="Aucune réservation flash en attente. Créez des flashs et partagez votre lien pour recevoir plus de demandes."
+                          primaryAction={{ label: 'Créer un flash', onClick: () => navigate('/dashboard/flashs') }}
+                          secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
+                        />
                       ) : (
-                        <>
-                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <Calendar className="text-zinc-600" size={28} />
-                          </div>
-                          <p className="text-lg font-display font-bold text-white mb-2">Aucun historique</p>
-                          <p className="text-zinc-500 text-sm">Aucune réservation dans l'historique</p>
-                        </>
+                        <EmptyState
+                          icon={Calendar}
+                          title="Aucun historique"
+                          description="Les réservations confirmées/refusées apparaîtront ici."
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                        />
                       )}
                     </motion.div>
                   ) : (
@@ -360,14 +433,12 @@ export const DashboardRequests: React.FC = () => {
                           {/* Image du flash */}
                           <div className="w-full md:w-20 h-28 md:h-20 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
                             {booking.flashs?.image_url ? (
-                              <img
+                              <ImageSkeleton
                                 src={booking.flashs.image_url}
                                 alt={`Tatouage ${booking.flashs.title}`}
-                                loading="lazy"
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%2318181b" width="400" height="400"/%3E%3C/svg%3E';
-                                }}
+                                className="w-full h-full"
+                                aspectRatio=""
+                                fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%2318181b' width='400' height='400'/%3E%3C/svg%3E"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-zinc-700">
@@ -470,26 +541,22 @@ export const DashboardRequests: React.FC = () => {
                   className="space-y-3"
                 >
                   {projects.length === 0 ? (
-                    <motion.div 
-                      variants={fadeInUp}
-                      className="text-center py-16 glass rounded-2xl"
-                    >
+                    <motion.div variants={fadeInUp}>
                       {viewMode === 'pending' ? (
-                        <>
-                          <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle className="text-emerald-400" size={28} />
-                          </div>
-                          <p className="text-lg font-display font-bold text-white mb-2">Tout est à jour !</p>
-                          <p className="text-zinc-500 text-sm">Aucune demande en attente</p>
-                        </>
+                        <EmptyState
+                          icon={MessageSquare}
+                          title="Aucune demande de projet perso"
+                          description="Les demandes personnalisées envoyées par vos clients apparaîtront ici."
+                          primaryAction={{ label: 'Optimiser mon profil', onClick: () => navigate('/dashboard/settings') }}
+                          secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
+                        />
                       ) : (
-                        <>
-                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare className="text-zinc-600" size={28} />
-                          </div>
-                          <p className="text-lg font-display font-bold text-white mb-2">Aucun historique</p>
-                          <p className="text-zinc-500 text-sm">Aucun projet dans l'historique</p>
-                        </>
+                        <EmptyState
+                          icon={MessageSquare}
+                          title="Aucun historique"
+                          description="Les projets approuvés/refusés apparaîtront ici."
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                        />
                       )}
                     </motion.div>
                   ) : (

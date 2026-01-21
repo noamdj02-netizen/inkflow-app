@@ -4,6 +4,9 @@ import { Plus, Edit2, Trash2, Upload, X, Loader2, AlertCircle, Image as ImageIco
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Database } from '../types/supabase';
+import { EmptyState } from './common/EmptyState';
+import { Skeleton } from './common/Skeleton';
+import { ImageSkeleton } from './common/ImageSkeleton';
 
 type Flash = Database['public']['Tables']['flashs']['Row'];
 type FlashInsert = Database['public']['Tables']['flashs']['Insert'];
@@ -221,8 +224,32 @@ export const FlashManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin text-white" size={32} />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-11 w-44" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="glass rounded-2xl overflow-hidden">
+              <Skeleton className="aspect-square w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-5 w-2/3" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 w-10" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -263,21 +290,19 @@ export const FlashManagement: React.FC = () => {
 
       {/* Flashs Grid */}
       {flashs.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12 glass rounded-2xl"
-        >
-          <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ImageIcon className="text-zinc-600" size={32} />
-          </div>
-          <p className="text-zinc-400 mb-4">Aucun flash pour le moment</p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-zinc-200"
-          >
-            Créer votre premier flash
-          </button>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <EmptyState
+            icon={ImageIcon}
+            title="Aucun flash pour le moment"
+            description="Ajoutez vos premiers designs pour commencer à recevoir des réservations."
+            primaryAction={{
+              label: 'Créer mon premier flash',
+              onClick: () => {
+                resetForm();
+                setIsModalOpen(true);
+              },
+            }}
+          />
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -290,14 +315,12 @@ export const FlashManagement: React.FC = () => {
               className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-colors group"
             >
               <div className="aspect-square relative overflow-hidden bg-[#050505]">
-                <img
+                <ImageSkeleton
                   src={flash.image_url}
                   alt={`Tatouage ${flash.title} - Design de flash`}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=Image+non+disponible';
-                  }}
+                  className="w-full h-full"
+                  aspectRatio="aspect-square"
+                  fallbackSrc="https://via.placeholder.com/400?text=Image+non+disponible"
                 />
                 <div className="absolute top-3 right-3">
                   <span
@@ -383,10 +406,11 @@ export const FlashManagement: React.FC = () => {
                     </label>
                     {formData.imageUrl && !formData.imageFile && (
                       <div className="mb-4 relative">
-                        <img
+                        <ImageSkeleton
                           src={formData.imageUrl}
                           alt="Aperçu du design de flash"
-                          className="w-full h-64 object-cover rounded-xl border border-white/10"
+                          className="w-full h-64 rounded-xl border border-white/10"
+                          aspectRatio=""
                         />
                         <button
                           type="button"

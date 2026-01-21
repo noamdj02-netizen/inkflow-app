@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { Skeleton } from '../common/Skeleton';
 
 interface Transaction {
   id: string;
@@ -156,8 +157,55 @@ export const DashboardFinance: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505]">
-        <Loader2 className="animate-spin text-white" size={32} />
+      <div className="flex-1 flex flex-col bg-[#050505] min-h-0">
+        <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-3 w-56 hidden md:block" />
+            </div>
+            <div className="flex items-center gap-2 md:gap-3">
+              <Skeleton className="h-[44px] w-40 rounded-xl flex-1 md:flex-none" />
+              <Skeleton className="h-[44px] w-32 rounded-xl flex-1 md:flex-none" />
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="glass rounded-xl md:rounded-2xl p-4 md:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <Skeleton className="h-4 w-12 hidden md:block" />
+                </div>
+                <Skeleton className="h-3 w-20 mb-2" />
+                <Skeleton className="h-7 w-28" />
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[#0a0a0a] rounded-xl md:rounded-2xl border border-white/5 overflow-hidden">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/5 flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-9 w-24 rounded-lg" />
+            </div>
+            <div className="p-4 md:p-6 space-y-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-white/5">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

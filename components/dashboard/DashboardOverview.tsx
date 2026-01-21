@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   DollarSign, Calendar, AlertCircle, Clock, TrendingUp, Plus, Share2, 
-  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User, X, Link, QrCode, Sparkles
+  ArrowRight, Loader2, CheckCircle, MessageSquare, Zap, User, X, Link, QrCode
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
+import { Skeleton } from '../common/Skeleton';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
   flashs?: {
@@ -285,14 +286,84 @@ export const DashboardOverview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto flex items-center justify-center bg-[#050505]">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        >
-          <Sparkles className="text-white" size={32} />
-        </motion.div>
-      </div>
+      <>
+        {/* Header (Desktop only) */}
+        <header className="hidden md:flex h-16 border-b border-white/5 bg-[#0a0a0a] items-center justify-between px-6 z-10 flex-shrink-0">
+          <Skeleton className="h-5 w-40" />
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-44" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </header>
+
+        {/* Content Skeleton */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+          {/* KPIs */}
+          <div className="grid grid-cols-3 gap-3 md:gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="glass rounded-2xl p-4 md:p-6">
+                <Skeleton className="h-12 w-12 rounded-xl mb-4" />
+                <Skeleton className="h-3 w-20 mb-2" />
+                <Skeleton className="h-7 w-24" />
+              </div>
+            ))}
+          </div>
+
+          {/* Actions Rapides (Mobile) */}
+          <div className="md:hidden">
+            <div className="flex gap-3 justify-center">
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+            </div>
+          </div>
+
+          {/* Ma Journée */}
+          <div className="glass rounded-2xl p-5 md:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+              <div className="flex items-start gap-4">
+                <Skeleton className="w-12 h-12 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-56" />
+                  <div className="flex items-center gap-4 pt-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Graphique et Activité */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-1 glass rounded-2xl p-5 md:p-6">
+              <Skeleton className="h-3 w-32 mb-5" />
+              <Skeleton className="h-[180px] w-full rounded-xl" />
+            </div>
+            <div className="lg:col-span-2 glass rounded-2xl p-5 md:p-6">
+              <Skeleton className="h-3 w-36 mb-5" />
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-4 p-3 rounded-xl bg-white/5">
+                    <Skeleton className="w-9 h-9 rounded-lg" />
+                    <div className="flex-1 min-w-0">
+                      <Skeleton className="h-4 w-2/3 mb-2" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <Skeleton className="h-3 w-10" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
     );
   }
 

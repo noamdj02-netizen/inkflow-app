@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Database } from '../../types/supabase';
+import { Skeleton } from '../common/Skeleton';
+import { ImageSkeleton } from '../common/ImageSkeleton';
 
 type BookingRow = Database['public']['Tables']['bookings']['Row'];
 type Booking = BookingRow & {
@@ -95,11 +97,12 @@ const EventModal: React.FC<EventModalProps> = ({ event, isOpen, onClose, onStatu
           <div className="mb-6">
             <div className="flex items-start gap-4 mb-4">
               {event.type === 'flash' && booking.flashs?.image_url && (
-                <img
+                <ImageSkeleton
                   src={booking.flashs.image_url}
                   alt={booking.flashs.title}
-                  loading="lazy"
-                  className="w-20 h-20 rounded-xl object-cover border border-white/10"
+                  className="w-20 h-20 rounded-xl border border-white/10"
+                  aspectRatio=""
+                  fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%2318181b' width='400' height='400'/%3E%3C/svg%3E"
                 />
               )}
               <div className="flex-1">
@@ -419,9 +422,55 @@ export const DashboardCalendar: React.FC = () => {
       {/* Calendar Grid */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 relative pb-20 md:pb-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin text-white" size={32} />
-          </div>
+          isMobile ? (
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="glass rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Skeleton className="h-3 w-16 ml-auto" />
+                      <Skeleton className="h-4 w-20 ml-auto" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 min-w-[800px] overflow-hidden">
+              <div className="grid grid-cols-8 border-b border-white/5 bg-[#0a0a0a]">
+                <div className="p-4 border-r border-white/5">
+                  <Skeleton className="h-3 w-12 mx-auto" />
+                </div>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className={`p-4 text-center border-r border-white/5 ${i === 6 ? 'border-r-0' : ''}`}>
+                    <Skeleton className="h-3 w-10 mx-auto mb-2" />
+                    <Skeleton className="h-8 w-8 rounded-full mx-auto" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-0">
+                {Array.from({ length: 6 }).map((_, row) => (
+                  <div key={row} className="grid grid-cols-8 border-b border-white/5 h-24">
+                    <div className="border-r border-white/5 p-2">
+                      <Skeleton className="h-3 w-10 ml-auto mt-2" />
+                    </div>
+                    {Array.from({ length: 7 }).map((_, col) => (
+                      <div
+                        key={col}
+                        className={`border-r border-white/5 ${col === 6 ? 'border-r-0' : ''} relative`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         ) : isMobile ? (
           /* Mobile List View */
           <div className="space-y-3">
