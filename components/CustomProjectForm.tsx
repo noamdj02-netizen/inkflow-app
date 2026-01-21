@@ -161,8 +161,18 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
       setAnalysis(null);
     } catch (err) {
       console.error('Error submitting project:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
-      setSubmitError(`Erreur lors de l'envoi: ${errorMessage}`);
+      const rawMessage = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
+      const isEdgeFnSendFailure = rawMessage.includes('Failed to send a request to the Edge Function');
+
+      const help = isEdgeFnSendFailure
+        ? [
+            "Impossible de contacter le serveur de traitement.",
+            "Vérifiez que l'Edge Function `submit-project-request` est bien déployée dans Supabase (Edge Functions) et accessible depuis ce projet.",
+            "En local: lancez `supabase start` puis `supabase functions serve submit-project-request`.",
+          ].join(' ')
+        : rawMessage;
+
+      setSubmitError(`Erreur lors de l'envoi: ${help}`);
     } finally {
       setIsLoading(false);
     }
