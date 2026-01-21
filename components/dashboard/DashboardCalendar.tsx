@@ -271,10 +271,19 @@ export const DashboardCalendar: React.FC = () => {
     try {
       setLoading(true);
 
+      // Optimisé: sélectionner uniquement les champs nécessaires pour le calendrier
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          *,
+          id,
+          client_name,
+          client_email,
+          date_debut,
+          date_fin,
+          duree_minutes,
+          prix_total,
+          flash_id,
+          project_id,
           flashs (
             title,
             image_url,

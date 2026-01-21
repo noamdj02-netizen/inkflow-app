@@ -42,15 +42,41 @@ export const AuthCallbackPage: React.FC = () => {
         if (sessionError) throw sessionError;
 
         if (!data.session) {
-          throw new Error(
-            "Session introuvable. Le lien a peut-être expiré. Veuillez recommencer la procédure de réinitialisation."
-          );
+          // Si c'est un callback OAuth (pas de code dans l'URL), on redirige vers le dashboard
+          // Si c'est un callback password reset (avec code), on redirige vers update-password
+          if (code) {
+            throw new Error(
+              "Session introuvable. Le lien a peut-être expiré. Veuillez recommencer la procédure de réinitialisation."
+            );
+          } else {
+            // OAuth callback - rediriger vers dashboard
+            if (cancelled) return;
+            setStatus('success');
+            setMessage('Connexion réussie. Redirection…');
+            setTimeout(() => {
+              navigate('/dashboard', { replace: true });
+            }, 1000);
+            return;
+          }
         }
 
         if (cancelled) return;
         setStatus('success');
-        setMessage('Session validée. Redirection…');
-        navigate('/auth/update-password', { replace: true });
+        
+        // Déterminer la redirection selon le type d'authentification
+        // Si l'utilisateur vient d'un OAuth, aller au dashboard
+        // Si c'est un password reset, aller à update-password
+        const isPasswordReset = code && location.pathname.includes('update-password');
+        
+        if (isPasswordReset) {
+          setMessage('Session validée. Redirection…');
+          navigate('/auth/update-password', { replace: true });
+        } else {
+          setMessage('Connexion réussie. Redirection…');
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 1000);
+        }
       } catch (e: any) {
         if (cancelled) return;
         setStatus('error');
@@ -74,7 +100,9 @@ export const AuthCallbackPage: React.FC = () => {
           {status === 'success' && <CheckCircle className="text-brand-mint mx-auto mb-4" size={44} />}
           {status === 'error' && <AlertCircle className="text-brand-pink mx-auto mb-4" size={44} />}
 
-          <h1 className="text-2xl font-display font-bold text-white mb-2">Réinitialisation</h1>
+          <h1 className="text-2xl font-display font-bold text-white mb-2">
+            {status === 'loading' ? 'Connexion' : status === 'success' ? 'Succès' : 'Erreur'}
+          </h1>
           <p className="text-zinc-400">{message}</p>
 
           {status === 'error' && (

@@ -661,6 +661,9 @@ export const PublicArtistPage: React.FC = () => {
                 src={`${artist.avatar_url}${artist.avatar_url.includes('?') ? '&' : '?'}v=${new Date().getTime()}`}
                 alt={`Avatar de ${artist.nom_studio} - Tatoueur professionnel`}
                 className="w-full h-full object-cover"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                   const parent = (e.target as HTMLImageElement).parentElement;
@@ -815,6 +818,9 @@ export const PublicArtistPage: React.FC = () => {
                               src={flash.image_url}
                               alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
                               className="object-cover w-full h-full transition-transform duration-500 group-active:scale-110"
+                              loading="lazy"
+                              decoding="async"
+                              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231e293b" width="400" height="400"/%3E%3Ctext fill="%23475569" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';
                               }}

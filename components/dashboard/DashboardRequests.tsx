@@ -72,10 +72,22 @@ export const DashboardRequests: React.FC = () => {
     try {
       setLoading(true);
 
+      // Optimisé: sélectionner uniquement les champs nécessaires (évite de charger tous les champs)
       let bookingsQuery = supabase
         .from('bookings')
         .select(`
-          *,
+          id,
+          client_name,
+          client_email,
+          date_debut,
+          date_fin,
+          prix_total,
+          deposit_amount,
+          statut_booking,
+          statut_paiement,
+          created_at,
+          flash_id,
+          project_id,
           flashs (
             title,
             image_url,
@@ -99,9 +111,28 @@ export const DashboardRequests: React.FC = () => {
         setBookings(bookingsData || []);
       }
 
+      // Optimisé: sélectionner uniquement les champs utilisés dans le composant
       let projectsQuery = supabase
         .from('projects')
-        .select('*')
+        .select(`
+          id,
+          client_name,
+          client_email,
+          body_part,
+          size_cm,
+          style,
+          description,
+          budget_max,
+          statut,
+          artist_quoted_price,
+          created_at,
+          updated_at,
+          is_cover_up,
+          is_first_tattoo,
+          care_template_id,
+          custom_care_instructions,
+          care_sent_at
+        `)
         .eq('artist_id', user.id);
 
       if (viewMode === 'pending') {

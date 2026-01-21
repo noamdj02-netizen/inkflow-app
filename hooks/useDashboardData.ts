@@ -27,32 +27,32 @@ export const useDashboardData = () => {
     try {
       setLoading(true);
 
-      // Récupérer les statistiques
+      // Récupérer les statistiques (optimisé: sélectionner uniquement les champs nécessaires)
       const [bookingsData, projectsData, flashsData, revenueData] = await Promise.all([
-        // Bookings à venir
+        // Bookings à venir (seulement les champs utilisés dans le composant)
         supabase
           .from('bookings')
-          .select('*')
+          .select('id,client_name,date_debut,date_fin,prix_total,statut_booking,statut_paiement,flash_id,project_id')
           .eq('artist_id', user.id)
           .gte('date_debut', new Date().toISOString())
           .order('date_debut', { ascending: true })
           .limit(10),
 
-        // Projets en attente
+        // Projets en attente (seulement les champs essentiels)
         supabase
           .from('projects')
-          .select('*')
+          .select('id,client_name,body_part,style,description,statut,created_at,budget_max')
           .eq('artist_id', user.id)
           .in('statut', ['inquiry', 'pending'])
           .order('created_at', { ascending: false }),
 
-        // Total flashs
+        // Total flashs (count only, pas besoin de données)
         supabase
           .from('flashs')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('artist_id', user.id),
 
-        // Revenus (depuis les transactions Stripe)
+        // Revenus (seulement amount)
         supabase
           .from('stripe_transactions')
           .select('amount')

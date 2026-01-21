@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
+// Recharts lazy loaded for code splitting
+const AreaChart = lazy(() => import('recharts').then(m => ({ default: m.AreaChart })));
+const Area = lazy(() => import('recharts').then(m => ({ default: m.Area })));
+const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
+const Tooltip = lazy(() => import('recharts').then(m => ({ default: m.Tooltip })));
 import { 
   Calendar, DollarSign, Users, MessageSquare, 
   FileSignature, PieChart, LayoutGrid, Settings, 
@@ -275,17 +279,19 @@ export const DashboardLayout: React.FC = () => {
                 </div>
               </div>
               <div className="h-16 -mx-5 -mb-5 opacity-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={REVENUE_DATA}>
-                    <defs>
-                      <linearGradient id="colorRevenueSmall" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="value" stroke="#ffffff" strokeWidth={1.5} fill="url(#colorRevenueSmall)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<div className="h-full w-full bg-white/5 rounded animate-pulse" />}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={REVENUE_DATA}>
+                      <defs>
+                        <linearGradient id="colorRevenueSmall" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="value" stroke="#ffffff" strokeWidth={1.5} fill="url(#colorRevenueSmall)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Suspense>
               </div>
               <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400"></div>

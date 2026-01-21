@@ -212,6 +212,57 @@ export const useAuth = () => {
   };
 
   // ============================================
+  // 🔐 Connexion OAuth (Google, Apple, etc.)
+  // ============================================
+  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    if (!isSupabaseConfigured()) {
+      return { 
+        data: null, 
+        error: { message: 'Supabase n\'est pas configuré. ' + getConfigErrors().join('. ') } as any 
+      };
+    }
+
+    try {
+      console.log(`🔐 useAuth: Tentative de connexion OAuth avec ${provider}...`);
+      
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      
+      if (error) {
+        console.error(`❌ useAuth: Erreur OAuth ${provider}:`, error.message);
+        return { data: null, error };
+      }
+      
+      console.log(`✅ useAuth: Redirection OAuth ${provider} initiée`);
+      // Note: Supabase redirige automatiquement vers le provider OAuth
+      // puis vers /auth/callback après authentification
+      return { data, error: null };
+    } catch (err) {
+      console.error(`🚨 useAuth: Erreur critique OAuth ${provider}:`, err);
+      const errorMessage = err instanceof Error ? err.message : `Erreur lors de la connexion avec ${provider}`;
+      
+      if (errorMessage.includes('Failed to fetch')) {
+        return { 
+          data: null, 
+          error: { message: 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.' } as any 
+        };
+      }
+      
+      return { data: null, error: { message: errorMessage } as any };
+    }
+  };
+
+  // ============================================
   // 🚪 Déconnexion
   // ============================================
   const signOut = async () => {
@@ -243,6 +294,7 @@ export const useAuth = () => {
     authError, // Nouvelle propriété pour afficher les erreurs
     signUp,
     signIn,
+    signInWithOAuth,
     signOut,
     isAuthenticated: !!user,
     isConfigured: isSupabaseConfigured(),
