@@ -23,6 +23,8 @@ export interface Database {
           deposit_percentage: number
           accent_color: string
           theme_color: 'amber' | 'red' | 'blue' | 'emerald' | 'violet' | null
+          theme_accent_hex: string | null
+          theme_secondary_hex: string | null
           avatar_url: string | null
           bio_instagram: string | null
           pre_tattoo_instructions: string | null
@@ -39,6 +41,8 @@ export interface Database {
           deposit_percentage?: number
           accent_color?: string
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
+          theme_accent_hex?: string | null
+          theme_secondary_hex?: string | null
           avatar_url?: string | null
           bio_instagram?: string | null
           pre_tattoo_instructions?: string | null
@@ -55,6 +59,8 @@ export interface Database {
           deposit_percentage?: number
           accent_color?: string
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
+          theme_accent_hex?: string | null
+          theme_secondary_hex?: string | null
           avatar_url?: string | null
           bio_instagram?: string | null
           pre_tattoo_instructions?: string | null
@@ -157,6 +163,9 @@ export interface Database {
           artist_quoted_price: number | null // En centimes
           artist_notes: string | null
           artist_response_at: string | null
+          care_template_id: string | null
+          custom_care_instructions: string | null
+          care_sent_at: string | null
           created_at: string
           updated_at: string
         }
@@ -184,6 +193,9 @@ export interface Database {
           artist_quoted_price?: number | null
           artist_notes?: string | null
           artist_response_at?: string | null
+          care_template_id?: string | null
+          custom_care_instructions?: string | null
+          care_sent_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -211,6 +223,35 @@ export interface Database {
           artist_quoted_price?: number | null
           artist_notes?: string | null
           artist_response_at?: string | null
+          care_template_id?: string | null
+          custom_care_instructions?: string | null
+          care_sent_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      care_templates: {
+        Row: {
+          id: string
+          artist_id: string
+          title: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          artist_id: string
+          title: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          artist_id?: string
+          title?: string
+          content?: string
           created_at?: string
           updated_at?: string
         }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon, X, Share2 } from 'lucide-react';
+import { toast as sonnerToast } from 'sonner';
+import { MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Euro, Calendar, User, Mail, Phone, Image as ImageIcon, X, Share2, FileText, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,6 +21,7 @@ type Booking = Database['public']['Tables']['bookings']['Row'] & {
 };
 
 type Project = Database['public']['Tables']['projects']['Row'];
+type CareTemplate = Database['public']['Tables']['care_templates']['Row'];
 
 // Animation variants
 const fadeInUp = {
@@ -33,17 +35,36 @@ export const DashboardRequests: React.FC = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [careTemplates, setCareTemplates] = useState<CareTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'bookings' | 'projects'>('bookings');
   const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending');
   const [updating, setUpdating] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [careTemplateId, setCareTemplateId] = useState<string | null>(null);
+  const [customCare, setCustomCare] = useState<string>('');
+  const [savingCare, setSavingCare] = useState(false);
+  const [sendingCare, setSendingCare] = useState(false);
+
   useEffect(() => {
     if (user) {
       fetchData();
     }
   }, [user, viewMode]);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('care_templates')
+        .select('*')
+        .eq('artist_id', user.id)
+        .order('updated_at', { ascending: false });
+      if (!error) setCareTemplates(data || []);
+    })();
+  }, [user?.id]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -138,6 +159,88 @@ export const DashboardRequests: React.FC = () => {
     } catch (err) {
       setToast({ message: 'Erreur lors du partage.', type: 'error' });
       setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const openProject = (project: Project) => {
+    setSelectedProject(project);
+    setCareTemplateId(project.care_template_id || null);
+    setCustomCare(project.custom_care_instructions || '');
+  };
+
+  const saveProjectCare = async () => {
+    if (!user || !selectedProject) return;
+    setSavingCare(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('projects')
+        .update({
+          care_template_id: careTemplateId,
+          custom_care_instructions: customCare.trim().length > 0 ? customCare.trim() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedProject.id)
+        .eq('artist_id', user.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      setProjects(prev => prev.map(p => (p.id === data.id ? data : p)));
+      setSelectedProject(data);
+      setToast({ message: 'Soins enregistrés', type: 'success' });
+      setTimeout(() => setToast(null), 2500);
+    } catch (e) {
+      setToast({ message: `Erreur: ${e instanceof Error ? e.message : 'Impossible d’enregistrer'}`, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setSavingCare(false);
+    }
+  };
+
+  const sendCareInstructions = async () => {
+    if (!selectedProject) return;
+    setSendingCare(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const res = await fetch('/api/send-care-instructions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          project_id: selectedProject.id,
+          care_template_id: careTemplateId,
+          custom_care_instructions: customCare.trim().length > 0 ? customCare.trim() : null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({} as any));
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || `Erreur serveur (HTTP ${res.status})`);
+      }
+
+      const care_sent_at = json.care_sent_at as string | undefined;
+      const updatedProject = {
+        ...selectedProject,
+        care_template_id: careTemplateId,
+        custom_care_instructions: customCare.trim().length > 0 ? customCare.trim() : null,
+        care_sent_at: care_sent_at || new Date().toISOString(),
+      } as Project;
+
+      setProjects(prev => prev.map(p => (p.id === updatedProject.id ? updatedProject : p)));
+      setSelectedProject(updatedProject);
+      setToast({ message: 'Email de soins envoyé', type: 'success' });
+      setTimeout(() => setToast(null), 2500);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue';
+      setToast({ message: `Erreur: ${msg}`, type: 'error' });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setSendingCare(false);
     }
   };
 
@@ -263,18 +366,19 @@ export const DashboardRequests: React.FC = () => {
     const badges = {
       booking: {
         pending: { icon: Clock, color: 'amber', text: 'En attente' },
-        confirmed: { icon: CheckCircle, color: 'emerald', text: 'Confirmé' },
+        confirmed: { icon: CheckCircle, color: 'emerald', text: 'Booked' },
         rejected: { icon: XCircle, color: 'red', text: 'Refusé' },
-        completed: { icon: CheckCircle, color: 'cyan', text: 'Terminé' },
+        completed: { icon: CheckCircle, color: 'zinc', text: 'Complété' },
         cancelled: { icon: XCircle, color: 'zinc', text: 'Annulé' },
         no_show: { icon: AlertCircle, color: 'red', text: 'No-show' },
         deposit_paid: { icon: CheckCircle, color: 'emerald', text: 'Acompte payé' },
       },
       project: {
-        pending: { icon: Clock, color: 'amber', text: 'En attente' },
+        inquiry: { icon: MessageSquare, color: 'blue', text: 'Inquiry' },
+        pending: { icon: MessageSquare, color: 'blue', text: 'Inquiry' },
         approved: { icon: CheckCircle, color: 'emerald', text: 'Approuvé' },
         rejected: { icon: XCircle, color: 'red', text: 'Refusé' },
-        quoted: { icon: AlertCircle, color: 'cyan', text: 'Devis envoyé' },
+        quoted: { icon: AlertCircle, color: 'violet', text: 'Devis' },
       },
     };
 
@@ -286,7 +390,8 @@ export const DashboardRequests: React.FC = () => {
       amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
       emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
       red: 'bg-red-500/10 text-red-400 border-red-500/20',
-      cyan: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+      blue: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+      violet: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
       zinc: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
     };
 
@@ -568,6 +673,7 @@ export const DashboardRequests: React.FC = () => {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         className="glass rounded-2xl p-4 md:p-5 hover:bg-white/10 transition-all cursor-pointer"
+                        onClick={() => openProject(project)}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
@@ -598,7 +704,7 @@ export const DashboardRequests: React.FC = () => {
                           <div className="flex gap-2 pt-3 border-t border-white/5">
                             <motion.button
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => handleProjectStatusUpdate(project.id, 'approved')}
+                              onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'approved'); }}
                               disabled={updating === project.id}
                               className="flex-1 bg-emerald-500/10 text-emerald-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
@@ -613,7 +719,7 @@ export const DashboardRequests: React.FC = () => {
                             </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => handleProjectStatusUpdate(project.id, 'quoted')}
+                              onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'quoted'); }}
                               disabled={updating === project.id}
                               className="flex-1 bg-cyan-500/10 text-cyan-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-cyan-500/20 transition-all border border-cyan-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
@@ -628,7 +734,7 @@ export const DashboardRequests: React.FC = () => {
                             </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => handleProjectStatusUpdate(project.id, 'rejected')}
+                              onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'rejected'); }}
                               disabled={updating === project.id}
                               className="flex-1 bg-red-500/10 text-red-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
@@ -652,6 +758,135 @@ export const DashboardRequests: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Project Details (with Post-Tattoo Care) */}
+      <AnimatePresence>
+        {selectedProject && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+              onClick={() => setSelectedProject(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.22 }}
+              className="fixed left-0 right-0 bottom-0 z-[61] md:left-1/2 md:bottom-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-2xl"
+            >
+              <div className="bg-[#0a0a0a]/95 border border-white/10 rounded-t-3xl md:rounded-3xl shadow-2xl p-5 md:p-6">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="min-w-0">
+                    <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">Project details</div>
+                    <div className="text-white font-semibold text-lg truncate">
+                      {selectedProject.body_part} • {selectedProject.style}
+                    </div>
+                    <div className="text-zinc-500 text-sm mt-1 truncate">
+                      {selectedProject.client_name || 'Client'} • {selectedProject.client_email}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedProject(null)}
+                    className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+                    aria-label="Close"
+                  >
+                    <X size={18} className="text-zinc-300" />
+                  </button>
+                </div>
+
+                <div className="glass rounded-2xl p-4 mb-4">
+                  <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Description</div>
+                  <div className="text-sm text-zinc-300 whitespace-pre-wrap">{selectedProject.description}</div>
+                </div>
+
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-brand-yellow" />
+                      <div className="text-white font-semibold">Post‑Tattoo Care</div>
+                    </div>
+                    {selectedProject.care_sent_at && (
+                      <div className="text-xs text-zinc-500">
+                        Envoyé le {new Date(selectedProject.care_sent_at).toLocaleDateString('fr-FR')}
+                      </div>
+                    )}
+                  </div>
+
+                  <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Template</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={careTemplateId || ''}
+                      onChange={(e) => setCareTemplateId(e.target.value || null)}
+                      className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-white/30"
+                    >
+                      <option value="">— Aucun —</option>
+                      {careTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.title}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const url = '/dashboard/settings/care-sheets';
+                        navigate(url);
+                        sonnerToast('Ouverture', { description: 'Gérez vos templates dans les paramètres.' });
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 text-sm"
+                      title="Gérer mes templates"
+                    >
+                      Gérer
+                    </button>
+                  </div>
+
+                  <label className="block text-xs text-zinc-500 uppercase tracking-wider mt-4 mb-2">
+                    Notes personnalisées (override)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={customCare}
+                    onChange={(e) => setCustomCare(e.target.value)}
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                    placeholder={"Optionnel. Si rempli, ce texte remplace le template.\nEx:\n- Laver 2x/jour\n- Pas de piscine 2 semaines"}
+                  />
+
+                  <div className="flex gap-2 pt-4">
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={saveProjectCare}
+                      disabled={savingCare}
+                      className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {savingCare ? 'Sauvegarde…' : 'Enregistrer'}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={sendCareInstructions}
+                      disabled={sendingCare}
+                      className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {sendingCare ? (
+                        <>
+                          <Loader2 className="animate-spin" size={16} />
+                          Envoi…
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          Envoyer
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Toast Notification */}
       <AnimatePresence>

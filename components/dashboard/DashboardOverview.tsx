@@ -30,7 +30,7 @@ interface MonthlyRevenue {
 // Animation variants
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const } }
 };
 
 const staggerContainer = {
@@ -51,6 +51,7 @@ export const DashboardOverview: React.FC = () => {
   
   // Aujourd'hui
   const [nextBooking, setNextBooking] = useState<Booking | null>(null);
+  const [nextCountdown, setNextCountdown] = useState<string | null>(null);
   
   // Graphique
   const [monthlyRevenues, setMonthlyRevenues] = useState<MonthlyRevenue[]>([]);
@@ -73,6 +74,35 @@ export const DashboardOverview: React.FC = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!nextBooking?.date_debut) {
+      setNextCountdown(null);
+      return;
+    }
+
+    const tick = () => {
+      const now = new Date();
+      const start = new Date(nextBooking.date_debut);
+      const diffMs = start.getTime() - now.getTime();
+      if (diffMs <= 0) {
+        setNextCountdown('Maintenant');
+        return;
+      }
+      const totalMinutes = Math.floor(diffMs / 60000);
+      const days = Math.floor(totalMinutes / (60 * 24));
+      const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+      const minutes = totalMinutes % 60;
+
+      if (days > 0) return setNextCountdown(`Dans ${days}j ${hours}h`);
+      if (hours > 0) return setNextCountdown(`Dans ${hours}h ${minutes}min`);
+      return setNextCountdown(`Dans ${minutes} min`);
+    };
+
+    tick();
+    const id = window.setInterval(tick, 60000);
+    return () => window.clearInterval(id);
+  }, [nextBooking?.date_debut]);
+
   const fetchDashboardData = async () => {
     if (!user) return;
 
@@ -81,19 +111,18 @@ export const DashboardOverview: React.FC = () => {
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setHours(23, 59, 59);
 
       // 1. Chiffre d'affaires du mois
       const { data: monthlyBookings } = await supabase
         .from('bookings')
-        .select('prix_total, statut_booking')
+        .select('prix_total,statut_booking')
         .eq('artist_id', user.id)
         .eq('statut_booking', 'confirmed')
         .gte('date_debut', startOfMonth.toISOString());
 
-      const revenue = monthlyBookings?.reduce((sum, b) => sum + (b.prix_total || 0), 0) || 0;
+      // NOTE: nos types Supabase custom n'ont pas `Relationships` → select() infère parfois `never`.
+      const monthlyBookingsSafe = (monthlyBookings as any[] | null) || [];
+      const revenue = monthlyBookingsSafe.reduce((sum, b) => sum + (b.prix_total || 0), 0) || 0;
       setMonthlyRevenue(revenue);
 
       // 2. RDV à venir
@@ -116,7 +145,7 @@ export const DashboardOverview: React.FC = () => {
 
       setPendingRequests(pendingCount || 0);
 
-      // 4. Prochain RDV aujourd'hui
+      // 4. Prochain RDV (le prochain, même si c'est demain)
       const { data: todayBookings } = await supabase
         .from('bookings')
         .select(`
@@ -126,13 +155,14 @@ export const DashboardOverview: React.FC = () => {
         `)
         .eq('artist_id', user.id)
         .eq('statut_booking', 'confirmed')
-        .gte('date_debut', startOfDay.toISOString())
-        .lte('date_debut', endOfDay.toISOString())
+        .gte('date_debut', now.toISOString())
         .order('date_debut', { ascending: true })
         .limit(1);
 
       if (todayBookings && todayBookings.length > 0) {
         setNextBooking(todayBookings[0] as Booking);
+      } else {
+        setNextBooking(null);
       }
 
       // 5. Revenus des 6 derniers mois
@@ -141,7 +171,7 @@ export const DashboardOverview: React.FC = () => {
       
       const { data: historicalBookings } = await supabase
         .from('bookings')
-        .select('prix_total, date_debut')
+        .select('prix_total,date_debut')
         .eq('artist_id', user.id)
         .eq('statut_booking', 'confirmed')
         .gte('date_debut', sixMonthsAgo.toISOString());
@@ -150,7 +180,8 @@ export const DashboardOverview: React.FC = () => {
       const monthlyData: { [key: string]: number } = {};
       const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
       
-      historicalBookings?.forEach(booking => {
+      const historicalBookingsSafe = (historicalBookings as any[] | null) || [];
+      historicalBookingsSafe.forEach(booking => {
         const date = new Date(booking.date_debut);
         const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
         monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (booking.prix_total || 0);
@@ -173,19 +204,19 @@ export const DashboardOverview: React.FC = () => {
       const [recentBookings, recentProjects, recentFlashs] = await Promise.all([
         supabase
           .from('bookings')
-          .select('id, client_name, created_at, statut_booking, flashs(title), projects(body_part)')
+          .select('id,client_name,created_at,statut_booking,flashs(title),projects(body_part)')
           .eq('artist_id', user.id)
           .order('created_at', { ascending: false })
           .limit(3),
         supabase
           .from('projects')
-          .select('id, client_name, created_at, statut, body_part')
+          .select('id,client_name,created_at,statut,body_part')
           .eq('artist_id', user.id)
           .order('created_at', { ascending: false })
           .limit(2),
         supabase
           .from('flashs')
-          .select('id, title, created_at')
+          .select('id,title,created_at')
           .eq('artist_id', user.id)
           .order('created_at', { ascending: false })
           .limit(2),
@@ -193,7 +224,11 @@ export const DashboardOverview: React.FC = () => {
 
       const activities: Activity[] = [];
       
-      recentBookings.data?.forEach(booking => {
+      const recentBookingsSafe = ((recentBookings as any).data as any[] | null) || [];
+      const recentProjectsSafe = ((recentProjects as any).data as any[] | null) || [];
+      const recentFlashsSafe = ((recentFlashs as any).data as any[] | null) || [];
+
+      recentBookingsSafe.forEach(booking => {
         activities.push({
           id: booking.id,
           type: 'booking',
@@ -206,7 +241,7 @@ export const DashboardOverview: React.FC = () => {
         });
       });
 
-      recentProjects.data?.forEach(project => {
+      recentProjectsSafe.forEach(project => {
         activities.push({
           id: project.id,
           type: 'project',
@@ -217,7 +252,7 @@ export const DashboardOverview: React.FC = () => {
         });
       });
 
-      recentFlashs.data?.forEach(flash => {
+      recentFlashsSafe.forEach(flash => {
         activities.push({
           id: flash.id,
           type: 'flash',
@@ -400,6 +435,64 @@ export const DashboardOverview: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+        {/* Next Appointment (Top Widget) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="mb-4"
+        >
+          <div className="glass rounded-2xl p-4 md:p-5 border border-white/5">
+            {nextBooking ? (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Clock className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">Prochain RDV</div>
+                    <div className="text-white font-semibold text-lg">
+                      {nextCountdown ? `${nextCountdown}` : 'À venir'}
+                      <span className="text-zinc-500 font-normal"> • </span>
+                      {formatTime(nextBooking.date_debut)}
+                    </div>
+                    <div className="text-zinc-400 text-sm mt-0.5">
+                      {nextBooking.client_name || 'Client'} —{' '}
+                      {nextBooking.flash_id
+                        ? `Flash: ${nextBooking.flashs?.title || 'Flash'}`
+                        : `Projet: ${nextBooking.projects?.body_part || 'Projet'}`}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate('/dashboard/calendar')}
+                    className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100"
+                  >
+                    Voir agenda
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">Prochain RDV</div>
+                  <div className="text-white font-semibold">Aucun rendez‑vous à venir</div>
+                  <div className="text-zinc-500 text-sm">Planifiez votre semaine depuis le calendrier.</div>
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/dashboard/calendar')}
+                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10"
+                >
+                  Ouvrir calendrier
+                </motion.button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
         {/* KPIs Grid */}
         <motion.div 
           initial="hidden"

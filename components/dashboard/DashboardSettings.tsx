@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2 } from 'lucide-react';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,6 +24,8 @@ export const DashboardSettings: React.FC = () => {
     bio_instagram: '',
     pre_tattoo_instructions: '',
     theme_color: 'amber',
+    theme_accent_hex: '',
+    theme_secondary_hex: '',
     deposit_percentage: 30,
     avatarFile: null as File | null,
     avatarUrl: '',
@@ -39,6 +42,8 @@ export const DashboardSettings: React.FC = () => {
         bio_instagram: profile.bio_instagram || '',
         pre_tattoo_instructions: profile.pre_tattoo_instructions || '',
         theme_color: profile.theme_color || profile.accent_color || 'amber',
+        theme_accent_hex: profile.theme_accent_hex || '',
+        theme_secondary_hex: profile.theme_secondary_hex || '',
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
         avatarUrl: profile.avatar_url || '',
@@ -218,6 +223,8 @@ export const DashboardSettings: React.FC = () => {
         bio_instagram: formData.bio_instagram,
         pre_tattoo_instructions: formData.pre_tattoo_instructions || null,
         theme_color: formData.theme_color,
+        theme_accent_hex: formData.theme_accent_hex?.trim() ? formData.theme_accent_hex.trim() : null,
+        theme_secondary_hex: formData.theme_secondary_hex?.trim() ? formData.theme_secondary_hex.trim() : null,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
       });
@@ -324,6 +331,47 @@ export const DashboardSettings: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
+          {/* Quick tools */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 glass rounded-2xl p-5 border border-white/5"
+          >
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <div className="text-white font-semibold">Outils</div>
+                <div className="text-zinc-500 text-sm">Care Sheets, liens rapides, etc.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => navigate('/dashboard/settings/care-sheets')}
+                  className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100"
+                >
+                  Gérer mes Care Sheets
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const url = `${window.location.origin}/${profile.slug_profil}`;
+                      await navigator.clipboard.writeText(url);
+                      toast.success('Lien copié', { description: url });
+                    } catch {
+                      toast.error('Impossible de copier le lien');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10"
+                  title="Copier le lien public"
+                >
+                  Copier lien public
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Messages */}
           {error && (
             <motion.div 
@@ -409,16 +457,36 @@ export const DashboardSettings: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-zinc-600 mt-2">
-                  Votre vitrine: <span className="text-white font-mono">
-                    {typeof window !== 'undefined'
-                      ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
-                      : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
+                <div className="text-xs text-zinc-600 mt-2 flex items-center gap-2">
+                  <span>
+                    Votre vitrine:{' '}
+                    <span className="text-white font-mono">
+                      {typeof window !== 'undefined'
+                        ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
+                        : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
+                    </span>
                   </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const url = `${window.location.origin}/${formData.slug_profil || ''}`;
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Copié !', { description: url });
+                      } catch {
+                        toast.error('Impossible de copier');
+                      }
+                    }}
+                    className="w-8 h-8 rounded-lg glass hover:bg-white/10 transition-colors flex items-center justify-center"
+                    title="Copier le lien"
+                    aria-label="Copier le lien"
+                  >
+                    <Copy size={14} className="text-zinc-300" />
+                  </button>
                   <span className="text-zinc-600"> (l'ancien format </span>
                   <span className="text-zinc-500 font-mono">/p/{formData.slug_profil || 'votre-slug'}</span>
                   <span className="text-zinc-600"> reste compatible)</span>
-                </p>
+                </div>
                 {slugError && (
                   <p className="text-xs text-brand-pink mt-1 flex items-center gap-1">
                     <AlertCircle size={12} /> {slugError}
@@ -557,6 +625,70 @@ export const DashboardSettings: React.FC = () => {
                 <p className="text-xs text-zinc-600 mt-2">
                   Sélectionné: <span className="font-medium text-white">{themeOptions.find(t => t.value === formData.theme_color)?.name || 'Gold'}</span>
                 </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Couleurs personnalisées (optionnel)
+                </label>
+                <p className="text-xs text-zinc-600 mb-3">
+                  Si renseignées, elles sont utilisées pour le glow/gradient de votre vitrine (style Landing).
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-[#050505] border border-white/10 rounded-2xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-white font-medium">Accent</span>
+                      <input
+                        type="color"
+                        value={formData.theme_accent_hex || '#fbbf24'}
+                        onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
+                        className="w-10 h-10 rounded-xl bg-transparent border border-white/10"
+                        aria-label="Couleur accent"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.theme_accent_hex}
+                      onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-white/30"
+                      placeholder="#FEE440"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, theme_accent_hex: '' })}
+                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+
+                  <div className="bg-[#050505] border border-white/10 rounded-2xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-white font-medium">Secondaire</span>
+                      <input
+                        type="color"
+                        value={formData.theme_secondary_hex || '#9b5de5'}
+                        onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
+                        className="w-10 h-10 rounded-xl bg-transparent border border-white/10"
+                        aria-label="Couleur secondaire"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.theme_secondary_hex}
+                      onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-white/30"
+                      placeholder="#9B5DE5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, theme_secondary_hex: '' })}
+                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div>

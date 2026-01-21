@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Ruler, MapPin, PenTool, Euro, Wand2, Loader2, Send, CheckCircle, ImagePlus, CalendarDays, AlertCircle } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { MapPin, PenTool, Euro, Wand2, Loader2, Send, CheckCircle, ImagePlus, CalendarDays, AlertCircle } from 'lucide-react';
 import { CustomProjectRequest, AIAnalysisResult } from '../types';
 import { analyzeProjectRequest } from '../services/geminiService';
 import { supabase } from '../services/supabase';
@@ -14,11 +16,10 @@ interface CustomProjectFormProps {
 
 export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }) => {
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [clientEmail, setClientEmail] = useState('');
   const [clientName, setClientName] = useState('');
   
@@ -41,6 +42,19 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
             ? prev.availability.filter(d => d !== day)
             : [...prev.availability, day]
     }));
+  };
+
+  const goToStep = (nextStep: number) => {
+    setDirection(nextStep > step ? 1 : -1);
+    setStep(nextStep);
+  };
+
+  const progress = useMemo(() => Math.max(0, Math.min(1, (step - 1) / 3)), [step]);
+
+  const stepVariants = {
+    enter: (dir: 1 | -1) => ({ opacity: 0, x: dir === 1 ? 24 : -24 }),
+    center: { opacity: 1, x: 0 },
+    exit: (dir: 1 | -1) => ({ opacity: 0, x: dir === 1 ? -24 : 24 }),
   };
 
   const validateStep = (currentStep: number): boolean => {
@@ -74,36 +88,34 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
 
   const handleNext = (nextStep: number) => {
     if (validateStep(step)) {
-        setStep(nextStep);
+      goToStep(nextStep);
     }
   };
 
   const handleAnalysis = async () => {
     // Validate all previous steps just in case
     if (!formData.bodyPart || !formData.style || !formData.description) {
-        setStep(1); // Go back to start if something is missing
-        alert("Des informations sont manquantes.");
-        return;
+      goToStep(1); // Go back to start if something is missing
+      toast.error('Informations manquantes', { description: 'Merci de compléter les étapes précédentes.' });
+      return;
     }
 
     setIsLoading(true);
     const result = await analyzeProjectRequest(formData);
     setAnalysis(result);
     setIsLoading(false);
-    setStep(4);
+    goToStep(4);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError(null);
-    setSubmitSuccess(null);
     if (!formData.bodyPart || !formData.style || !formData.description || !clientEmail || !clientName) {
-      setSubmitError("Veuillez remplir tous les champs obligatoires.");
+      toast.error('Champs manquants', { description: 'Veuillez remplir tous les champs obligatoires.' });
       return;
     }
 
     if (step !== 4 || !analysis) {
-      setSubmitError("Veuillez d'abord analyser votre projet.");
+      toast.error('Analyse requise', { description: "Veuillez d'abord analyser votre projet." });
       return;
     }
 
@@ -112,39 +124,48 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
     try {
       const budgetMax = formData.budget ? parseFloat(formData.budget) * 100 : null; // Convertir en centimes
 
-      // IMPORTANT:
-      // L'insertion directe depuis le client échoue avec RLS (public).
-      // On passe par une Edge Function (service role) qui:
-      // - upsert customer
-      // - crée project avec statut 'inquiry' + deposit_paid=false
-      // - notifie l'artiste via Resend
-      const { data, error } = await supabase.functions.invoke('submit-project-request', {
-        body: {
-          artist_id: artistId,
-          client_email: clientEmail,
-          client_name: clientName,
-          body_part: formData.bodyPart,
-          size_cm: formData.sizeCm,
-          style: formData.style,
-          description: formData.description,
-          budget_max: budgetMax,
-          is_cover_up: formData.isCoverUp,
-          is_first_tattoo: formData.isFirstTattoo,
-          availability: formData.availability.length > 0 ? formData.availability : null,
-          ai_estimated_hours: analysis.estimatedTimeHours,
-          ai_complexity_score: analysis.complexityScore,
-          ai_price_range: analysis.suggestedPriceRange,
-          ai_technical_notes: analysis.technicalNotes,
-        },
+      const payload = {
+        artist_id: artistId,
+        client_email: clientEmail,
+        client_name: clientName,
+        body_part: formData.bodyPart,
+        size_cm: formData.sizeCm,
+        style: formData.style,
+        description: formData.description,
+        budget_max: budgetMax,
+        is_cover_up: formData.isCoverUp,
+        is_first_tattoo: formData.isFirstTattoo,
+        availability: formData.availability.length > 0 ? formData.availability : null,
+        ai_estimated_hours: analysis.estimatedTimeHours,
+        ai_complexity_score: analysis.complexityScore,
+        ai_price_range: analysis.suggestedPriceRange,
+        ai_technical_notes: analysis.technicalNotes,
+      };
+
+      // Primary path (stable on Vercel): Serverless API route
+      const apiRes = await fetch('/api/submit-project-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
+      if (apiRes.ok) {
+        const json = await apiRes.json().catch(() => ({} as any));
+        if (!json?.success) throw new Error(json?.error || "Impossible d'envoyer la demande.");
+      } else if (apiRes.status === 404 || apiRes.status === 405) {
+        // Fallback (local dev / no /api): Supabase Edge Function
+        const { data, error } = await supabase.functions.invoke('submit-project-request', { body: payload });
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
+      } else {
+        const json = await apiRes.json().catch(() => ({} as any));
+        throw new Error(json?.error || `Erreur serveur (HTTP ${apiRes.status})`);
+      }
 
-      setSubmitSuccess("Demande envoyée !");
+      toast.success('Demande envoyée !', { description: "L'artiste va revenir vers vous rapidement." });
       
       // Reset form
-      setStep(1);
+      goToStep(1);
       setFormData({
         bodyPart: '',
         sizeCm: 10,
@@ -165,68 +186,67 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
       const isEdgeFnSendFailure = rawMessage.includes('Failed to send a request to the Edge Function');
 
       const help = isEdgeFnSendFailure
-        ? [
-            "Impossible de contacter le serveur de traitement.",
-            "Vérifiez que l'Edge Function `submit-project-request` est bien déployée dans Supabase (Edge Functions) et accessible depuis ce projet.",
-            "En local: lancez `supabase start` puis `supabase functions serve submit-project-request`.",
-          ].join(' ')
+        ? "Impossible de contacter le serveur. Si vous êtes en production, vérifiez que `/api/submit-project-request` existe sur Vercel. Sinon, déployez l'Edge Function `submit-project-request` dans Supabase."
         : rawMessage;
 
-      setSubmitError(`Erreur lors de l'envoi: ${help}`);
+      toast.error("Erreur lors de l'envoi", { description: help });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-6 animate-in slide-in-from-bottom-10 duration-500">
-        {(submitSuccess || submitError) && (
-          <div className={`mb-6 p-4 rounded-2xl border ${
-            submitSuccess
-              ? 'bg-green-500/10 border-green-500/20 text-green-300'
-              : 'bg-red-500/10 border-red-500/20 text-red-300'
-          }`}>
-            <div className="flex items-start gap-3">
-              {submitSuccess ? <CheckCircle size={18} className="mt-0.5" /> : <AlertCircle size={18} className="mt-0.5" />}
-              <div className="text-sm font-medium">
-                {submitSuccess || submitError}
-              </div>
-            </div>
+    <div className="max-w-3xl mx-auto p-4 md:p-6">
+      <div className="mb-8 text-center md:text-left">
+        <h2 className="text-3xl md:text-4xl font-serif font-extrabold text-white mb-2 tracking-tight">
+          Parlez-nous de votre projet
+        </h2>
+        <p className="text-slate-400">
+          Pour obtenir un devis précis sans attendre, remplissez ce formulaire en détail.
+        </p>
+      </div>
+
+      <form className="glass p-6 md:p-8 rounded-3xl shadow-xl" onSubmit={handleSubmit}>
+        {/* Sleek progress bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Progression</span>
+            <span className="text-xs text-zinc-400 font-mono">{step}/4</span>
           </div>
-        )}
-        <div className="mb-8 text-center md:text-left">
-            <h2 className="text-3xl font-bold text-white mb-2">Parlez-nous de votre projet</h2>
-            <p className="text-slate-400">Pour obtenir un devis précis sans attendre, remplissez ce formulaire en détail.</p>
+          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-brand-yellow via-brand-purple to-brand-cyan"
+              initial={false}
+              animate={{ width: `${Math.round(progress * 100)}%` }}
+              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-500">
+            <span className={step >= 1 ? 'text-white/80' : ''}>Zone</span>
+            <span className={step >= 2 ? 'text-white/80' : ''}>Idée</span>
+            <span className={step >= 3 ? 'text-white/80' : ''}>Logistique</span>
+            <span className={step >= 4 ? 'text-white/80' : ''}>Analyse</span>
+          </div>
         </div>
-
-        {/* Progress Bar */}
-        <div className="flex justify-between mb-8 relative px-4">
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-800 -z-10 rounded"></div>
-            {[
-                { id: 1, label: "Zone" },
-                { id: 2, label: "Idée" },
-                { id: 3, label: "Logistique" },
-                { id: 4, label: "Analyse" }
-            ].map((s) => (
-                <div key={s.id} className="flex flex-col items-center gap-2 bg-slate-900 px-2">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all border-2 ${step >= s.id ? 'bg-amber-400 border-amber-400 text-black' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                        {s.id}
-                    </div>
-                    <span className={`text-xs font-medium hidden md:block ${step >= s.id ? 'text-amber-400' : 'text-slate-600'}`}>{s.label}</span>
-                </div>
-            ))}
-        </div>
-
-        <form className="bg-slate-800/50 p-6 md:p-8 rounded-2xl border border-slate-700 backdrop-blur-sm shadow-xl" onSubmit={handleSubmit}>
             
-            {step === 1 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+        <AnimatePresence mode="wait" custom={direction}>
+          {step === 1 && (
+            <motion.div
+              key="step-1"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+              className="space-y-8"
+            >
                     <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
                          <div className="w-10 h-10 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400">
                             <MapPin size={24} />
                          </div>
                          <div>
-                             <h3 className="text-xl font-bold text-white">Emplacement & Anatomie</h3>
+                             <h3 className="text-xl font-serif font-bold text-white">Emplacement & Anatomie</h3>
                              <p className="text-sm text-slate-400">La zone détermine la douleur et la complexité.</p>
                          </div>
                     </div>
@@ -251,7 +271,7 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                         {errors.bodyPart && <p className="text-red-400 text-sm mt-2 flex items-center gap-1"><AlertCircle size={14}/> {errors.bodyPart}</p>}
                     </div>
 
-                    <div className="bg-slate-900 p-5 rounded-xl border border-slate-700">
+                    <div className="glass p-5 rounded-2xl">
                         <label className="flex justify-between text-sm font-medium text-slate-300 mb-4">
                             <span>Taille estimée</span>
                             <span className="text-amber-400 font-mono text-lg">{formData.sizeCm} cm</span>
@@ -274,21 +294,30 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                     <button 
                         type="button" 
                         onClick={() => handleNext(2)} 
-                        className="w-full bg-white text-black font-bold py-4 rounded-xl mt-4 hover:bg-amber-50 shadow-lg shadow-white/5 transition-all transform hover:-translate-y-1"
+                        className="w-full bg-white text-black font-bold py-4 rounded-2xl mt-4 hover:bg-zinc-100 shadow-lg shadow-white/10 transition-all active:scale-[0.99]"
                     >
                         Continuer vers le Design
                     </button>
-                </div>
-            )}
+            </motion.div>
+          )}
 
-            {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          {step === 2 && (
+            <motion.div
+              key="step-2"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+              className="space-y-6"
+            >
                     <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
                          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
                             <PenTool size={24} />
                          </div>
                          <div>
-                             <h3 className="text-xl font-bold text-white">Le Projet Artistique</h3>
+                             <h3 className="text-xl font-serif font-bold text-white">Le Projet Artistique</h3>
                              <p className="text-sm text-slate-400">Détaillez votre idée pour éviter les allers-retours.</p>
                          </div>
                     </div>
@@ -356,26 +385,35 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={() => setStep(1)} className="w-1/3 border border-slate-600 text-slate-300 font-bold py-3 rounded-xl hover:bg-slate-700">Retour</button>
+                        <button type="button" onClick={() => goToStep(1)} className="w-1/3 border border-slate-600 text-slate-300 font-bold py-3 rounded-2xl hover:bg-white/5">Retour</button>
                         <button 
                             type="button" 
                             onClick={() => handleNext(3)} 
-                            className="w-2/3 bg-white text-black font-bold py-3 rounded-xl hover:bg-amber-50"
+                            className="w-2/3 bg-white text-black font-bold py-3 rounded-2xl hover:bg-zinc-100"
                         >
                             Logistique & Images
                         </button>
                     </div>
-                </div>
-            )}
+            </motion.div>
+          )}
 
-            {step === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          {step === 3 && (
+            <motion.div
+              key="step-3"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+              className="space-y-6"
+            >
                      <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
                          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
                             <ImagePlus size={24} />
                          </div>
                          <div>
-                             <h3 className="text-xl font-bold text-white">Références & Dispos</h3>
+                             <h3 className="text-xl font-serif font-bold text-white">Références & Dispos</h3>
                              <p className="text-sm text-slate-400">Pour vous donner un prix et une date.</p>
                          </div>
                     </div>
@@ -441,30 +479,39 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setStep(2)} className="w-1/3 border border-slate-600 text-slate-300 font-bold py-3 rounded-xl hover:bg-slate-700">Retour</button>
+                        <button type="button" onClick={() => goToStep(2)} className="w-1/3 border border-slate-600 text-slate-300 font-bold py-3 rounded-2xl hover:bg-white/5">Retour</button>
                         <button 
                             type="button" 
                             onClick={handleAnalysis} 
                             disabled={isLoading} 
-                            className="w-2/3 bg-amber-400 text-black font-bold py-3 rounded-xl disabled:opacity-50 hover:bg-amber-300 flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20"
+                            className="w-2/3 bg-gradient-to-r from-brand-yellow to-brand-purple text-black font-extrabold py-3 rounded-2xl disabled:opacity-50 hover:brightness-110 flex items-center justify-center gap-2 shadow-lg shadow-brand-purple/20"
                         >
-                            {isLoading ? <Loader2 className="animate-spin" /> : <><Wand2 size={18}/> Analyser & Envoyer</>}
+                            {isLoading ? <Loader2 className="animate-spin" /> : <><Wand2 size={18}/> Analyser</>}
                         </button>
                     </div>
-                </div>
-            )}
+            </motion.div>
+          )}
 
-            {step === 4 && analysis && (
-                <div className="space-y-6 animate-in zoom-in duration-300">
+          {step === 4 && analysis && (
+            <motion.div
+              key="step-4"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+              className="space-y-6"
+            >
                     <div className="text-center mb-6">
                         <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
                             <CheckCircle size={40} className="text-green-500" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white">Dossier Prêt !</h3>
+                        <h3 className="text-2xl font-serif font-bold text-white">Dossier Prêt</h3>
                         <p className="text-slate-400">L'artiste a toutes les infos pour valider.</p>
                     </div>
                     
-                    <div className="bg-slate-900/80 p-5 rounded-xl border border-slate-700 space-y-4">
+                    <div className="glass p-5 rounded-2xl space-y-4">
                         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                             <span className="text-slate-400 flex items-center gap-2"><MapPin size={14}/> Difficulté</span>
                             <div className="flex gap-1">
@@ -483,7 +530,7 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                         </div>
                     </div>
 
-                     <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-sm">
+                     <div className="glass p-4 rounded-2xl text-sm">
                         <h4 className="font-bold text-slate-300 mb-2">Récapitulatif technique :</h4>
                         <ul className="space-y-1 text-slate-400 list-disc list-inside">
                             <li>Zone : <span className="text-white">{formData.bodyPart} ({formData.sizeCm}cm)</span></li>
@@ -525,13 +572,14 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
                     <button 
                         type="submit" 
                         disabled={!clientName || !clientEmail || isLoading}
-                        className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-amber-50 flex items-center justify-center gap-2 text-lg shadow-lg shadow-white/10 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white text-black font-extrabold py-4 rounded-2xl hover:bg-zinc-100 flex items-center justify-center gap-2 text-lg shadow-lg shadow-white/10 transition-transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                       {isLoading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={20} /> Envoyer la demande au Tatoueur</>}
+                       {isLoading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={20} /> Envoyer la demande</>}
                     </button>
                     <p className="text-center text-xs text-slate-600">En envoyant, vous acceptez de verser un acompte si le projet est validé.</p>
-                </div>
-            )}
+            </motion.div>
+          )}
+        </AnimatePresence>
         </form>
     </div>
   );

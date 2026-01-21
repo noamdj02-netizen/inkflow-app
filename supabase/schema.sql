@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS artists (
     deposit_percentage INTEGER DEFAULT 30, -- Pourcentage d'acompte (30%)
     accent_color TEXT DEFAULT 'gold', -- Couleur d'accent (gold, red, blue, etc.) - DEPRECATED, utiliser theme_color
     theme_color TEXT DEFAULT 'amber', -- Thème de couleur (amber, red, blue, emerald, violet)
+    theme_accent_hex TEXT, -- Couleur custom (ex: #FEE440)
+    theme_secondary_hex TEXT, -- Secondaire custom (ex: #9B5DE5)
     avatar_url TEXT, -- URL de l'avatar uploadé
     bio_instagram TEXT,
     pre_tattoo_instructions TEXT, -- Instructions personnalisées envoyées au client avant le RDV
@@ -98,6 +100,11 @@ CREATE TABLE IF NOT EXISTS projects (
     artist_quoted_price INTEGER, -- Prix final proposé par l'artiste (en centimes)
     artist_notes TEXT, -- Commentaires de l'artiste
     artist_response_at TIMESTAMP WITH TIME ZONE,
+
+    -- Post-tattoo care
+    care_template_id UUID,
+    custom_care_instructions TEXT,
+    care_sent_at TIMESTAMP WITH TIME ZONE,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -108,6 +115,21 @@ CREATE INDEX IF NOT EXISTS idx_projects_artist ON projects(artist_id);
 CREATE INDEX IF NOT EXISTS idx_projects_statut ON projects(statut);
 CREATE INDEX IF NOT EXISTS idx_projects_client_email ON projects(client_email);
 CREATE INDEX IF NOT EXISTS idx_projects_customer_id ON projects(customer_id);
+CREATE INDEX IF NOT EXISTS idx_projects_care_template_id ON projects(care_template_id);
+
+-- ============================================
+-- TABLE: care_templates
+-- ============================================
+CREATE TABLE IF NOT EXISTS care_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_care_templates_artist_id ON care_templates(artist_id);
 
 -- ============================================
 -- TABLE: bookings
@@ -211,6 +233,10 @@ DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_care_templates_updated_at ON care_templates;
+CREATE TRIGGER update_care_templates_updated_at BEFORE UPDATE ON care_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -225,6 +251,7 @@ ALTER TABLE flashs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stripe_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE care_templates ENABLE ROW LEVEL SECURITY;
 
 -- Supprimer les politiques existantes avant de les recréer (pour éviter les erreurs de duplication)
 DROP POLICY IF EXISTS "Artists can view own data" ON artists;
@@ -238,6 +265,7 @@ DROP POLICY IF EXISTS "Artists can update own projects" ON projects;
 DROP POLICY IF EXISTS "Artists can view own bookings" ON bookings;
 DROP POLICY IF EXISTS "Artists can update own bookings" ON bookings;
 DROP POLICY IF EXISTS "Artists can view own transactions" ON stripe_transactions;
+DROP POLICY IF EXISTS "Artists can manage own care templates" ON care_templates;
 
 -- Policy: Les artistes peuvent voir/modifier leurs propres données
 CREATE POLICY "Artists can view own data" ON artists
@@ -286,6 +314,11 @@ CREATE POLICY "Artists can update own bookings" ON bookings
 -- Policy: Les transactions Stripe sont visibles par l'artiste
 CREATE POLICY "Artists can view own transactions" ON stripe_transactions
     FOR SELECT USING (artist_id::text = auth.uid()::text);
+
+-- Policy: Templates de soins (CRUD)
+CREATE POLICY "Artists can manage own care templates" ON care_templates
+    FOR ALL USING (artist_id::text = auth.uid()::text)
+    WITH CHECK (artist_id::text = auth.uid()::text);
 
 -- ============================================
 -- FONCTIONS UTILES

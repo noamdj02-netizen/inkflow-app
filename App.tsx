@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
@@ -29,6 +30,7 @@ const DashboardFlashs = lazy(() => import('./components/dashboard/DashboardFlash
 const DashboardClients = lazy(() => import('./components/dashboard/DashboardClients').then(m => ({ default: m.DashboardClients })));
 const DashboardFinance = lazy(() => import('./components/dashboard/DashboardFinance').then(m => ({ default: m.DashboardFinance })));
 const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSettings').then(m => ({ default: m.DashboardSettings })));
+const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
 
 // Skeleton de chargement réutilisable
 const LoadingSkeleton: React.FC = () => (
@@ -47,6 +49,14 @@ const App: React.FC = () => {
         <BrowserRouter>
           <ArtistProfileProvider>
             <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-amber-400 selection:text-black">
+              <Toaster
+                theme="dark"
+                position="top-center"
+                richColors
+                toastOptions={{
+                  className: 'glass border border-white/10 text-white',
+                }}
+              />
               <Suspense fallback={<LoadingSkeleton />}>
                 <Routes>
                   {/* Public Routes - Importées normalement pour FCP rapide */}
@@ -100,6 +110,7 @@ const App: React.FC = () => {
                     <Route path="clients" element={<DashboardClients />} />
                     <Route path="finance" element={<DashboardFinance />} />
                     <Route path="settings" element={<DashboardSettings />} />
+                    <Route path="settings/care-sheets" element={<DashboardCareSheets />} />
                   </Route>
                   
                   {/* Redirect unknown routes to home */}

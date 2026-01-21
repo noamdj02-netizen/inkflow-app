@@ -14,6 +14,8 @@ type TabKey = 'flashs' | 'project';
 export interface PublicProfileCTAProps {
   theme: PublicProfileCTATheme;
   themeColor: string;
+  accentHex?: string | null;
+  secondaryHex?: string | null;
   artistEmail?: string | null;
   artistName: string;
   profileUrl?: string;
@@ -43,6 +45,8 @@ function roundToNext30Min(date: Date) {
 export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
   theme,
   themeColor,
+  accentHex,
+  secondaryHex,
   artistEmail,
   artistName,
   profileUrl,
@@ -54,9 +58,12 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
   const [view, setView] = useState<'choices' | 'consultation'>('choices');
 
   const isAmberTheme = themeColor === 'amber';
-  const ctaButtonClass = isAmberTheme
-    ? 'bg-white text-black hover:bg-zinc-100'
-    : `${theme.primary} ${theme.primaryHover} text-white`;
+  const hasCustom = Boolean(accentHex);
+  const ctaButtonClass = hasCustom
+    ? 'text-white hover:brightness-110'
+    : isAmberTheme
+      ? 'bg-white text-black hover:bg-zinc-100'
+      : `${theme.primary} ${theme.primaryHover} text-white`;
 
   const defaultConsultDate = useMemo(() => roundToNext30Min(new Date()), []);
   const [consultDateTime, setConsultDateTime] = useState<string>(() => toDateTimeLocalValue(defaultConsultDate));
@@ -112,7 +119,7 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
     <>
       {/* Sticky Bottom Bar (Mobile only) */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-xl border border-slate-700 shadow-xl rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div className="pointer-events-auto glass shadow-xl rounded-2xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="relative inline-flex h-2.5 w-2.5">
               <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-60" />
@@ -120,13 +127,14 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
             </span>
             <div className="leading-tight">
               <div className="text-sm font-semibold text-white">Agenda ouvert</div>
-              <div className="text-xs text-slate-400">Réponse rapide • Réservation simple</div>
+              <div className="text-xs text-zinc-400">Réponse rapide • Réservation simple</div>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => setOpen(true)}
+            style={hasCustom ? { background: `linear-gradient(135deg, ${accentHex}, ${secondaryHex || accentHex})` } : undefined}
             className={`ml-3 px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all active:scale-[0.98] ${ctaButtonClass}`}
           >
             Prendre RDV
@@ -153,10 +161,10 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
               transition={{ type: 'spring', damping: 24, stiffness: 220 }}
               className="fixed bottom-0 left-0 right-0 z-[60]"
             >
-              <div className="bg-slate-950/95 backdrop-blur-xl border-t border-slate-700 rounded-t-3xl px-4 pt-4 pb-6">
+              <div className="bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl px-4 pt-4 pb-6">
                 {/* Handle */}
                 <div className="flex justify-center mb-3">
-                  <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
+                  <div className="w-12 h-1.5 bg-white/10 rounded-full" />
                 </div>
 
                 {view === 'choices' ? (
@@ -170,7 +178,7 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
                       <button
                         type="button"
                         onClick={() => goToTab('flashs')}
-                        className="w-full text-left bg-slate-900/60 border border-slate-700 rounded-2xl p-4 flex items-center justify-between hover:bg-slate-900 transition-colors"
+                        className="w-full text-left bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${theme.primaryBg}`}>
@@ -178,27 +186,27 @@ export const PublicProfileCTA: React.FC<PublicProfileCTAProps> = ({
                           </div>
                           <div>
                             <div className="font-bold text-white">⚡ Réserver un Flash</div>
-                            <div className="text-sm text-slate-400">Voir les flashs disponibles</div>
+                            <div className="text-sm text-zinc-400">Voir les flashs disponibles</div>
                           </div>
                         </div>
-                        <ChevronRight className="text-slate-500" size={20} />
+                        <ChevronRight className="text-zinc-500" size={20} />
                       </button>
 
                       <button
                         type="button"
                         onClick={() => goToTab('project')}
-                        className="w-full text-left bg-slate-900/60 border border-slate-700 rounded-2xl p-4 flex items-center justify-between hover:bg-slate-900 transition-colors"
+                        className="w-full text-left bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
-                            <MessageSquare className="text-slate-200" size={20} />
+                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                            <MessageSquare className="text-white" size={20} />
                           </div>
                           <div>
                             <div className="font-bold text-white">🎨 Projet Perso</div>
-                            <div className="text-sm text-slate-400">Décrire votre idée & disponibilités</div>
+                            <div className="text-sm text-zinc-400">Décrire votre idée & disponibilités</div>
                           </div>
                         </div>
-                        <ChevronRight className="text-slate-500" size={20} />
+                        <ChevronRight className="text-zinc-500" size={20} />
                       </button>
 
                       <button
