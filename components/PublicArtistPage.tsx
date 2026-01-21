@@ -12,6 +12,7 @@ import { supabase } from '../services/supabase';
 import type { Artist, Flash } from '../types/supabase';
 import { CustomProjectForm } from './CustomProjectForm';
 import { bookingFormSchema, type BookingFormData } from '../utils/validation';
+import { PublicProfileCTA } from './PublicProfileCTA';
 
 interface BookingDrawerProps {
   flash: Flash;
@@ -537,6 +538,12 @@ export const PublicArtistPage: React.FC = () => {
     }
   };
 
+  const scrollToTabs = () => {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('public-profile-tabs');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handleFlashClick = (flash: Flash) => {
     setSelectedFlash(flash);
     setIsDrawerOpen(true);
@@ -681,7 +688,7 @@ export const PublicArtistPage: React.FC = () => {
       </section>
 
       {/* Tabs Navigation */}
-      <section className="border-b border-slate-800 sticky top-[73px] z-30 bg-slate-900/95 backdrop-blur-md">
+      <section id="public-profile-tabs" className="border-b border-slate-800 sticky top-[73px] z-30 bg-slate-900/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex">
             <button
@@ -842,6 +849,18 @@ export const PublicArtistPage: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Sticky CTA (Mobile) */}
+      <PublicProfileCTA
+        theme={theme}
+        themeColor={themeColor}
+        artistEmail={artist.email}
+        artistName={artist.nom_studio}
+        profileUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+        isHidden={isDrawerOpen}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        onScrollToTabs={scrollToTabs}
+      />
 
       {/* Footer Légal */}
       <footer className="border-t border-slate-800 py-6 mt-12 bg-slate-950/50">

@@ -4,6 +4,7 @@ import { PenTool, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useArtistProfile } from '../contexts/ArtistProfileContext';
 import { supabase } from '../services/supabase';
+import { normalizeSlug, validatePublicSlug } from '../utils/slug';
 
 export const OnboardingPage: React.FC = () => {
   const [nomStudio, setNomStudio] = useState('');
@@ -20,28 +21,16 @@ export const OnboardingPage: React.FC = () => {
   // Générer le slug automatiquement depuis le nom du studio
   useEffect(() => {
     if (nomStudio && !slug) {
-      const generatedSlug = nomStudio
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
-        .replace(/[^a-z0-9]+/g, '_') // Remplacer les caractères spéciaux par _
-        .replace(/^_+|_+$/g, ''); // Supprimer les _ au début/fin
-      setSlug(generatedSlug);
+      setSlug(normalizeSlug(nomStudio, '-'));
     }
   }, [nomStudio, slug]);
 
   // Vérifier la disponibilité du slug
   const checkSlugAvailability = async (slugToCheck: string) => {
-    if (!slugToCheck || slugToCheck.length < 3) {
-      setSlugAvailable(null);
-      setSlugError('Le slug doit contenir au moins 3 caractères');
-      return;
-    }
-
-    // Validation du format (lettres, chiffres, underscores uniquement)
-    if (!/^[a-z0-9_]+$/.test(slugToCheck)) {
+    const validationError = validatePublicSlug(slugToCheck);
+    if (validationError) {
       setSlugAvailable(false);
-      setSlugError('Le slug ne peut contenir que des lettres minuscules, chiffres et underscores');
+      setSlugError(validationError);
       return;
     }
 
@@ -50,8 +39,8 @@ export const OnboardingPage: React.FC = () => {
 
     const { data, error } = await supabase
       .from('artists')
-      .select('slug_profil')
-      .eq('slug_profil', slugToCheck)
+      .select('id')
+      .eq('slug_profil', slugToCheck.trim().toLowerCase())
       .single();
 
     if (error && error.code === 'PGRST116') {
@@ -226,12 +215,11 @@ export const OnboardingPage: React.FC = () => {
                   type="text"
                   value={slug}
                   onChange={(e) => {
-                    const newSlug = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                    setSlug(newSlug);
+                    setSlug(normalizeSlug(e.target.value, '-'));
                   }}
                   required
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-4 pr-10 py-3 text-white focus:outline-none focus:border-amber-400 transition-colors font-mono"
-                  placeholder="zonett_ink"
+                  placeholder="zonett-ink"
                 />
                 {checkingSlug && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -252,7 +240,7 @@ export const OnboardingPage: React.FC = () => {
               <p className="text-xs text-slate-500 mt-2">
                 Votre page publique sera accessible sur :{' '}
                 <span className="text-amber-400 font-mono">
-                  inkflow.app/p/{slug || 'votre_slug'}
+                  inkflow.app/{slug || 'votre-slug'}
                 </span>
               </p>
               {slugError && (

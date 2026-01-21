@@ -54,6 +54,8 @@ const App: React.FC = () => {
                   
                   {/* Public Artist Page (Vitrine) - Lazy loaded */}
                   <Route path="/p/:slug" element={<PublicArtistPage />} />
+                  {/* Public Artist Page (Vitrine) - URL courte */}
+                  <Route path="/:slug" element={<PublicArtistPage />} />
                   
                   {/* Payment Routes - Lazy loaded */}
                   <Route path="/payment/success" element={<PaymentSuccess />} />

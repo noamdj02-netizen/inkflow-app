@@ -111,7 +111,7 @@ export const DashboardRequests: React.FC = () => {
       return;
     }
 
-    const url = `${window.location.origin}/p/${profile.slug_profil}`;
+    const url = `${window.location.origin}/${profile.slug_profil}`;
 
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {

@@ -240,7 +240,7 @@ export const DashboardOverview: React.FC = () => {
   const handleShare = async () => {
     if (!profile?.slug_profil || typeof window === 'undefined') return;
     
-    const url = `${window.location.origin}/p/${profile.slug_profil}`;
+    const url = `${window.location.origin}/${profile.slug_profil}`;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({

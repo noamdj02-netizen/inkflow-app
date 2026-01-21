@@ -127,7 +127,7 @@ export const DashboardLayout: React.FC = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={async () => {
                     if (!profile?.slug_profil || typeof window === 'undefined') return;
-                    const url = `${window.location.origin}/p/${profile.slug_profil}`;
+                    const url = `${window.location.origin}/${profile.slug_profil}`;
                     try {
                       if (typeof navigator !== 'undefined' && navigator.share) {
                         await navigator.share({

@@ -2,10 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield } from 'lucide-react';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2 } from 'lucide-react';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
 
 export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, error: profileError } = useArtistProfile();
@@ -18,25 +19,99 @@ export const DashboardSettings: React.FC = () => {
 
   const [formData, setFormData] = useState({
     nom_studio: '',
+    slug_profil: '',
     bio_instagram: '',
     theme_color: 'amber',
     deposit_percentage: 30,
     avatarFile: null as File | null,
     avatarUrl: '',
   });
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (profile) {
       setFormData({
         nom_studio: profile.nom_studio || '',
+        slug_profil: profile.slug_profil || '',
         bio_instagram: profile.bio_instagram || '',
         theme_color: profile.theme_color || profile.accent_color || 'amber',
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
         avatarUrl: profile.avatar_url || '',
       });
+      setSlugError(null);
+      setSlugAvailable(true);
     }
   }, [profile]);
+
+  const checkSlugAvailability = async (slugToCheck: string): Promise<{ available: boolean; message?: string }> => {
+    if (!user) return { available: false, message: 'User not authenticated' };
+
+    const normalized = slugToCheck.trim().toLowerCase();
+    const validationError = validatePublicSlug(normalized);
+    if (validationError) {
+      setSlugAvailable(false);
+      setSlugError(validationError);
+      return { available: false, message: validationError };
+    }
+
+    // Si c'est le slug actuel, c'est OK.
+    if (profile?.slug_profil && normalized === profile.slug_profil) {
+      setSlugAvailable(true);
+      setSlugError(null);
+      return { available: true };
+    }
+
+    setCheckingSlug(true);
+    setSlugError(null);
+
+    const { data, error: checkError } = await supabase
+      .from('artists')
+      .select('id')
+      .eq('slug_profil', normalized)
+      .neq('id', user.id)
+      .single();
+
+    if (checkError && checkError.code === 'PGRST116') {
+      // Aucun résultat = disponible
+      setSlugAvailable(true);
+      setSlugError(null);
+      setCheckingSlug(false);
+      return { available: true };
+    } else if (data) {
+      setSlugAvailable(false);
+      const msg = 'Ce slug est déjà pris. Choisissez-en un autre.';
+      setSlugError(msg);
+      setCheckingSlug(false);
+      return { available: false, message: msg };
+    } else {
+      setSlugAvailable(false);
+      const msg = 'Erreur lors de la vérification du slug.';
+      setSlugError(msg);
+      setCheckingSlug(false);
+      return { available: false, message: msg };
+    }
+  };
+
+  // Vérifier le slug quand il change (debounce) - uniquement si différent du slug actuel
+  useEffect(() => {
+    if (!user) return;
+    if (!formData.slug_profil) return;
+    if (profile?.slug_profil && formData.slug_profil === profile.slug_profil) {
+      setSlugAvailable(true);
+      setSlugError(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      checkSlugAvailability(formData.slug_profil);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.slug_profil, user?.id, profile?.slug_profil]);
 
   const uploadAvatar = async (file: File): Promise<string> => {
     if (!user) throw new Error('User not authenticated');
@@ -112,6 +187,17 @@ export const DashboardSettings: React.FC = () => {
     setSaving(true);
 
     try {
+      // 1) Validation slug + disponibilité
+      const normalizedSlug = formData.slug_profil.trim().toLowerCase();
+      const validationError = validatePublicSlug(normalizedSlug);
+      if (validationError) throw new Error(validationError);
+
+      // On attend le résultat du check asynchrone si l'utilisateur vient de modifier
+      if (profile?.slug_profil && normalizedSlug !== profile.slug_profil) {
+        const check = await checkSlugAvailability(normalizedSlug);
+        if (check && check.available === false) throw new Error(check.message || 'Ce slug est déjà pris. Choisissez-en un autre.');
+      }
+
       let avatarUrl = formData.avatarUrl;
 
       if (formData.avatarFile) {
@@ -126,6 +212,7 @@ export const DashboardSettings: React.FC = () => {
 
       await updateProfile({
         nom_studio: formData.nom_studio,
+        slug_profil: normalizedSlug,
         bio_instagram: formData.bio_instagram,
         theme_color: formData.theme_color,
         avatar_url: avatarUrl,
@@ -290,6 +377,54 @@ export const DashboardSettings: React.FC = () => {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  URL publique (slug) <span className="text-brand-pink">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.slug_profil}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug_profil: normalizeSlug(e.target.value, '-') })
+                    }
+                    required
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors font-mono"
+                    placeholder="nom-du-studio"
+                  />
+                  {checkingSlug && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="animate-spin text-white/70" size={18} />
+                    </div>
+                  )}
+                  {!checkingSlug && slugAvailable === true && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle className="text-brand-mint" size={18} />
+                    </div>
+                  )}
+                  {!checkingSlug && slugAvailable === false && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <AlertCircle className="text-brand-pink" size={18} />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-600 mt-2">
+                  Votre vitrine: <span className="text-white font-mono">
+                    {typeof window !== 'undefined'
+                      ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
+                      : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
+                  </span>
+                  <span className="text-zinc-600"> (l'ancien format </span>
+                  <span className="text-zinc-500 font-mono">/p/{formData.slug_profil || 'votre-slug'}</span>
+                  <span className="text-zinc-600"> reste compatible)</span>
+                </p>
+                {slugError && (
+                  <p className="text-xs text-brand-pink mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} /> {slugError}
+                  </p>
+                )}
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Bio Instagram
                 </label>
                 <textarea
@@ -435,7 +570,7 @@ export const DashboardSettings: React.FC = () => {
             <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-mint/10 flex items-center justify-center">
-                  <Shield className="text-brand-mint" size={20} />
+                  <Link2 className="text-brand-mint" size={20} />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white">Informations de Compte</h3>
@@ -455,7 +590,7 @@ export const DashboardSettings: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-zinc-500 mb-1">Lien de votre profil</label>
                   <div className="bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-zinc-400 font-mono text-sm truncate">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/p/${profile.slug_profil}` : `inkflow.app/p/${profile.slug_profil}`}
+                    {typeof window !== 'undefined' ? `${window.location.origin}/${profile.slug_profil}` : `inkflow.app/${profile.slug_profil}`}
                   </div>
                 </div>
               </div>
