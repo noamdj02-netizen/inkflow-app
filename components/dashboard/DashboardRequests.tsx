@@ -84,7 +84,8 @@ export const DashboardRequests: React.FC = () => {
         .eq('artist_id', user.id);
 
       if (viewMode === 'pending') {
-        projectsQuery = projectsQuery.eq('statut', 'pending');
+        // "INQUIRY" = demandes entrantes (compat legacy: 'pending')
+        projectsQuery = projectsQuery.in('statut', ['inquiry', 'pending']);
       } else {
         projectsQuery = projectsQuery.in('statut', ['approved', 'rejected', 'quoted']);
       }
@@ -593,7 +594,7 @@ export const DashboardRequests: React.FC = () => {
                           </div>
                         )}
 
-                        {project.statut === 'pending' && (
+                        {['pending', 'inquiry'].includes(project.statut) && (
                           <div className="flex gap-2 pt-3 border-t border-white/5">
                             <motion.button
                               whileTap={{ scale: 0.95 }}

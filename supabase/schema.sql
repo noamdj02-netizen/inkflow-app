@@ -31,6 +31,20 @@ CREATE INDEX IF NOT EXISTS idx_artists_slug ON artists(slug_profil);
 CREATE INDEX IF NOT EXISTS idx_artists_email ON artists(email);
 
 -- ============================================
+-- TABLE: customers
+-- ============================================
+-- Clients (dédupliqués par email) pour lier les projets aux clients.
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+
+-- ============================================
 -- TABLE: flashs
 -- ============================================
 CREATE TABLE IF NOT EXISTS flashs (
@@ -59,6 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_flashs_statut ON flashs(statut);
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
     client_email TEXT NOT NULL,
     client_name TEXT,
     body_part TEXT NOT NULL, -- Zone du corps
@@ -66,6 +81,7 @@ CREATE TABLE IF NOT EXISTS projects (
     style TEXT NOT NULL, -- Fine Line, Réalisme, etc.
     description TEXT NOT NULL,
     budget_max INTEGER, -- En centimes (ex: 40000 = 400€)
+    deposit_paid BOOLEAN DEFAULT FALSE, -- Toujours false pour une demande ("INQUIRY")
     is_cover_up BOOLEAN DEFAULT FALSE,
     is_first_tattoo BOOLEAN DEFAULT FALSE,
     reference_images TEXT[], -- Array d'URLs d'images
@@ -78,7 +94,7 @@ CREATE TABLE IF NOT EXISTS projects (
     ai_technical_notes TEXT,
     
     -- Validation artiste
-    statut TEXT DEFAULT 'pending' CHECK (statut IN ('pending', 'approved', 'rejected', 'quoted')),
+    statut TEXT DEFAULT 'inquiry' CHECK (statut IN ('pending', 'inquiry', 'approved', 'rejected', 'quoted')),
     artist_quoted_price INTEGER, -- Prix final proposé par l'artiste (en centimes)
     artist_notes TEXT, -- Commentaires de l'artiste
     artist_response_at TIMESTAMP WITH TIME ZONE,
@@ -91,6 +107,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE INDEX IF NOT EXISTS idx_projects_artist ON projects(artist_id);
 CREATE INDEX IF NOT EXISTS idx_projects_statut ON projects(statut);
 CREATE INDEX IF NOT EXISTS idx_projects_client_email ON projects(client_email);
+CREATE INDEX IF NOT EXISTS idx_projects_customer_id ON projects(customer_id);
 
 -- ============================================
 -- TABLE: bookings
@@ -182,6 +199,10 @@ DROP TRIGGER IF EXISTS update_artists_updated_at ON artists;
 CREATE TRIGGER update_artists_updated_at BEFORE UPDATE ON artists
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_customers_updated_at ON customers;
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 DROP TRIGGER IF EXISTS update_flashs_updated_at ON flashs;
 CREATE TRIGGER update_flashs_updated_at BEFORE UPDATE ON flashs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -199,6 +220,7 @@ CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings
 -- ============================================
 -- Activer RLS sur toutes les tables
 ALTER TABLE artists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flashs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
@@ -208,6 +230,7 @@ ALTER TABLE stripe_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Artists can view own data" ON artists;
 DROP POLICY IF EXISTS "Artists can insert own data" ON artists;
 DROP POLICY IF EXISTS "Artists can update own data" ON artists;
+DROP POLICY IF EXISTS "Customers can be managed by service role" ON customers;
 DROP POLICY IF EXISTS "Flashs are public for reading" ON flashs;
 DROP POLICY IF EXISTS "Artists can manage own flashs" ON flashs;
 DROP POLICY IF EXISTS "Artists can view own projects" ON projects;
@@ -233,6 +256,11 @@ CREATE POLICY "Artists can update own data" ON artists
     FOR UPDATE 
     USING (auth.uid()::text = id::text)
     WITH CHECK (auth.uid()::text = id::text);
+
+-- Customers: pas de policy publique (création via edge function/service role).
+-- Policy placeholder (laisse la table sécurisée par défaut).
+CREATE POLICY "Customers can be managed by service role" ON customers
+    FOR ALL USING (false);
 
 -- Policy: Les flashs sont publics en lecture, mais seul l'artiste peut les modifier
 CREATE POLICY "Flashs are public for reading" ON flashs

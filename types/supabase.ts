@@ -62,6 +62,29 @@ export interface Database {
           updated_at?: string
         }
       }
+      customers: {
+        Row: {
+          id: string
+          email: string
+          name: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       flashs: {
         Row: {
           id: string
@@ -113,6 +136,7 @@ export interface Database {
         Row: {
           id: string
           artist_id: string
+          customer_id: string | null
           client_email: string
           client_name: string | null
           body_part: string
@@ -120,6 +144,7 @@ export interface Database {
           style: string
           description: string
           budget_max: number | null // En centimes
+          deposit_paid: boolean
           is_cover_up: boolean
           is_first_tattoo: boolean
           reference_images: string[] | null
@@ -128,7 +153,7 @@ export interface Database {
           ai_complexity_score: number | null
           ai_price_range: string | null
           ai_technical_notes: string | null
-          statut: 'pending' | 'approved' | 'rejected' | 'quoted'
+          statut: 'pending' | 'inquiry' | 'approved' | 'rejected' | 'quoted'
           artist_quoted_price: number | null // En centimes
           artist_notes: string | null
           artist_response_at: string | null
@@ -138,6 +163,7 @@ export interface Database {
         Insert: {
           id?: string
           artist_id: string
+          customer_id?: string | null
           client_email: string
           client_name?: string | null
           body_part: string
@@ -145,6 +171,7 @@ export interface Database {
           style: string
           description: string
           budget_max?: number | null
+          deposit_paid?: boolean
           is_cover_up?: boolean
           is_first_tattoo?: boolean
           reference_images?: string[] | null
@@ -153,7 +180,7 @@ export interface Database {
           ai_complexity_score?: number | null
           ai_price_range?: string | null
           ai_technical_notes?: string | null
-          statut?: 'pending' | 'approved' | 'rejected' | 'quoted'
+          statut?: 'pending' | 'inquiry' | 'approved' | 'rejected' | 'quoted'
           artist_quoted_price?: number | null
           artist_notes?: string | null
           artist_response_at?: string | null
@@ -163,6 +190,7 @@ export interface Database {
         Update: {
           id?: string
           artist_id?: string
+          customer_id?: string | null
           client_email?: string
           client_name?: string | null
           body_part?: string
@@ -170,6 +198,7 @@ export interface Database {
           style?: string
           description?: string
           budget_max?: number | null
+          deposit_paid?: boolean
           is_cover_up?: boolean
           is_first_tattoo?: boolean
           reference_images?: string[] | null
@@ -178,7 +207,7 @@ export interface Database {
           ai_complexity_score?: number | null
           ai_price_range?: string | null
           ai_technical_notes?: string | null
-          statut?: 'pending' | 'approved' | 'rejected' | 'quoted'
+          statut?: 'pending' | 'inquiry' | 'approved' | 'rejected' | 'quoted'
           artist_quoted_price?: number | null
           artist_notes?: string | null
           artist_response_at?: string | null
@@ -318,17 +347,20 @@ export interface Database {
 
 // Types helpers pour faciliter l'utilisation
 export type Artist = Database['public']['Tables']['artists']['Row']
+export type Customer = Database['public']['Tables']['customers']['Row']
 export type Flash = Database['public']['Tables']['flashs']['Row']
 export type Project = Database['public']['Tables']['projects']['Row']
 export type Booking = Database['public']['Tables']['bookings']['Row']
 export type StripeTransaction = Database['public']['Tables']['stripe_transactions']['Row']
 
 export type ArtistInsert = Database['public']['Tables']['artists']['Insert']
+export type CustomerInsert = Database['public']['Tables']['customers']['Insert']
 export type FlashInsert = Database['public']['Tables']['flashs']['Insert']
 export type ProjectInsert = Database['public']['Tables']['projects']['Insert']
 export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
 
 export type ArtistUpdate = Database['public']['Tables']['artists']['Update']
+export type CustomerUpdate = Database['public']['Tables']['customers']['Update']
 export type FlashUpdate = Database['public']['Tables']['flashs']['Update']
 export type ProjectUpdate = Database['public']['Tables']['projects']['Update']
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']

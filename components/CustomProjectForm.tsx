@@ -17,6 +17,8 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [clientEmail, setClientEmail] = useState('');
   const [clientName, setClientName] = useState('');
   
@@ -93,14 +95,16 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    setSubmitSuccess(null);
     if (!formData.bodyPart || !formData.style || !formData.description || !clientEmail || !clientName) {
-        alert("Veuillez remplir tous les champs obligatoires.");
-        return;
+      setSubmitError("Veuillez remplir tous les champs obligatoires.");
+      return;
     }
 
     if (step !== 4 || !analysis) {
-        alert("Veuillez d'abord analyser votre projet.");
-        return;
+      setSubmitError("Veuillez d'abord analyser votre projet.");
+      return;
     }
 
     setIsLoading(true);
@@ -108,9 +112,14 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
     try {
       const budgetMax = formData.budget ? parseFloat(formData.budget) * 100 : null; // Convertir en centimes
 
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
+      // IMPORTANT:
+      // L'insertion directe depuis le client échoue avec RLS (public).
+      // On passe par une Edge Function (service role) qui:
+      // - upsert customer
+      // - crée project avec statut 'inquiry' + deposit_paid=false
+      // - notifie l'artiste via Resend
+      const { data, error } = await supabase.functions.invoke('submit-project-request', {
+        body: {
           artist_id: artistId,
           client_email: clientEmail,
           client_name: clientName,
@@ -126,14 +135,13 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
           ai_complexity_score: analysis.complexityScore,
           ai_price_range: analysis.suggestedPriceRange,
           ai_technical_notes: analysis.technicalNotes,
-          statut: 'pending',
-        })
-        .select()
-        .single();
+        },
+      });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
 
-      alert("✅ Dossier complet envoyé ! L'artiste reviendra vers vous avec un devis basé sur ces éléments.");
+      setSubmitSuccess("Demande envoyée !");
       
       // Reset form
       setStep(1);
@@ -154,7 +162,7 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
     } catch (err) {
       console.error('Error submitting project:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
-      alert(`Erreur lors de l'envoi: ${errorMessage}`);
+      setSubmitError(`Erreur lors de l'envoi: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +170,20 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 animate-in slide-in-from-bottom-10 duration-500">
+        {(submitSuccess || submitError) && (
+          <div className={`mb-6 p-4 rounded-2xl border ${
+            submitSuccess
+              ? 'bg-green-500/10 border-green-500/20 text-green-300'
+              : 'bg-red-500/10 border-red-500/20 text-red-300'
+          }`}>
+            <div className="flex items-start gap-3">
+              {submitSuccess ? <CheckCircle size={18} className="mt-0.5" /> : <AlertCircle size={18} className="mt-0.5" />}
+              <div className="text-sm font-medium">
+                {submitSuccess || submitError}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mb-8 text-center md:text-left">
             <h2 className="text-3xl font-bold text-white mb-2">Parlez-nous de votre projet</h2>
             <p className="text-slate-400">Pour obtenir un devis précis sans attendre, remplissez ce formulaire en détail.</p>

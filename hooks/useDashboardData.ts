@@ -43,7 +43,7 @@ export const useDashboardData = () => {
           .from('projects')
           .select('*')
           .eq('artist_id', user.id)
-          .eq('statut', 'pending')
+          .in('statut', ['inquiry', 'pending'])
           .order('created_at', { ascending: false }),
 
         // Total flashs
