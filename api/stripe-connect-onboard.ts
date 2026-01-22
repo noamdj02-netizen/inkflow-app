@@ -30,10 +30,43 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // Get environment variables
-    const stripeSecretKey = requireEnv('STRIPE_SECRET_KEY');
-    const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
-    const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY') || requireEnv('SUPABASE_ANON_KEY');
+    // Get environment variables with better error messages
+    let stripeSecretKey: string;
+    let supabaseUrl: string;
+    let supabaseServiceKey: string;
+    
+    try {
+      stripeSecretKey = requireEnv('STRIPE_SECRET_KEY');
+    } catch (e) {
+      console.error('Missing STRIPE_SECRET_KEY');
+      return json(res, 500, { 
+        error: 'Configuration serveur manquante: STRIPE_SECRET_KEY. Vérifiez les variables d\'environnement dans Vercel.' 
+      });
+    }
+    
+    try {
+      supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
+      if (!supabaseUrl) {
+        throw new Error('Missing Supabase URL');
+      }
+    } catch (e) {
+      console.error('Missing VITE_SUPABASE_URL or SUPABASE_URL');
+      return json(res, 500, { 
+        error: 'Configuration serveur manquante: VITE_SUPABASE_URL ou SUPABASE_URL. Vérifiez les variables d\'environnement dans Vercel.' 
+      });
+    }
+    
+    try {
+      supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY') || requireEnv('SUPABASE_ANON_KEY');
+      if (!supabaseServiceKey) {
+        throw new Error('Missing Supabase Service Key');
+      }
+    } catch (e) {
+      console.error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY');
+      return json(res, 500, { 
+        error: 'Configuration serveur manquante: SUPABASE_SERVICE_ROLE_KEY. Vérifiez les variables d\'environnement dans Vercel.' 
+      });
+    }
     
     // Get authorization token from request
     const authHeader = req.headers.authorization;
@@ -125,8 +158,18 @@ export default async function handler(req: any, res: any) {
     
   } catch (error: any) {
     console.error('Stripe Connect onboarding error:', error);
+    
+    // Ensure we always return valid JSON, even on unexpected errors
+    const errorMessage = error?.message || 'Failed to create Stripe Connect onboarding link';
+    
+    // Log full error for debugging
+    if (error?.stack) {
+      console.error('Error stack:', error.stack);
+    }
+    
     return json(res, 500, {
-      error: error.message || 'Failed to create Stripe Connect onboarding link',
+      error: errorMessage,
+      code: error?.code || 'UNKNOWN_ERROR',
     });
   }
 }

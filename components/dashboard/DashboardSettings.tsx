@@ -88,23 +88,44 @@ export const DashboardSettings: React.FC = () => {
         },
       });
 
-      const data = await response.json();
-
+      // Check if response is ok and has content
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la création du lien Stripe');
+        let errorMessage = 'Erreur lors de la création du lien Stripe';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+          errorMessage = response.statusText || `Erreur ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse JSON response
+      let data;
+      try {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Réponse vide du serveur');
+        }
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Réponse invalide du serveur. Vérifiez les variables d\'environnement dans Vercel.');
       }
 
       if (data.url) {
         // Redirect to Stripe onboarding
         window.location.href = data.url;
       } else {
-        throw new Error('URL de redirection Stripe manquante');
+        throw new Error('URL de redirection Stripe manquante dans la réponse');
       }
     } catch (err: any) {
       console.error('Stripe Connect error:', err);
-      setError(err.message || 'Erreur lors de la connexion à Stripe');
-      toast.error('Erreur', {
-        description: err.message || 'Impossible de créer le lien de configuration Stripe',
+      const errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
+      setError(errorMessage);
+      toast.error('Erreur Stripe Connect', {
+        description: errorMessage,
       });
       setStripeConnecting(false);
     }
