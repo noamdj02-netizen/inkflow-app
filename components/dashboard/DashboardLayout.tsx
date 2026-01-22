@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const AreaChart = lazy(() => import('recharts').then(m => ({ default: m.AreaChart })));
 const Area = lazy(() => import('recharts').then(m => ({ default: m.Area })));
 const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
-const Tooltip = lazy(() => import('recharts').then(m => ({ default: m.Tooltip })));
 import { 
   Calendar, DollarSign, Users, MessageSquare, 
   FileSignature, PieChart, LayoutGrid, Settings, 

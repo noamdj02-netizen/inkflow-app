@@ -407,15 +407,15 @@ const getThemeClasses = (themeColor: string = 'amber') => {
       badge: 'bg-green-500/90',
       inputFocus: 'focus:border-red-500',
     },
-    blue: {
-      primary: 'bg-blue-500',
-      primaryHover: 'hover:bg-blue-400',
-      primaryText: 'text-blue-500',
-      primaryBg: 'bg-blue-500/10',
-      primaryBorder: 'border-blue-500',
-      icon: 'text-blue-500',
+    gold: {
+      primary: 'bg-amber-500',
+      primaryHover: 'hover:bg-amber-400',
+      primaryText: 'text-amber-500',
+      primaryBg: 'bg-amber-500/10',
+      primaryBorder: 'border-amber-500',
+      icon: 'text-amber-500',
       badge: 'bg-green-500/90',
-      inputFocus: 'focus:border-blue-500',
+      inputFocus: 'focus:border-amber-500',
     },
     emerald: {
       primary: 'bg-emerald-500',

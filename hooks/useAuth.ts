@@ -42,7 +42,6 @@ export const useAuth = () => {
         // Vérifier le cache de session d'abord
         const now = Date.now();
         if (sessionCache && (now - sessionCache.timestamp) < SESSION_CACHE_DURATION) {
-          console.log('🔄 useAuth: Utilisation du cache de session');
           setUser(sessionCache.session?.user ?? null);
           setLoading(false);
           return;
@@ -51,7 +50,6 @@ export const useAuth = () => {
         // Cache expiré ou inexistant, vérifier la session
         if (!isCheckingSession) {
           isCheckingSession = true;
-          console.log('🔄 useAuth: Vérification de la session...');
           
           const { data: { session }, error } = await supabase.auth.getSession();
           
@@ -61,7 +59,6 @@ export const useAuth = () => {
             sessionCache = null;
             setUser(null);
           } else {
-            console.log('✅ useAuth: Session récupérée', session ? 'avec utilisateur' : 'sans utilisateur');
             sessionCache = {
               session,
               timestamp: Date.now(),
@@ -127,8 +124,6 @@ export const useAuth = () => {
     }
 
     try {
-      console.log('📝 useAuth: Tentative d\'inscription pour:', email);
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -138,8 +133,6 @@ export const useAuth = () => {
         console.error('❌ useAuth: Erreur inscription:', error.message);
         return { data: null, error };
       }
-      
-      console.log('✅ useAuth: Inscription réussie');
       
       if (data?.session) {
         sessionCache = {

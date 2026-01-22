@@ -313,7 +313,7 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
               className="space-y-6"
             >
                     <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
-                         <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                         <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
                             <PenTool size={24} />
                          </div>
                          <div>
