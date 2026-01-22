@@ -186,7 +186,7 @@ export default async function handler(req: any, res: any) {
           artist_email: artist.email,
           flash_title: flash.title,
           plan: plan,
-          commission_rate: planLimits.commissionRate.toString(),
+          commission_rate: getPlanLimits(plan).commissionRate.toString(),
           application_fee: applicationFeeAmount.toString(),
         },
       },
@@ -209,7 +209,7 @@ export default async function handler(req: any, res: any) {
       sessionId: session.id,
       depositAmount: depositAmount,
       applicationFee: applicationFeeAmount,
-      commissionRate: planLimits.commissionRate,
+      commissionRate: getPlanLimits(plan).commissionRate,
       plan: plan,
     });
 

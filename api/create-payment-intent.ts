@@ -150,7 +150,7 @@ export default async function handler(req: any, res: any) {
         client_email: project.client_email,
         client_name: project.client_name || '',
         plan: plan,
-        commission_rate: planLimits.commissionRate.toString(),
+        commission_rate: getPlanLimits(plan).commissionRate.toString(),
         application_fee: applicationFeeAmount.toString(),
       },
       // Optional: Set automatic payment methods
@@ -165,7 +165,7 @@ export default async function handler(req: any, res: any) {
       paymentIntentId: paymentIntent.id,
       amount: paymentIntent.amount,
       applicationFee: applicationFeeAmount,
-      commissionRate: planLimits.commissionRate,
+      commissionRate: getPlanLimits(plan).commissionRate,
       plan: plan,
     });
 
