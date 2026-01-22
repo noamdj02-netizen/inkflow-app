@@ -14,72 +14,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/pwa-512x512.png" />
     <title>InkFlow - Tattoo Booking SaaS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'brand-purple': '#9B5DE5',
-              'brand-pink': '#F15BB5',
-              'brand-yellow': '#FEE440',
-              'brand-cyan': '#00BBF9',
-              'brand-mint': '#00F5D4',
-              'brand-purple-dark': '#7C3AED',
-              'brand-pink-dark': '#DB2777',
-            },
-            fontFamily: {
-              'display': ['Syne', 'system-ui', 'sans-serif'],
-              'serif': ['Cinzel', 'ui-serif', 'Georgia', 'serif'],
-              'sans': ['Space Grotesk', 'system-ui', 'sans-serif'],
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      body {
-        background-color: #050505;
-        color: #fafafa;
-        font-family: 'Space Grotesk', system-ui, sans-serif;
-      }
-      .glass {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-      }
-      .gradient-text {
-        background: linear-gradient(135deg, #fff 0%, #71717a 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      /* Animations */
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-      }
-      @keyframes pulse-glow {
-        0%, 100% { opacity: 0.5; }
-        50% { opacity: 1; }
-      }
-      @keyframes slide-up {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .animate-float { animation: float 6s ease-in-out infinite; }
-      .animate-float-delayed { animation: float 6s ease-in-out 2s infinite; }
-      .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-      .animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
-    </style>
   <script type="importmap">
 {
   "imports": {
