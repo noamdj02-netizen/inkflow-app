@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIP } from '../utils/rateLimit';
+import { validateProjectSubmission, escapeHtml, sanitizeText } from '../utils/validation';
 
 type SubmitProjectBody = {
   artist_id: string;

@@ -30,7 +30,7 @@ export default async function handler(req: any, res: any) {
     
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-12-15.clover',
     });
     
     // Retrieve the account to check onboarding status

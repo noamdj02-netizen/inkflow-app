@@ -67,11 +67,11 @@ export default async function handler(req: any, res: any) {
   // Validate input with Zod (strict mode)
   const bodyParseResult = careInstructionsSchema.safeParse(req.body);
   if (!bodyParseResult.success) {
-    const firstError = bodyParseResult.error.errors[0];
+    const firstError = bodyParseResult.error.issues[0];
     return json(res, 400, {
       success: false,
       error: firstError?.message || 'Validation failed',
-      details: process.env.NODE_ENV === 'development' ? bodyParseResult.error.errors : undefined,
+      details: process.env.NODE_ENV === 'development' ? bodyParseResult.error.issues : undefined,
     });
   }
   const body = bodyParseResult.data;

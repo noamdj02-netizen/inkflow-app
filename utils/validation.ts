@@ -223,12 +223,12 @@ export function validateProjectSubmission(data: unknown) {
     return { success: true, data: validated, error: null };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       return {
         success: false,
         data: null,
         error: firstError.message || 'Validation failed',
-        details: error.errors,
+        details: error.issues,
       };
     }
     return {
