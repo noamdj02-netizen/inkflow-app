@@ -74,55 +74,83 @@ async function sendResendEmail(args: { to: string; subject: string; html: string
 // escapeHtml and sanitizeText are now imported from utils/validation
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== 'POST') return json(res, 405, { success: false, error: 'Method not allowed' });
+  // Wrap everything in try-catch to handle unexpected errors
+  try {
+    if (req.method !== 'POST') return json(res, 405, { success: false, error: 'Method not allowed' });
 
-  // Step 1: Rate Limiting (Anti-Spam)
-  // Limit: 3 requests per IP per hour
-  const clientIP = getClientIP(req);
-  const rateLimitResult = rateLimit(clientIP, 3, 60 * 60 * 1000); // 3 requests per hour
-  
-  if (!rateLimitResult.allowed) {
-    const resetSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+    // Step 1: Rate Limiting (Anti-Spam)
+    // Limit: 3 requests per IP per hour
+    const clientIP = getClientIP(req);
+    const rateLimitResult = rateLimit(clientIP, 3, 60 * 60 * 1000); // 3 requests per hour
+    
+    if (!rateLimitResult.allowed) {
+      const resetSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      return json(
+        res,
+        429,
+        {
+          success: false,
+          error: 'Too many requests. Please try again later.',
+          retryAfter: resetSeconds,
+        },
+        {
+          'X-RateLimit-Limit': '3',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
+          'Retry-After': resetSeconds.toString(),
+        }
+      );
+    }
+
+    // Add rate limit headers to successful responses
+    const rateLimitHeaders = {
+      'X-RateLimit-Limit': '3',
+      'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+      'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
+    };
+
+    const supabaseUrl = requireEnv('SUPABASE_URL') || requireEnv('VITE_SUPABASE_URL');
+    const serviceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Missing environment variables:', { 
+        hasSupabaseUrl: !!supabaseUrl, 
+        hasServiceKey: !!serviceKey 
+      });
+      return json(
+        res,
+        500,
+        {
+          success: false,
+          error: 'Configuration serveur manquante. Vérifiez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans Vercel.',
+        },
+        rateLimitHeaders
+      );
+    }
+
+  // Step 2: Parse request body
+  let requestBody: any;
+  try {
+    // Handle both string and object body (Vercel can send either)
+    if (typeof req.body === 'string') {
+      requestBody = JSON.parse(req.body);
+    } else {
+      requestBody = req.body;
+    }
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
     return json(
       res,
-      429,
+      400,
       {
         success: false,
-        error: 'Too many requests. Please try again later.',
-        retryAfter: resetSeconds,
-      },
-      {
-        'X-RateLimit-Limit': '3',
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
-        'Retry-After': resetSeconds.toString(),
-      }
-    );
-  }
-
-  // Add rate limit headers to successful responses
-  const rateLimitHeaders = {
-    'X-RateLimit-Limit': '3',
-    'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-    'X-RateLimit-Reset': rateLimitResult.resetAt.toString(),
-  };
-
-  const supabaseUrl = requireEnv('SUPABASE_URL') || requireEnv('VITE_SUPABASE_URL');
-  const serviceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceKey) {
-    return json(
-      res,
-      500,
-      {
-        success: false,
-        error: 'Missing server env vars (SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY)',
+        error: 'Invalid JSON in request body',
       },
       rateLimitHeaders
     );
   }
 
-  // Step 2: Validate and sanitize input with Zod (prevents injection attacks)
-  const validationResult = validateProjectSubmission(req.body);
+  // Step 3: Validate and sanitize input with Zod (prevents injection attacks)
+  const validationResult = validateProjectSubmission(requestBody);
   
   if (!validationResult.success) {
     console.error('Validation failed:', validationResult.error, validationResult.details);
@@ -162,7 +190,12 @@ export default async function handler(req: any, res: any) {
     .single();
 
   if (customerError || !customer) {
-    return json(res, 500, { success: false, error: 'Failed to upsert customer' });
+    console.error('Failed to upsert customer:', customerError);
+    return json(res, 500, { 
+      success: false, 
+      error: 'Failed to upsert customer',
+      details: process.env.NODE_ENV === 'development' ? customerError?.message : undefined
+    });
   }
 
   // 3) Create project as INQUIRY, deposit_paid=false
@@ -192,7 +225,14 @@ export default async function handler(req: any, res: any) {
     .select('id')
     .single();
 
-  if (projectError || !project) return json(res, 500, { success: false, error: 'Failed to create project' });
+  if (projectError || !project) {
+    console.error('Failed to create project:', projectError);
+    return json(res, 500, { 
+      success: false, 
+      error: 'Failed to create project',
+      details: process.env.NODE_ENV === 'development' ? projectError?.message : undefined
+    });
+  }
 
   // 4) Email notify (non-blocking)
   // All user input is sanitized with escapeHtml() to prevent HTML injection/XSS
@@ -237,11 +277,24 @@ export default async function handler(req: any, res: any) {
     // ignore email failures
   }
 
-  return json(
-    res,
-    200,
-    { success: true, project_id: project.id },
-    rateLimitHeaders
-  );
+    return json(
+      res,
+      200,
+      { success: true, project_id: project.id },
+      rateLimitHeaders
+    );
+  } catch (error: any) {
+    // Catch any unexpected errors
+    console.error('Unexpected error in submit-project-request:', error);
+    return json(
+      res,
+      500,
+      {
+        success: false,
+        error: 'Erreur serveur inattendue',
+        details: process.env.NODE_ENV === 'development' ? error?.message : undefined,
+      }
+    );
+  }
 }
 

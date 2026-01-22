@@ -98,6 +98,7 @@ export const DashboardSettings: React.FC = () => {
       // Check if response is ok and has content
       if (!response.ok) {
         let errorMessage = 'Erreur lors de la création du lien Stripe';
+        let errorData: any = null;
         
         // Handle 404 specifically (route not found)
         if (response.status === 404) {
@@ -111,8 +112,11 @@ export const DashboardSettings: React.FC = () => {
           }
         } else {
           try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+            const text = await response.text();
+            if (text && text.trim()) {
+              errorData = JSON.parse(text);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            }
           } catch {
             // If JSON parsing fails, use status text
             const statusText = response.statusText || `Erreur ${response.status}`;
@@ -121,7 +125,11 @@ export const DashboardSettings: React.FC = () => {
               : statusText;
           }
         }
-        throw new Error(errorMessage);
+        
+        // Create error with data for specific handling
+        const error = new Error(errorMessage);
+        (error as any).data = errorData;
+        throw error;
       }
 
       // Parse JSON response
@@ -136,6 +144,13 @@ export const DashboardSettings: React.FC = () => {
         console.error('JSON parse error:', parseError);
         throw new Error('Réponse invalide du serveur. Vérifiez les variables d\'environnement dans Vercel.');
       }
+      
+      // Check for Stripe Connect configuration errors in response
+      if (data?.code === 'STRIPE_CONNECT_CONFIG_REQUIRED') {
+        const error = new Error(data.message || data.error);
+        (error as any).data = data;
+        throw error;
+      }
 
       if (data.url) {
         // Redirect to Stripe onboarding
@@ -145,7 +160,19 @@ export const DashboardSettings: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Stripe Connect error:', err);
-      const errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
+      
+      let errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
+      let helpUrl: string | undefined;
+      
+      // Handle specific Stripe Connect configuration errors
+      const errorData = err.data;
+      if (err.message?.includes('losses') || err.message?.includes('platform-profile') || 
+          err.message?.includes('Configuration Stripe Connect requise') ||
+          errorData?.code === 'STRIPE_CONNECT_CONFIG_REQUIRED') {
+        errorMessage = 'Configuration Stripe Connect requise. Veuillez configurer les responsabilités de gestion des pertes dans votre compte Stripe Dashboard.';
+        helpUrl = errorData?.helpUrl || 'https://dashboard.stripe.com/settings/connect/platform-profile';
+      }
+      
       setError(errorMessage);
       
       // Show more helpful error message
@@ -155,8 +182,12 @@ export const DashboardSettings: React.FC = () => {
         : errorMessage;
       
       toast.error('Erreur Stripe Connect', {
-        description: displayMessage,
-        duration: 6000, // Show longer for important errors
+        description: displayMessage + (helpUrl ? '\n\nCliquez sur "Ouvrir Stripe Dashboard" pour configurer.' : ''),
+        duration: 10000, // Show longer for important errors
+        action: helpUrl ? {
+          label: 'Ouvrir Stripe Dashboard',
+          onClick: () => window.open(helpUrl, '_blank'),
+        } : undefined,
       });
       setStripeConnecting(false);
     }

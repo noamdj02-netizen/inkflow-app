@@ -122,17 +122,32 @@ export default async function handler(req: any, res: any) {
     
     // If no Stripe account exists, create one
     if (!accountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'FR', // Default to France, can be made configurable
-        email: artist.email,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
-        },
-      });
-      
-      accountId = account.id;
+      try {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: 'FR', // Default to France, can be made configurable
+          email: artist.email,
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+        });
+        
+        accountId = account.id;
+      } catch (accountError: any) {
+        // Handle specific Stripe Connect errors
+        if (accountError?.message?.includes('losses') || accountError?.message?.includes('platform-profile')) {
+          console.error('Stripe Connect platform configuration error:', accountError);
+          return json(res, 400, {
+            error: 'Configuration Stripe Connect requise',
+            code: 'STRIPE_CONNECT_CONFIG_REQUIRED',
+            message: 'Veuillez configurer les responsabilités de gestion des pertes dans votre compte Stripe Dashboard avant de créer des comptes connectés.',
+            helpUrl: 'https://dashboard.stripe.com/settings/connect/platform-profile',
+          });
+        }
+        // Re-throw other errors
+        throw accountError;
+      }
       
       // Save the account ID to the database
       const { error: updateError } = await supabase
@@ -170,6 +185,16 @@ export default async function handler(req: any, res: any) {
     
   } catch (error: any) {
     console.error('Stripe Connect onboarding error:', error);
+    
+    // Handle specific Stripe Connect configuration errors
+    if (error?.message?.includes('losses') || error?.message?.includes('platform-profile')) {
+      return json(res, 400, {
+        error: 'Configuration Stripe Connect requise',
+        code: 'STRIPE_CONNECT_CONFIG_REQUIRED',
+        message: 'Veuillez configurer les responsabilités de gestion des pertes dans votre compte Stripe Dashboard avant de créer des comptes connectés.',
+        helpUrl: 'https://dashboard.stripe.com/settings/connect/platform-profile',
+      });
+    }
     
     // Ensure we always return valid JSON, even on unexpected errors
     const errorMessage = error?.message || 'Failed to create Stripe Connect onboarding link';

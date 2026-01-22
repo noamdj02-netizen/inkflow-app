@@ -498,11 +498,18 @@ export const PublicArtistPage: React.FC = () => {
           .single();
 
         if (artistError) {
+          console.error('Error fetching artist:', artistError);
           if (artistError.code === 'PGRST116') {
-            setError('Artiste non trouvé');
+            setError(`Artiste "${slug}" non trouvé. Vérifiez que le slug est correct.`);
           } else {
-            setError('Erreur lors du chargement');
+            setError(`Erreur lors du chargement: ${artistError.message || 'Erreur inconnue'}`);
           }
+          setLoading(false);
+          return;
+        }
+
+        if (!artistData) {
+          setError(`Artiste "${slug}" non trouvé`);
           setLoading(false);
           return;
         }
@@ -519,12 +526,21 @@ export const PublicArtistPage: React.FC = () => {
 
         if (flashsError) {
           console.error('Error fetching flashs:', flashsError);
+          // Ne pas bloquer l'affichage si les flashs ne peuvent pas être chargés
+          setFlashs([]);
         } else {
           setFlashs(flashsData || []);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching data:', err);
-        setError('Erreur lors du chargement');
+        const errorMessage = err?.message || 'Erreur lors du chargement';
+        
+        // Gérer les erreurs de parsing JSON spécifiquement
+        if (errorMessage.includes('JSON') || errorMessage.includes('Unexpected token')) {
+          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
+        } else {
+          setError(`Erreur lors du chargement: ${errorMessage}`);
+        }
       } finally {
         setLoading(false);
       }
@@ -603,24 +619,90 @@ export const PublicArtistPage: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la création de la session de paiement');
+      // Vérifier si la réponse est vide ou invalide
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      // Lire le texte de la réponse d'abord
+      const text = await response.text();
+      
+      // Si la réponse est vide ou n'est pas du JSON
+      if (!text || text.trim() === '') {
+        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+        if (isDevelopment) {
+          throw new Error(
+            'Les routes API ne fonctionnent qu\'en production sur Vercel. ' +
+            'Déployez votre projet sur Vercel pour tester les paiements.'
+          );
+        } else {
+          throw new Error('Réponse vide du serveur. Vérifiez que la fonction serverless est déployée.');
+        }
       }
 
-      if (data.url) {
+      // Parser le JSON seulement si c'est du JSON valide
+      let data;
+      if (isJson) {
+        try {
+          data = JSON.parse(text);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError, 'Response text:', text);
+          throw new Error('Réponse invalide du serveur. Vérifiez les logs Vercel.');
+        }
+      } else {
+        // Si ce n'est pas du JSON, c'est probablement une erreur HTML (404, etc.)
+        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+        if (response.status === 404) {
+          if (isDevelopment) {
+            throw new Error(
+              'Route API non trouvée. Les routes API ne fonctionnent qu\'en production sur Vercel.'
+            );
+          } else {
+            throw new Error('Route API non trouvée. Vérifiez que la fonction serverless est déployée sur Vercel.');
+          }
+        }
+        throw new Error(`Erreur serveur (${response.status}): ${text.substring(0, 100)}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error || `Erreur serveur (${response.status})`);
+      }
+
+      if (data?.url) {
         // Rediriger vers Stripe Checkout
         window.location.href = data.url;
       } else {
-        throw new Error('URL de paiement manquante');
+        throw new Error('URL de paiement manquante dans la réponse');
       }
     } catch (err: any) {
       console.error('Direct booking error:', err);
-      const errorMessage = err.message || 'Erreur lors de la réservation. Veuillez réessayer.';
+      
+      // Nettoyer le message d'erreur pour l'utilisateur
+      let errorMessage = 'Erreur lors de la réservation. Veuillez réessayer.';
+      
+      if (err.message) {
+        // Messages d'erreur spécifiques et clairs
+        if (err.message.includes('Unexpected end of JSON input') || err.message.includes('Failed to execute')) {
+          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+          errorMessage = isDevelopment
+            ? 'Les routes API ne fonctionnent qu\'en production sur Vercel. Déployez votre projet pour tester les paiements.'
+            : 'Erreur de communication avec le serveur. Veuillez réessayer ou contacter le support.';
+        } else if (err.message.includes('Route API non trouvée') || err.message.includes('404')) {
+          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+          errorMessage = isDevelopment
+            ? 'Route API non trouvée. Les routes API ne fonctionnent qu\'en production sur Vercel.'
+            : 'Fonction de paiement non disponible. Veuillez contacter le support.';
+        } else if (err.message.includes('Stripe') || err.message.includes('paiement')) {
+          errorMessage = err.message;
+        } else {
+          // Pour les autres erreurs, utiliser le message original
+          errorMessage = err.message;
+        }
+      }
+      
       setError(errorMessage);
       toast.error('Erreur', {
         description: errorMessage,
+        duration: 5000,
       });
       setBookingFlashId(null);
     }
@@ -647,6 +729,13 @@ export const PublicArtistPage: React.FC = () => {
   }
 
   if (error || !artist) {
+    // Nettoyer le message d'erreur pour éviter d'afficher des erreurs techniques
+    const displayError = error && error.includes('Unexpected end of JSON input')
+      ? 'Erreur de communication avec le serveur. Veuillez réessayer.'
+      : error && error.includes('Failed to execute')
+      ? 'Erreur de communication avec le serveur. Veuillez réessayer.'
+      : error;
+    
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -655,7 +744,7 @@ export const PublicArtistPage: React.FC = () => {
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">404</h1>
           <p className="text-slate-400 mb-6">
-            {error || "Cet artiste n'existe pas ou n'a pas encore configuré son profil."}
+            {displayError || "Cet artiste n'existe pas ou n'a pas encore configuré son profil."}
           </p>
           <Link
             to="/"

@@ -20,6 +20,7 @@ const PaymentSuccess = lazy(() => import('./components/PaymentSuccess').then(m =
 const PaymentCancel = lazy(() => import('./components/PaymentCancel').then(m => ({ default: m.PaymentCancel })));
 const AuthCallbackPage = lazy(() => import('./components/auth/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const UpdatePasswordPage = lazy(() => import('./components/auth/UpdatePasswordPage').then(m => ({ default: m.UpdatePasswordPage })));
+const TestDatabase = lazy(() => import('./components/TestDatabase').then(m => ({ default: m.TestDatabase })));
 
 // Dashboard components (les plus lourds)
 const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout').then(m => ({ default: m.DashboardLayout })));
@@ -66,9 +67,12 @@ const App: React.FC = () => {
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
                   <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
                   
+                  {/* Test Database - Lazy loaded (doit être avant /:slug) */}
+                  <Route path="/test-db" element={<TestDatabase />} />
+                  
                   {/* Public Artist Page (Vitrine) - Lazy loaded */}
                   <Route path="/p/:slug" element={<PublicArtistPage />} />
-                  {/* Public Artist Page (Vitrine) - URL courte */}
+                  {/* Public Artist Page (Vitrine) - URL courte (doit être en dernier) */}
                   <Route path="/:slug" element={<PublicArtistPage />} />
                   
                   {/* Payment Routes - Lazy loaded */}

@@ -29,3 +29,6 @@ dist-ssr
 android/
 ios/
 .capacitor/
+
+# Scripts d'installation (optionnel - vous pouvez les garder ou les ignorer)
+# install-stripe-cli.ps1
