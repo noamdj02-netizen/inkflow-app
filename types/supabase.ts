@@ -20,6 +20,7 @@ export interface Database {
           slug_profil: string
           stripe_account_id: string | null
           stripe_connected: boolean
+          stripe_onboarding_complete: boolean
           deposit_percentage: number
           accent_color: string
           theme_color: 'amber' | 'red' | 'blue' | 'emerald' | 'violet' | null
@@ -39,6 +40,7 @@ export interface Database {
           slug_profil: string
           stripe_account_id?: string | null
           stripe_connected?: boolean
+          stripe_onboarding_complete?: boolean
           deposit_percentage?: number
           accent_color?: string
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
@@ -57,6 +59,7 @@ export interface Database {
           slug_profil?: string
           stripe_account_id?: string | null
           stripe_connected?: boolean
+          stripe_onboarding_complete?: boolean
           deposit_percentage?: number
           accent_color?: string
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
@@ -100,6 +103,7 @@ export interface Database {
           title: string
           image_url: string
           prix: number // En centimes
+          deposit_amount: number | null // Montant de l'acompte en centimes (optionnel, calculé depuis prix * deposit_percentage si NULL)
           duree_minutes: number
           taille_cm: string | null
           style: string | null
@@ -115,6 +119,7 @@ export interface Database {
           title: string
           image_url: string
           prix: number
+          deposit_amount?: number | null
           duree_minutes: number
           taille_cm?: string | null
           style?: string | null

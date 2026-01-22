@@ -193,7 +193,7 @@ export const OnboardingPage: React.FC = () => {
               INK<span className="text-amber-400">FLOW</span>
             </span>
           </div>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2">Créer votre profil</h1>
+          <h1 className="text-[25px] font-serif font-bold text-white mb-2">Créer votre profil</h1>
           <p className="text-slate-400">Configurez votre identité sur InkFlow</p>
         </motion.div>
 

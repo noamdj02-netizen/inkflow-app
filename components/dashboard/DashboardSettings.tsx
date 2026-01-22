@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy } from 'lucide-react';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
@@ -33,6 +33,82 @@ export const DashboardSettings: React.FC = () => {
   const [slugError, setSlugError] = useState<string | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [stripeConnecting, setStripeConnecting] = useState(false);
+
+  // Check URL params for Stripe callback status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe_success') === 'true') {
+      toast.success('Compte Stripe connecté avec succès !', {
+        description: 'Vous pouvez maintenant recevoir des paiements.',
+      });
+      // Refresh profile to get updated Stripe status
+      if (profile) {
+        updateProfile({}).then(() => {
+          window.location.search = '';
+        });
+      } else {
+        window.location.search = '';
+      }
+    } else if (params.get('stripe_incomplete') === 'true') {
+      toast.warning('Configuration Stripe incomplète', {
+        description: 'Veuillez compléter toutes les étapes de configuration.',
+      });
+      window.location.search = '';
+    } else if (params.get('stripe_refresh') === 'true') {
+      toast.info('Configuration Stripe requise', {
+        description: 'Veuillez compléter la configuration de votre compte bancaire.',
+      });
+      window.location.search = '';
+    }
+  }, [profile]);
+
+  const handleStripeConnect = async () => {
+    if (!user) {
+      toast.error('Vous devez être connecté');
+      return;
+    }
+
+    setStripeConnecting(true);
+    setError(null);
+
+    try {
+      // Get the session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Session invalide');
+      }
+
+      // Call the API route to create Stripe Connect account and get onboarding link
+      const response = await fetch('/api/stripe-connect-onboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la création du lien Stripe');
+      }
+
+      if (data.url) {
+        // Redirect to Stripe onboarding
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de redirection Stripe manquante');
+      }
+    } catch (err: any) {
+      console.error('Stripe Connect error:', err);
+      setError(err.message || 'Erreur lors de la connexion à Stripe');
+      toast.error('Erreur', {
+        description: err.message || 'Impossible de créer le lien de configuration Stripe',
+      });
+      setStripeConnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -715,6 +791,72 @@ export const DashboardSettings: React.FC = () => {
                   <span>50%</span>
                   <span>100%</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Section: Paiements Stripe */}
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <CreditCard className="text-amber-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Paiements Stripe</h3>
+                  <p className="text-sm text-zinc-500">Configurez votre compte bancaire pour recevoir les acomptes</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {profile?.stripe_onboarding_complete ? (
+                  <div className="p-4 bg-brand-mint/10 border border-brand-mint/20 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="text-brand-mint shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-brand-mint font-semibold text-sm mb-1">Compte Stripe actif</p>
+                        <p className="text-zinc-400 text-xs">
+                          Votre compte bancaire est configuré. Vous pouvez recevoir des paiements.
+                        </p>
+                        {profile.stripe_account_id && (
+                          <p className="text-zinc-600 text-xs mt-2 font-mono">
+                            Compte: {profile.stripe_account_id.substring(0, 20)}...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-amber-400 font-semibold text-sm mb-1">Configuration requise</p>
+                        <p className="text-zinc-400 text-xs">
+                          Connectez votre compte bancaire pour recevoir les acomptes de vos clients.
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={handleStripeConnect}
+                      disabled={stripeConnecting}
+                      className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-semibold py-3 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {stripeConnecting ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Configuration en cours...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink size={18} />
+                          Configurer les virements
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                )}
               </div>
             </div>
 

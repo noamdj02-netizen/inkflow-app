@@ -13,6 +13,7 @@ import type { Artist, Flash } from '../types/supabase';
 import { CustomProjectForm } from './CustomProjectForm';
 import { bookingFormSchema, type BookingFormData } from '../utils/validation';
 import { PublicProfileCTA } from './PublicProfileCTA';
+import { toast } from 'sonner';
 
 interface BookingDrawerProps {
   flash: Flash;
@@ -450,6 +451,7 @@ export const PublicArtistPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'flashs' | 'project'>('flashs');
   const [selectedFlash, setSelectedFlash] = useState<Flash | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [bookingFlashId, setBookingFlashId] = useState<string | null>(null);
   
   // Obtenir les classes du thème (doit être après que artist soit chargé)
   const themeColor = artist ? (artist.theme_color || artist.accent_color || 'amber') : 'amber';
@@ -576,6 +578,61 @@ export const PublicArtistPage: React.FC = () => {
           if (data) setFlashs(data);
         });
     }
+  };
+
+  const handleDirectBooking = async (flash: Flash, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher l'ouverture du drawer
+    
+    if (!artist) return;
+
+    setBookingFlashId(flash.id);
+    setError(null);
+
+    try {
+      // Calculer l'acompte
+      const depositAmount = flash.deposit_amount !== null && flash.deposit_amount !== undefined
+        ? flash.deposit_amount
+        : Math.round((flash.prix * (artist.deposit_percentage || 30)) / 100);
+
+      // Appeler l'API pour créer la session Stripe Checkout
+      const response = await fetch('/api/create-flash-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flash_id: flash.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la création de la session de paiement');
+      }
+
+      if (data.url) {
+        // Rediriger vers Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de paiement manquante');
+      }
+    } catch (err: any) {
+      console.error('Direct booking error:', err);
+      const errorMessage = err.message || 'Erreur lors de la réservation. Veuillez réessayer.';
+      setError(errorMessage);
+      toast.error('Erreur', {
+        description: errorMessage,
+      });
+      setBookingFlashId(null);
+    }
+  };
+
+  // Calculer l'acompte pour un flash
+  const calculateDeposit = (flash: Flash): number => {
+    if (!artist) return 0;
+    if (flash.deposit_amount !== null && flash.deposit_amount !== undefined) {
+      return flash.deposit_amount;
+    }
+    return Math.round((flash.prix * (artist.deposit_percentage || 30)) / 100);
   };
 
   if (loading) {
@@ -788,6 +845,24 @@ export const PublicArtistPage: React.FC = () => {
                 <p className="text-zinc-400 text-lg">Premier arrivé, premier servi. Réservez votre créneau instantanément.</p>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 max-w-2xl mx-auto"
+                >
+                  <X className="text-red-400 shrink-0" size={20} />
+                  <p className="text-red-300 text-sm flex-1">{error}</p>
+                  <button
+                    onClick={() => setError(null)}
+                    className="text-red-400/60 hover:text-red-400"
+                  >
+                    <X size={18} />
+                  </button>
+                </motion.div>
+              )}
+
               {/* Afficher uniquement les flashs réels de la base de données */}
               {(() => {
                 if (flashs.length === 0) {
@@ -803,53 +878,90 @@ export const PublicArtistPage: React.FC = () => {
 
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {flashs.map((flash, index) => (
-                      <motion.div
-                        key={flash.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        onClick={() => handleFlashClick(flash)}
-                        className="group relative glass rounded-2xl overflow-hidden transition-all active:scale-95 cursor-pointer hover:bg-white/10"
-                      >
-                        <div className="aspect-square relative overflow-hidden bg-black/40">
-                          {flash.image_url ? (
-                            <img
-                              src={flash.image_url}
-                              alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
-                              className="object-cover w-full h-full transition-transform duration-500 group-active:scale-110"
-                              loading="lazy"
-                              decoding="async"
-                              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231e293b" width="400" height="400"/%3E%3Ctext fill="%23475569" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                              <PenTool size={48} />
+                    {flashs.map((flash, index) => {
+                      const depositAmount = calculateDeposit(flash);
+                      const isBooking = bookingFlashId === flash.id;
+                      const isAvailable = flash.statut === 'available' && flash.stock_current < flash.stock_limit;
+                      
+                      return (
+                        <motion.div
+                          key={flash.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="group relative glass rounded-2xl overflow-hidden transition-all hover:bg-white/10"
+                        >
+                          <div className="aspect-square relative overflow-hidden bg-black/40">
+                            {flash.image_url ? (
+                              <img
+                                src={flash.image_url}
+                                alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
+                                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+                                loading="lazy"
+                                decoding="async"
+                                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231e293b" width="400" height="400"/%3E%3Ctext fill="%23475569" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                                <PenTool size={48} />
+                              </div>
+                            )}
+                            <div className={`absolute top-2 right-2 ${theme.badge} backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full`}>
+                              {isAvailable ? 'Disponible' : 'Indisponible'}
                             </div>
-                          )}
-                          <div className={`absolute top-2 right-2 ${theme.badge} backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full`}>
-                            Disponible
                           </div>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-bold text-white mb-2 line-clamp-1">{flash.title}</h3>
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`${hasCustomHex ? '' : theme.primaryText} font-mono font-bold text-lg`}
-                              style={hasCustomHex ? { color: glowA } : undefined}
-                            >
-                              {Math.round(flash.prix / 100)}€
-                            </span>
-                            <span className="text-zinc-400 text-sm flex items-center gap-1">
-                              <Clock size={14} /> {flash.duree_minutes}min
-                            </span>
+                          <div className="p-4">
+                            <h3 className="font-bold text-white mb-2 line-clamp-1">{flash.title}</h3>
+                            <div className="flex items-center justify-between mb-3">
+                              <span
+                                className={`${hasCustomHex ? '' : theme.primaryText} font-mono font-bold text-lg`}
+                                style={hasCustomHex ? { color: glowA } : undefined}
+                              >
+                                {Math.round(flash.prix / 100)}€
+                              </span>
+                              <span className="text-zinc-400 text-sm flex items-center gap-1">
+                                <Clock size={14} /> {flash.duree_minutes}min
+                              </span>
+                            </div>
+                            
+                            {/* Bouton de réservation directe */}
+                            {isAvailable ? (
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={(e) => handleDirectBooking(flash, e)}
+                                disabled={isBooking}
+                                style={hasCustomHex ? { background: `linear-gradient(135deg, ${accentHex}, ${secondaryHex || accentHex})` } : undefined}
+                                className={`w-full font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                                  hasCustomHex 
+                                    ? 'text-white hover:brightness-110' 
+                                    : 'bg-gradient-to-r from-amber-400 to-amber-600 text-white hover:from-amber-500 hover:to-amber-700'
+                                }`}
+                              >
+                                {isBooking ? (
+                                  <>
+                                    <Loader2 className="animate-spin" size={18} />
+                                    <span>Redirection...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Zap size={18} />
+                                    <span>Réserver ({Math.round(depositAmount / 100)}€)</span>
+                                  </>
+                                )}
+                              </motion.button>
+                            ) : (
+                              <div className="w-full bg-zinc-800/50 text-zinc-500 font-medium py-3 rounded-xl text-center text-sm">
+                                Indisponible
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 );
               })()}
