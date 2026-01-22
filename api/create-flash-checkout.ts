@@ -148,18 +148,6 @@ export default async function handler(req: any, res: any) {
 
     // Calculate application fee (commission) based on plan
     const applicationFeeAmount = calculateApplicationFee(depositAmount, plan);
-    
-    // Get plan limits for logging
-    const planLimits = getPlanLimits(plan);
-    
-    console.log(`Creating checkout session for flash ${body.flash_id}:`, {
-      flashTitle: flash.title,
-      depositAmount,
-      plan,
-      commissionRate: planLimits.commissionRate,
-      applicationFee: applicationFeeAmount,
-      artistAccount: artist.stripe_account_id,
-    });
 
     // Get the origin from request headers (for redirect URLs)
     const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';

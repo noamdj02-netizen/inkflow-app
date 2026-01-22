@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured, getConfigErrors } from '../services/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
+// Debug mode (only in development)
+const DEBUG_MODE = import.meta.env.DEV || false;
+
 // ============================================
 // 🔄 Cache de session (module-level)
 // ============================================
@@ -94,7 +97,6 @@ export const useAuth = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('🔔 useAuth: Auth state changed:', _event);
       sessionCache = {
         session,
         timestamp: Date.now(),
@@ -174,8 +176,6 @@ export const useAuth = () => {
     }
 
     try {
-      console.log('🔑 useAuth: Tentative de connexion pour:', email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -185,8 +185,6 @@ export const useAuth = () => {
         console.error('❌ useAuth: Erreur connexion:', error.message);
         return { data: null, error };
       }
-      
-      console.log('✅ useAuth: Connexion réussie');
       
       if (data?.session) {
         sessionCache = {
@@ -223,8 +221,6 @@ export const useAuth = () => {
     }
 
     try {
-      console.log(`🔐 useAuth: Tentative de connexion OAuth avec ${provider}...`);
-      
       const redirectTo = `${window.location.origin}/auth/callback`;
       
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -243,7 +239,6 @@ export const useAuth = () => {
         return { data: null, error };
       }
       
-      console.log(`✅ useAuth: Redirection OAuth ${provider} initiée`);
       // Note: Supabase redirige automatiquement vers le provider OAuth
       // puis vers /auth/callback après authentification
       return { data, error: null };
@@ -271,7 +266,6 @@ export const useAuth = () => {
     }
 
     try {
-      console.log('🚪 useAuth: Déconnexion...');
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -279,7 +273,6 @@ export const useAuth = () => {
         return { error };
       }
       
-      console.log('✅ useAuth: Déconnexion réussie');
       sessionCache = null;
       return { error: null };
     } catch (err) {

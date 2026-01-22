@@ -128,17 +128,6 @@ export default async function handler(req: any, res: any) {
 
     // Calculate application fee (commission) based on plan
     const applicationFeeAmount = calculateApplicationFee(body.amount, plan);
-    
-    // Get plan limits for logging
-    const planLimits = getPlanLimits(plan);
-    
-    console.log(`Creating payment intent for project ${body.project_id}:`, {
-      amount: body.amount,
-      plan,
-      commissionRate: planLimits.commissionRate,
-      applicationFee: applicationFeeAmount,
-      artistAccount: artist.stripe_account_id,
-    });
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
