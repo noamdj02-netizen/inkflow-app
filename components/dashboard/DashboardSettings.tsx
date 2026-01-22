@@ -79,8 +79,15 @@ export const DashboardSettings: React.FC = () => {
         throw new Error('Session invalide');
       }
 
+      // Check if we're in development mode
+      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      
       // Call the API route to create Stripe Connect account and get onboarding link
-      const response = await fetch('/api/stripe-connect-onboard', {
+      const apiUrl = isDevelopment 
+        ? `${window.location.origin}/api/stripe-connect-onboard`
+        : '/api/stripe-connect-onboard';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,12 +98,28 @@ export const DashboardSettings: React.FC = () => {
       // Check if response is ok and has content
       if (!response.ok) {
         let errorMessage = 'Erreur lors de la création du lien Stripe';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // If JSON parsing fails, use status text
-          errorMessage = response.statusText || `Erreur ${response.status}`;
+        
+        // Handle 404 specifically (route not found)
+        if (response.status === 404) {
+          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+          if (isDevelopment) {
+            errorMessage = 'Les routes API ne fonctionnent qu\'en production sur Vercel. Déployez votre projet sur Vercel pour tester Stripe Connect.';
+            console.error('API routes are only available in production on Vercel. Deploy your project to test Stripe Connect.');
+          } else {
+            errorMessage = 'Route API non trouvée. Vérifiez que les fonctions serverless sont déployées sur Vercel.';
+            console.error('API route not found. Make sure the serverless function is deployed on Vercel.');
+          }
+        } else {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If JSON parsing fails, use status text
+            const statusText = response.statusText || `Erreur ${response.status}`;
+            errorMessage = statusText === 'Not Found' 
+              ? 'Route API non trouvée. Vérifiez que les fonctions serverless sont déployées sur Vercel.'
+              : statusText;
+          }
         }
         throw new Error(errorMessage);
       }
@@ -124,8 +147,16 @@ export const DashboardSettings: React.FC = () => {
       console.error('Stripe Connect error:', err);
       const errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
       setError(errorMessage);
+      
+      // Show more helpful error message
+      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      const displayMessage = isDevelopment && errorMessage.includes('non trouvée')
+        ? 'Les routes API ne fonctionnent qu\'en production. Déployez sur Vercel pour tester.'
+        : errorMessage;
+      
       toast.error('Erreur Stripe Connect', {
-        description: errorMessage,
+        description: displayMessage,
+        duration: 6000, // Show longer for important errors
       });
       setStripeConnecting(false);
     }

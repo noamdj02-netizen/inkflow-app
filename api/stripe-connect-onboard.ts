@@ -1,3 +1,15 @@
+/**
+ * Vercel Serverless Function for Stripe Connect Onboarding
+ * 
+ * This function creates a Stripe Connect Express account and returns an onboarding link.
+ * 
+ * Requirements:
+ * - Must be deployed on Vercel (doesn't work in local development)
+ * - Environment variables must be set in Vercel Dashboard
+ * 
+ * @see docs/TROUBLESHOOTING_STRIPE_CONNECT.md for troubleshooting
+ */
+
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
