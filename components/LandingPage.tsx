@@ -196,14 +196,6 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                   Essai gratuit
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </motion.button>
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/client')}
-                  className="glass px-6 md:px-8 py-3.5 md:py-4 font-semibold text-zinc-300 hover:text-white transition-all min-h-[48px]"
-                >
-                  Voir une démo
-                </motion.button>
               </motion.div>
 
               {/* Trust badges */}
