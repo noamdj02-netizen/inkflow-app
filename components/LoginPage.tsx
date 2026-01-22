@@ -181,7 +181,7 @@ export const LoginPage: React.FC = () => {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading || oauthLoading !== null}
-              className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-bold py-4 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold py-4 rounded-xl border border-blue-700 hover:from-blue-700 hover:to-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
