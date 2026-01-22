@@ -411,40 +411,40 @@ export const DashboardSettings: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#050505] min-h-0">
+    <div className="flex-1 flex flex-col bg-[#050505] min-h-0 overflow-x-hidden">
       {/* Header */}
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-6 py-5 flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
-            <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
-              <Settings className="text-brand-purple" size={20} />
+      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
+        <div className="max-w-4xl mx-auto w-full">
+          <h1 className="text-xl md:text-2xl font-display font-bold text-white flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 glass rounded-xl flex items-center justify-center shrink-0">
+              <Settings className="text-brand-purple" size={18} />
             </div>
-            Paramètres du Compte
+            <span className="truncate">Paramètres du Compte</span>
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">Gérez vos informations personnelles et préférences</p>
+          <p className="text-zinc-500 text-xs md:text-sm mt-1">Gérez vos informations personnelles et préférences</p>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+        <div className="max-w-4xl mx-auto w-full">
           {/* Quick tools */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 glass rounded-2xl p-5 border border-white/5"
+            className="mb-6 glass rounded-2xl p-4 md:p-5 border border-white/5"
           >
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <div className="text-white font-semibold">Outils</div>
-                <div className="text-zinc-500 text-sm">Care Sheets, liens rapides, etc.</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-white font-semibold text-sm md:text-base">Outils</div>
+                <div className="text-zinc-500 text-xs md:text-sm">Care Sheets, liens rapides, etc.</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => navigate('/dashboard/settings/care-sheets')}
-                  className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100"
+                  className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 text-sm whitespace-nowrap"
                 >
                   Gérer mes Care Sheets
                 </motion.button>
@@ -460,7 +460,7 @@ export const DashboardSettings: React.FC = () => {
                       toast.error('Impossible de copier le lien');
                     }
                   }}
-                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10"
+                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 text-sm whitespace-nowrap"
                   title="Copier le lien public"
                 >
                   Copier lien public
@@ -474,12 +474,12 @@ export const DashboardSettings: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-brand-pink/10 border border-brand-pink/20 rounded-xl flex items-center gap-3"
+              className="mb-6 p-3 md:p-4 bg-brand-pink/10 border border-brand-pink/20 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="text-brand-pink shrink-0" size={20} />
-              <p className="text-brand-pink text-sm flex-1">{error}</p>
-              <button onClick={() => setError(null)} className="text-brand-pink/60 hover:text-brand-pink">
-                <X size={18} />
+              <AlertCircle className="text-brand-pink shrink-0 mt-0.5" size={18} />
+              <p className="text-brand-pink text-xs md:text-sm flex-1 break-words">{error}</p>
+              <button onClick={() => setError(null)} className="text-brand-pink/60 hover:text-brand-pink shrink-0">
+                <X size={16} />
               </button>
             </motion.div>
           )}
@@ -488,17 +488,17 @@ export const DashboardSettings: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-brand-mint/10 border border-brand-mint/20 rounded-xl flex items-center gap-3"
+              className="mb-6 p-3 md:p-4 bg-brand-mint/10 border border-brand-mint/20 rounded-xl flex items-center gap-3"
             >
-              <CheckCircle className="text-brand-mint shrink-0" size={20} />
-              <p className="text-brand-mint text-sm">Profil mis à jour avec succès !</p>
+              <CheckCircle className="text-brand-mint shrink-0" size={18} />
+              <p className="text-brand-mint text-xs md:text-sm">Profil mis à jour avec succès !</p>
             </motion.div>
           )}
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             {/* Section: Informations de Base */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
               <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-cyan/10 flex items-center justify-center">
                   <User className="text-brand-cyan" size={20} />
@@ -554,10 +554,10 @@ export const DashboardSettings: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="text-xs text-zinc-600 mt-2 flex items-center gap-2">
-                  <span>
+                <div className="text-xs text-zinc-600 mt-2 flex flex-wrap items-center gap-2">
+                  <span className="break-all">
                     Votre vitrine:{' '}
-                    <span className="text-white font-mono">
+                    <span className="text-white font-mono break-all">
                       {typeof window !== 'undefined'
                         ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
                         : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
@@ -574,15 +574,15 @@ export const DashboardSettings: React.FC = () => {
                         toast.error('Impossible de copier');
                       }
                     }}
-                    className="w-8 h-8 rounded-lg glass hover:bg-white/10 transition-colors flex items-center justify-center"
+                    className="w-8 h-8 rounded-lg glass hover:bg-white/10 transition-colors flex items-center justify-center shrink-0"
                     title="Copier le lien"
                     aria-label="Copier le lien"
                   >
                     <Copy size={14} className="text-zinc-300" />
                   </button>
-                  <span className="text-zinc-600"> (l'ancien format </span>
-                  <span className="text-zinc-500 font-mono">/p/{formData.slug_profil || 'votre-slug'}</span>
-                  <span className="text-zinc-600"> reste compatible)</span>
+                  <span className="text-zinc-600 hidden sm:inline"> (l'ancien format </span>
+                  <span className="text-zinc-500 font-mono hidden sm:inline">/p/{formData.slug_profil || 'votre-slug'}</span>
+                  <span className="text-zinc-600 hidden sm:inline"> reste compatible)</span>
                 </div>
                 {slugError && (
                   <p className="text-xs text-brand-pink mt-1 flex items-center gap-1">
@@ -682,7 +682,7 @@ export const DashboardSettings: React.FC = () => {
             </div>
 
             {/* Section: Préférences */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
               <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
                   <Palette className="text-brand-purple" size={20} />
@@ -732,14 +732,14 @@ export const DashboardSettings: React.FC = () => {
                   Si renseignées, elles sont utilisées pour le glow/gradient de votre vitrine (style Landing).
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-[#050505] border border-white/10 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-white font-medium">Accent</span>
+                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs md:text-sm text-white font-medium">Accent</span>
                       <input
                         type="color"
                         value={formData.theme_accent_hex || '#fbbf24'}
                         onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                        className="w-10 h-10 rounded-xl bg-transparent border border-white/10"
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
                         aria-label="Couleur accent"
                       />
                     </div>
@@ -747,7 +747,7 @@ export const DashboardSettings: React.FC = () => {
                       type="text"
                       value={formData.theme_accent_hex}
                       onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-white/30"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
                       placeholder="#FEE440"
                     />
                     <button
@@ -759,14 +759,14 @@ export const DashboardSettings: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="bg-[#050505] border border-white/10 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-white font-medium">Secondaire</span>
+                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="text-xs md:text-sm text-white font-medium">Secondaire</span>
                       <input
                         type="color"
                         value={formData.theme_secondary_hex || '#9b5de5'}
                         onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                        className="w-10 h-10 rounded-xl bg-transparent border border-white/10"
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
                         aria-label="Couleur secondaire"
                       />
                     </div>
@@ -774,7 +774,7 @@ export const DashboardSettings: React.FC = () => {
                       type="text"
                       value={formData.theme_secondary_hex}
                       onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-white/30"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
                       placeholder="#9B5DE5"
                     />
                     <button
@@ -802,21 +802,22 @@ export const DashboardSettings: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, deposit_percentage: parseInt(e.target.value) })}
                     className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
                   />
-                  <span className="text-2xl font-display font-bold text-white w-16 text-right">
+                  <span className="text-xl md:text-2xl font-display font-bold text-white w-12 md:w-16 text-right shrink-0">
                     {formData.deposit_percentage}%
                   </span>
                 </div>
-                <div className="flex justify-between text-xs text-zinc-600 mt-2">
-                  <span>0%</span>
-                  <span>30% (Standard)</span>
-                  <span>50%</span>
-                  <span>100%</span>
+                <div className="flex justify-between text-xs text-zinc-600 mt-2 flex-wrap gap-1">
+                  <span className="shrink-0">0%</span>
+                  <span className="shrink-0 hidden sm:inline">30% (Standard)</span>
+                  <span className="shrink-0 sm:hidden">30%</span>
+                  <span className="shrink-0">50%</span>
+                  <span className="shrink-0">100%</span>
                 </div>
               </div>
             </div>
 
             {/* Section: Paiements Stripe */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
               <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
                   <CreditCard className="text-amber-400" size={20} />
@@ -882,29 +883,29 @@ export const DashboardSettings: React.FC = () => {
             </div>
 
             {/* Section: Informations de Compte */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-brand-mint/10 flex items-center justify-center">
-                  <Link2 className="text-brand-mint" size={20} />
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
+              <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6 border-b border-white/5 pb-3 md:pb-4">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-mint/10 flex items-center justify-center shrink-0">
+                  <Link2 className="text-brand-mint" size={18} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Informations de Compte</h3>
-                  <p className="text-sm text-zinc-500">Informations de connexion</p>
+                <div className="min-w-0">
+                  <h3 className="text-base md:text-lg font-semibold text-white">Informations de Compte</h3>
+                  <p className="text-xs md:text-sm text-zinc-500">Informations de connexion</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-500 mb-1">Email</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-zinc-400">
+                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Email</label>
+                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 text-xs md:text-sm break-all">
                     {user?.email}
                   </div>
                   <p className="text-xs text-zinc-600 mt-1">L'email ne peut pas être modifié ici</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-500 mb-1">Lien de votre profil</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-zinc-400 font-mono text-sm truncate">
+                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Lien de votre profil</label>
+                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 font-mono text-xs md:text-sm break-all">
                     {typeof window !== 'undefined' ? `${window.location.origin}/${profile.slug_profil}` : `inkflow.app/${profile.slug_profil}`}
                   </div>
                 </div>
@@ -912,18 +913,18 @@ export const DashboardSettings: React.FC = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/overview')}
-                className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors"
+                className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={saving || uploadingAvatar}
-                className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {saving ? (
                   <>

@@ -248,10 +248,10 @@ export const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* CENTER & RIGHT CONTENT WRAPPER */}
-      <main className="flex-1 flex overflow-hidden relative pb-16 md:pb-0 pt-16 md:pt-0">
+      <main className="flex-1 flex overflow-hidden overflow-x-hidden relative pb-16 md:pb-0 pt-16 md:pt-0">
         
         {/* COLUMN 2: Central Main View (Dynamic Content via Outlet) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#050505]">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#050505] overflow-x-hidden">
           <Outlet />
         </div>
 
