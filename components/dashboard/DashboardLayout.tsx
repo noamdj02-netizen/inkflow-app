@@ -38,6 +38,18 @@ export const DashboardLayout: React.FC = () => {
   const { loading: dataLoading, stats, recentBookings, pendingProjects } = useDashboardData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Prevent body scroll when drawer is open
+  React.useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
@@ -74,25 +86,27 @@ export const DashboardLayout: React.FC = () => {
       <PWAInstallPrompt />
       
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4">
-        <button
+      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(true)}
-          className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors"
+          className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+          aria-label="Ouvrir le menu"
         >
           <Menu size={24} />
-        </button>
+        </motion.button>
         <div className="flex items-center gap-2">
           <span className="text-lg font-display font-bold tracking-tight text-white">
             INK<span className="text-zinc-500">FLOW</span>
           </span>
         </div>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0">
           {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
         </div>
       </header>
 
       {/* Mobile Drawer */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isMobileMenuOpen && (
           <>
             {/* Backdrop */}
@@ -100,84 +114,156 @@ export const DashboardLayout: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-black/70 backdrop-blur-md z-[60] md:hidden"
             />
             {/* Drawer */}
             <motion.aside
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-72 bg-[#0a0a0a] border-r border-white/5 z-50 md:hidden flex flex-col"
+              transition={{ 
+                type: 'spring', 
+                damping: 30, 
+                stiffness: 300,
+                mass: 0.8
+              }}
+              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
             >
               {/* Drawer Header */}
-              <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                <span className="text-xl font-display font-bold tracking-tight text-white">
+              <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+                <span className="text-lg md:text-xl font-display font-bold tracking-tight text-white">
                   INK<span className="text-zinc-500">FLOW</span>
                 </span>
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 -mr-2 text-zinc-500 hover:text-white transition-colors"
+                  className="p-2 -mr-2 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                  aria-label="Fermer le menu"
                 >
                   <X size={20} />
-                </button>
+                </motion.button>
               </div>
 
               {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={async () => {
-                    if (!profile?.slug_profil || typeof window === 'undefined') return;
-                    const url = `${window.location.origin}/${profile.slug_profil}`;
-                    try {
-                      if (typeof navigator !== 'undefined' && navigator.share) {
-                        await navigator.share({
-                          title: `${profile.nom_studio} - InkFlow`,
-                          text: `Découvrez mes flashs disponibles`,
-                          url: url,
-                        });
-                      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                        await navigator.clipboard.writeText(url);
-                        alert('Lien copié !');
-                      }
-                    } catch (err) {
-                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                        await navigator.clipboard.writeText(url);
-                        alert('Lien copié !');
-                      }
-                    }
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl text-zinc-300 font-medium hover:bg-white/10 transition-colors"
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 scrollbar-hide">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  <Share2 size={18} />
-                  <span>Partager mon lien</span>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    navigate('/dashboard/flashs');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white text-black rounded-xl font-semibold hover:bg-zinc-100 transition-colors"
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={async () => {
+                      if (!profile?.slug_profil || typeof window === 'undefined') return;
+                      const url = `${window.location.origin}/${profile.slug_profil}`;
+                      try {
+                        if (typeof navigator !== 'undefined' && navigator.share) {
+                          await navigator.share({
+                            title: `${profile.nom_studio} - InkFlow`,
+                            text: `Découvrez mes flashs disponibles`,
+                            url: url,
+                          });
+                        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          await navigator.clipboard.writeText(url);
+                          alert('Lien copié !');
+                        }
+                      } catch (err) {
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          await navigator.clipboard.writeText(url);
+                          alert('Lien copié !');
+                        }
+                      }
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl text-zinc-300 font-medium hover:bg-white/10 transition-colors text-sm"
+                  >
+                    <Share2 size={18} />
+                    <span>Partager mon lien</span>
+                  </motion.button>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
                 >
-                  <Plus size={18} />
-                  <span>Nouveau Flash</span>
-                </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      navigate('/dashboard/flashs');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white text-black rounded-xl font-semibold hover:bg-zinc-100 transition-colors text-sm"
+                  >
+                    <Plus size={18} />
+                    <span>Nouveau Flash</span>
+                  </motion.button>
+                </motion.div>
                 <div className="pt-4 border-t border-white/5 space-y-1">
-                  <SidebarItem to="/dashboard/overview" icon={LayoutGrid} label="Dashboard" />
-                  <SidebarItem to="/dashboard/calendar" icon={Calendar} label="Calendrier" />
-                  <SidebarItem to="/dashboard/requests" icon={MessageSquare} label="Demandes" count={pendingProjects.length} />
-                  <SidebarItem to="/dashboard/flashs" icon={Clock} label="Mes Flashs" />
-                  <SidebarItem to="/dashboard/clients" icon={Users} label="Clients & Docs" />
-                  <SidebarItem to="/dashboard/finance" icon={PieChart} label="Finance" />
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <SidebarItem to="/dashboard/overview" icon={LayoutGrid} label="Dashboard" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.25 }}
+                  >
+                    <SidebarItem to="/dashboard/calendar" icon={Calendar} label="Calendrier" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <SidebarItem to="/dashboard/requests" icon={MessageSquare} label="Demandes" count={pendingProjects.length} />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.35 }}
+                  >
+                    <SidebarItem to="/dashboard/flashs" icon={Clock} label="Mes Flashs" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <SidebarItem to="/dashboard/clients" icon={Users} label="Clients & Docs" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.45 }}
+                  >
+                    <SidebarItem to="/dashboard/finance" icon={PieChart} label="Finance" />
+                  </motion.div>
                 </div>
-                <div className="pt-4 border-t border-white/5">
-                  <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
-                  <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
-                  <button
+                <div className="pt-4 border-t border-white/5 space-y-2">
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.55 }}
+                  >
+                    <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
+                  </motion.div>
+                  <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={async () => {
                       await handleSignOut();
                       setIsMobileMenuOpen(false);
@@ -186,22 +272,27 @@ export const DashboardLayout: React.FC = () => {
                   >
                     <LogOut size={18} />
                     <span>Déconnexion</span>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
 
               {/* Drawer Footer */}
-              <div className="p-4 border-t border-white/5">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="p-4 border-t border-white/5 shrink-0"
+              >
                 <div className="flex items-center gap-3 px-4 glass p-3 rounded-xl">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0">
                     {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
                   </div>
-                  <div className="text-sm overflow-hidden flex-1">
+                  <div className="text-sm overflow-hidden flex-1 min-w-0">
                     <div className="font-semibold truncate">{profile?.nom_studio || user?.email || 'Artiste'}</div>
                     <div className="text-xs text-emerald-400 flex items-center gap-1">● En ligne</div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.aside>
           </>
         )}
