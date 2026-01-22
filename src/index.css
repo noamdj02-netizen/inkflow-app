@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Custom colors */
+  --color-brand-purple: #9B5DE5;
+  --color-brand-pink: #F15BB5;
+  --color-brand-yellow: #FEE440;
+  --color-brand-cyan: #00BBF9;
+  --color-brand-mint: #00F5D4;
+  --color-brand-purple-dark: #7C3AED;
+  --color-brand-pink-dark: #DB2777;
+
+  /* Custom font families */
+  --font-family-display: 'Syne', system-ui, sans-serif;
+  --font-family-serif: 'Cinzel', ui-serif, Georgia, serif;
+  --font-family-sans: 'Space Grotesk', system-ui, sans-serif;
+}
 
 /* Custom styles */
 body {
