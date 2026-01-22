@@ -48,7 +48,7 @@ const App: React.FC = () => {
       <HelmetProvider>
         <BrowserRouter>
           <ArtistProfileProvider>
-            <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-amber-400 selection:text-black">
+            <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-amber-400 selection:text-black overflow-x-hidden w-full">
               <Toaster
                 theme="dark"
                 position="top-center"
