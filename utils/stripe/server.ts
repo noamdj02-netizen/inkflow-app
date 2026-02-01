@@ -32,7 +32,7 @@ export function getStripeServer(): Stripe {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: '2024-12-18.acacia', // Use latest stable API version
+    apiVersion: '2025-12-15.clover',
     typescript: true,
   });
 }

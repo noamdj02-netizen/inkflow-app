@@ -139,11 +139,13 @@ export async function sendAppointmentNotification(options: SendAppointmentNotifi
       return result;
     }
 
-    console.error('[appointmentNotification] Artist email failed (attempt 1):', {
-      projectId,
-      artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
-      error: result.error,
-    });
+    if (!result.ok) {
+      console.error('[appointmentNotification] Artist email failed (attempt 1):', {
+        projectId,
+        artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
+        error: result.error,
+      });
+    }
 
     if (MAX_RETRIES >= 1) {
       await sleep(RETRY_DELAY_MS);
@@ -153,11 +155,13 @@ export async function sendAppointmentNotification(options: SendAppointmentNotifi
         return result;
       }
 
-      console.error('[appointmentNotification] Artist email failed after retry (attempt 2):', {
-        projectId,
-        artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
-        error: result.error,
-      });
+      if (!result.ok) {
+        console.error('[appointmentNotification] Artist email failed after retry (attempt 2):', {
+          projectId,
+          artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
+          error: result.error,
+        });
+      }
     }
 
     if (onEmailFailed) {
@@ -168,7 +172,7 @@ export async function sendAppointmentNotification(options: SendAppointmentNotifi
       }
     }
 
-    return { ok: false, error: result.error };
+    return { ok: false, error: !result.ok ? result.error : 'Unknown' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
@@ -216,7 +220,7 @@ export async function sendAppointmentConfirmationToClient(options: {
       html,
       text,
     });
-    if (!result.ok) {
+    if (!result.ok && 'error' in result) {
       console.error('[appointmentNotification] Client confirmation email failed:', {
         clientEmail: clientEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
         error: result.error,

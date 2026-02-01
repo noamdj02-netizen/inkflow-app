@@ -152,7 +152,7 @@ export default async function handler(req: any, res: any) {
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number; current_period_start?: number };
         const customerId = subscription.customer as string;
         
         // Get user by Stripe customer ID (if you store it)
@@ -212,7 +212,7 @@ export default async function handler(req: any, res: any) {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number; current_period_start?: number };
         const userId = subscription.metadata?.userId;
         
         if (userId) {
