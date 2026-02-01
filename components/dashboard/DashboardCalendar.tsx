@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Loader2, X, User, Mail, Phone, Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Database } from '../../types/supabase';
@@ -243,6 +244,16 @@ export const DashboardCalendar: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewRDVOpen, setIsNewRDVOpen] = useState(false);
+  const [newRDVSaving, setNewRDVSaving] = useState(false);
+  const [newRDVError, setNewRDVError] = useState<string | null>(null);
+  const [newRDVForm, setNewRDVForm] = useState({
+    client_name: '',
+    client_email: '',
+    client_phone: '',
+    date_debut: '',
+    duree_minutes: 60,
+  });
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
 
@@ -342,6 +353,47 @@ export const DashboardCalendar: React.FC = () => {
     fetchBookings();
   };
 
+  const handleCreateManualRDV = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setNewRDVError(null);
+    setNewRDVSaving(true);
+    try {
+      const start = new Date(newRDVForm.date_debut);
+      const end = new Date(start.getTime() + newRDVForm.duree_minutes * 60 * 1000);
+      const { error: insertError } = await supabase
+        .from('bookings')
+        .insert({
+          artist_id: user.id,
+          flash_id: null,
+          project_id: null,
+          is_manual_booking: true,
+          client_name: newRDVForm.client_name.trim() || null,
+          client_email: newRDVForm.client_email.trim(),
+          client_phone: newRDVForm.client_phone.trim() || null,
+          date_debut: start.toISOString(),
+          date_fin: end.toISOString(),
+          duree_minutes: newRDVForm.duree_minutes,
+          prix_total: 0,
+          deposit_amount: 0,
+          deposit_percentage: 0,
+          statut_booking: 'confirmed',
+          statut_paiement: 'pending',
+        });
+      if (insertError) throw insertError;
+      toast.success('RDV créé', { description: 'Le rendez-vous a été ajouté au calendrier.' });
+      setIsNewRDVOpen(false);
+      setNewRDVForm({ client_name: '', client_email: '', client_phone: '', date_debut: '', duree_minutes: 60 });
+      fetchBookings();
+    } catch (err: any) {
+      const msg = err?.message || 'Erreur lors de la création du RDV';
+      setNewRDVError(msg);
+      toast.error('Erreur', { description: msg });
+    } finally {
+      setNewRDVSaving(false);
+    }
+  };
+
   const getWeekDays = () => {
     const startOfWeek = new Date(currentWeek);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
@@ -422,11 +474,146 @@ export const DashboardCalendar: React.FC = () => {
               Aujourd'hui
             </button>
           </div>
-          <button className="flex items-center gap-2 bg-white text-black px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors">
+          <button
+            type="button"
+            onClick={() => {
+              const next = new Date();
+              next.setMinutes(Math.ceil(next.getMinutes() / 30) * 30, 0, 0);
+              if (next <= new Date()) next.setMinutes(next.getMinutes() + 30, 0, 0);
+              setNewRDVForm((prev) => ({
+                ...prev,
+                date_debut: next.toISOString().slice(0, 16),
+              }));
+              setNewRDVError(null);
+              setIsNewRDVOpen(true);
+            }}
+            className="flex items-center gap-2 bg-white text-black px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors"
+          >
             <Plus size={16}/> Nouveau RDV
           </button>
         </div>
       </header>
+
+      {/* Modal Nouveau RDV (création manuelle) */}
+      <AnimatePresence>
+        {isNewRDVOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !newRDVSaving && setIsNewRDVOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div
+                className="bg-[#0a0a0a] border border-white/10 rounded-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-display font-bold text-white">Nouveau RDV</h2>
+                  <button
+                    type="button"
+                    onClick={() => !newRDVSaving && setIsNewRDVOpen(false)}
+                    className="text-zinc-500 hover:text-white transition-colors p-1"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <p className="text-zinc-400 text-sm mb-4">
+                  Ajoutez un rendez-vous manuel (réception, consultation, RDV hors plateforme).
+                </p>
+                <form onSubmit={handleCreateManualRDV} className="space-y-4">
+                  {newRDVError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-sm">
+                      <AlertCircle size={16} /> {newRDVError}
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Nom du client</label>
+                    <input
+                      type="text"
+                      value={newRDVForm.client_name}
+                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_name: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      placeholder="Jean Dupont"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Email <span className="text-red-500">*</span></label>
+                    <input
+                      type="email"
+                      required
+                      value={newRDVForm.client_email}
+                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_email: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      placeholder="jean@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Téléphone</label>
+                    <input
+                      type="tel"
+                      value={newRDVForm.client_phone}
+                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_phone: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      placeholder="06 12 34 56 78"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Date et heure <span className="text-red-500">*</span></label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={newRDVForm.date_debut}
+                      onChange={(e) => setNewRDVForm({ ...newRDVForm, date_debut: e.target.value })}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Durée</label>
+                    <select
+                      value={newRDVForm.duree_minutes}
+                      onChange={(e) => setNewRDVForm({ ...newRDVForm, duree_minutes: Number(e.target.value) })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
+                    >
+                      <option value={30}>30 min</option>
+                      <option value={60}>1 h</option>
+                      <option value={90}>1 h 30</option>
+                      <option value={120}>2 h</option>
+                      <option value={180}>3 h</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsNewRDVOpen(false)}
+                      disabled={newRDVSaving}
+                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={newRDVSaving}
+                      className="flex-1 py-2.5 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {newRDVSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} />}
+                      {newRDVSaving ? 'Création...' : 'Créer le RDV'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Calendar Grid */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 relative pb-20 md:pb-6">

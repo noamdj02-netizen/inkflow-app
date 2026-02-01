@@ -10,10 +10,23 @@
   --color-brand-purple-dark: #7C3AED;
   --color-brand-pink-dark: #DB2777;
 
+  /* Vitrine premium (ink palette) */
+  --color-ink-black: #0a0a0a;
+  --color-ink-dark: #121212;
+  --color-ink-card: #1a1a1a;
+  --color-ink-accent: #8b5cf6;
+  --color-ink-accent-hover: #7c3aed;
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-muted: rgba(255, 255, 255, 0.3);
+
   /* Custom font families */
   --font-family-display: 'Syne', system-ui, sans-serif;
   --font-family-serif: 'Cinzel', ui-serif, Georgia, serif;
   --font-family-sans: 'Space Grotesk', system-ui, sans-serif;
+  /* Vitrine premium only */
+  --font-family-vitrine-sans: 'Inter', system-ui, sans-serif;
+  --font-family-vitrine-serif: 'Playfair Display', Georgia, serif;
 }
 
 /* Custom styles */
@@ -79,6 +92,19 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Vitrine premium glass */
+.glass-vitrine {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Vitrine premium typography scope */
+.vitrine-fonts {
+  font-family: var(--font-family-vitrine-sans), system-ui, sans-serif;
+}
+
 .gradient-text {
   background: linear-gradient(135deg, #fff 0%, #71717a 100%);
   -webkit-background-clip: text;
@@ -115,3 +141,19 @@ html, body {
 .animate-float-delayed { animation: float 6s ease-in-out 2s infinite; }
 .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 .animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
+
+/* AI Consultant panel */
+@keyframes ai-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ai-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-ai-fade-in {
+  animation: ai-fade-in 0.2s ease-out;
+}
+.animate-ai-slide-in {
+  animation: ai-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}

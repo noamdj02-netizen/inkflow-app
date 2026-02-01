@@ -1,104 +1,28 @@
 /**
- * Recent Activity Widget
- * 
- * Displays recent activity (bookings, projects, flashs).
- * Uses Suspense for streaming - loads independently.
+ * Recent Activity Widget – SWR cache, ActivitySkeleton, error fallback.
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, MessageSquare, Zap, CheckCircle } from 'lucide-react';
-import { supabase } from '../../../services/supabase';
-import { useAuth } from '../../../hooks/useAuth';
-
-interface Activity {
-  id: string;
-  type: 'booking' | 'project' | 'flash';
-  title: string;
-  client?: string;
-  date: string;
-  status?: string;
-}
+import { useRecentActivitySWR } from '../../../hooks/useDashboardSWR';
+import { ActivitySkeleton, WidgetErrorFallback } from './WidgetSkeleton';
 
 export const RecentActivityWidget: React.FC = () => {
-  const { user } = useAuth();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { activities, loading, error, refresh } = useRecentActivitySWR();
 
-  useEffect(() => {
-    if (!user) return;
-    fetchRecentActivity();
-  }, [user]);
+  if (loading && activities.length === 0) {
+    return <ActivitySkeleton />;
+  }
 
-  const fetchRecentActivity = async () => {
-    if (!user) return;
-
-    try {
-      const [recentBookings, recentProjects, recentFlashs] = await Promise.all([
-        supabase
-          .from('bookings')
-          .select('id,client_name,created_at,statut_booking,flashs(title),projects(body_part)')
-          .eq('artist_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(3),
-        supabase
-          .from('projects')
-          .select('id,client_name,created_at,statut,body_part')
-          .eq('artist_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2),
-        supabase
-          .from('flashs')
-          .select('id,title,created_at')
-          .eq('artist_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2),
-      ]);
-
-      const allActivities: Activity[] = [];
-
-      ((recentBookings as any).data as any[] || []).forEach((booking) => {
-        allActivities.push({
-          id: booking.id,
-          type: 'booking',
-          title: booking.flashs?.title
-            ? `Réservation Flash: ${booking.flashs.title}`
-            : `Projet: ${booking.projects?.body_part}`,
-          client: booking.client_name || 'Client',
-          date: booking.created_at,
-          status: booking.statut_booking,
-        });
-      });
-
-      ((recentProjects as any).data as any[] || []).forEach((project) => {
-        allActivities.push({
-          id: project.id,
-          type: 'project',
-          title: `Nouveau projet: ${project.body_part}`,
-          client: project.client_name || 'Client',
-          date: project.created_at,
-          status: project.statut,
-        });
-      });
-
-      ((recentFlashs as any).data as any[] || []).forEach((flash) => {
-        allActivities.push({
-          id: flash.id,
-          type: 'flash',
-          title: `Flash créé: ${flash.title}`,
-          date: flash.created_at,
-        });
-      });
-
-      // Sort by date and take top 5
-      allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setActivities(allActivities.slice(0, 5));
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (error) {
+    return (
+      <WidgetErrorFallback
+        message="L'activité récente n'a pas pu être chargée."
+        onRetry={() => refresh()}
+      />
+    );
+  }
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -119,29 +43,11 @@ export const RecentActivityWidget: React.FC = () => {
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) return 'Il y a moins d\'une heure';
+    if (diffHours < 1) return "Il y a moins d'une heure";
     if (diffHours < 24) return `Il y a ${diffHours}h`;
     if (diffDays < 7) return `Il y a ${diffDays}j`;
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
-
-  if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-2xl p-6 border border-white/10"
-      >
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-white/10 rounded w-48" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 bg-white/10 rounded" />
-          ))}
-        </div>
-      </motion.div>
-    );
-  }
 
   return (
     <motion.div

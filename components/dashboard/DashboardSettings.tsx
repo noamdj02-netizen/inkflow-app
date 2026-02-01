@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink } from 'lucide-react';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
@@ -10,13 +10,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
 
 export const DashboardSettings: React.FC = () => {
-  const { profile, loading: profileLoading, updateProfile, error: profileError } = useArtistProfile();
+  const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [generatingCalendarToken, setGeneratingCalendarToken] = useState(false);
 
   const [formData, setFormData] = useState({
     nom_studio: '',
@@ -29,6 +30,14 @@ export const DashboardSettings: React.FC = () => {
     deposit_percentage: 30,
     avatarFile: null as File | null,
     avatarUrl: '',
+    ville: '',
+    rating: '' as string | number,
+    nb_avis: '' as string | number,
+    years_experience: '' as string | number,
+    vitrine_show_glow: true,
+    instagram_url: '',
+    tiktok_url: '',
+    facebook_url: '',
   });
   const [slugError, setSlugError] = useState<string | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
@@ -195,6 +204,7 @@ export const DashboardSettings: React.FC = () => {
 
   useEffect(() => {
     if (profile) {
+      const p = profile as Record<string, unknown>;
       setFormData({
         nom_studio: profile.nom_studio || '',
         slug_profil: profile.slug_profil || '',
@@ -206,6 +216,14 @@ export const DashboardSettings: React.FC = () => {
         deposit_percentage: profile.deposit_percentage || 30,
         avatarFile: null,
         avatarUrl: profile.avatar_url || '',
+        ville: (p.ville as string) || '',
+        rating: (p.rating as number) ?? '',
+        nb_avis: (p.nb_avis as number) ?? '',
+        years_experience: (p.years_experience as number) ?? '',
+        vitrine_show_glow: p.vitrine_show_glow !== undefined ? (p.vitrine_show_glow as boolean) !== false : true,
+        instagram_url: (p.instagram_url as string) || '',
+        tiktok_url: (p.tiktok_url as string) || '',
+        facebook_url: (p.facebook_url as string) || '',
       });
       setSlugError(null);
       setSlugAvailable(true);
@@ -376,7 +394,7 @@ export const DashboardSettings: React.FC = () => {
         }));
       }
 
-      await updateProfile({
+      const updates: Record<string, unknown> = {
         nom_studio: formData.nom_studio,
         slug_profil: normalizedSlug,
         bio_instagram: formData.bio_instagram,
@@ -386,7 +404,23 @@ export const DashboardSettings: React.FC = () => {
         theme_secondary_hex: formData.theme_secondary_hex?.trim() ? formData.theme_secondary_hex.trim() : null,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
-      });
+      };
+      if (formData.ville !== undefined) updates.ville = formData.ville.trim() || null;
+      if (formData.rating !== '' && formData.rating !== undefined) updates.rating = Number(formData.rating) || null;
+      if (formData.nb_avis !== '' && formData.nb_avis !== undefined) updates.nb_avis = Number(formData.nb_avis) ?? null;
+      if (formData.years_experience !== '' && formData.years_experience !== undefined) updates.years_experience = Number(formData.years_experience) ?? null;
+      // vitrine_show_glow : n'envoyer que si la colonne existe (migration vitrine appliquée)
+      const profileWithGlow = profile as Record<string, unknown> | undefined;
+      if (profileWithGlow && 'vitrine_show_glow' in profileWithGlow) {
+        (updates as Record<string, unknown>).vitrine_show_glow = formData.vitrine_show_glow;
+      }
+      if (profileWithGlow && 'instagram_url' in profileWithGlow) {
+        (updates as Record<string, unknown>).instagram_url = formData.instagram_url?.trim() || null;
+        (updates as Record<string, unknown>).tiktok_url = formData.tiktok_url?.trim() || null;
+        (updates as Record<string, unknown>).facebook_url = formData.facebook_url?.trim() || null;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateProfile(updates as any);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -745,15 +779,29 @@ export const DashboardSettings: React.FC = () => {
 
             {/* Section: Préférences */}
             <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+              <div className="flex items-center gap-3 mb-4 border-b border-white/5 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
                   <Palette className="text-brand-purple" size={20} />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-white">Préférences</h3>
-                  <p className="text-sm text-zinc-500">Personnalisez votre expérience</p>
+                  <p className="text-sm text-zinc-500">Personnalisez votre vitrine comme vous le souhaitez</p>
                 </div>
+                {profile?.slug_profil && (
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => window.open(`${typeof window !== 'undefined' ? window.location.origin : ''}/${profile.slug_profil}`, '_blank')}
+                    className="shrink-0 px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink size={16} />
+                    Voir l&apos;aperçu
+                  </motion.button>
+                )}
               </div>
+              <p className="text-zinc-400 text-sm mb-6">
+                Thème, couleurs et infos affichées sur votre page publique. Les visiteurs voient ces réglages en direct.
+              </p>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-zinc-400 mb-3">
@@ -848,6 +896,238 @@ export const DashboardSettings: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-3">
+                  Vitrine — infos et apparence
+                </label>
+                <p className="text-xs text-zinc-600 mb-3">
+                  Ville, note, avis et années d&apos;expérience s&apos;affichent sur votre page publique. Tous les champs sont optionnels.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Ville / localisation</label>
+                    <input
+                      type="text"
+                      value={formData.ville}
+                      onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="Ex: Lyon"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Note (ex: 4.9)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      value={formData.rating === '' ? '' : formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="4.9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Nombre d&apos;avis</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.nb_avis === '' ? '' : formData.nb_avis}
+                      onChange={(e) => setFormData({ ...formData, nb_avis: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="42"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Années d&apos;expérience</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.years_experience === '' ? '' : formData.years_experience}
+                      onChange={(e) => setFormData({ ...formData, years_experience: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between rounded-xl border border-white/10 bg-[#050505]/50 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Effets de lumière (ambiance)</p>
+                    <p className="text-xs text-zinc-500">Halos colorés discrets sur la vitrine, selon votre thème</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.vitrine_show_glow}
+                    onClick={() => setFormData({ ...formData, vitrine_show_glow: !formData.vitrine_show_glow })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border border-white/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                      formData.vitrine_show_glow ? 'bg-amber-500/80' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                        formData.vitrine_show_glow ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                      style={{ marginTop: 2 }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-3">Réseaux sociaux (vitrine)</h3>
+                <p className="text-xs text-zinc-500 mb-3">
+                  Liens affichés sous &quot;Réserver maintenant&quot; sur votre vitrine. Laissez vide pour masquer.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Instagram (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.instagram_url}
+                      onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="https://instagram.com/votre_compte"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">TikTok (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.tiktok_url}
+                      onChange={(e) => setFormData({ ...formData, tiktok_url: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="https://tiktok.com/@votre_compte"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Facebook (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.facebook_url}
+                      onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="https://facebook.com/votre_page"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Synchronisation Calendrier (iCal) */}
+              <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Calendar className="text-zinc-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-white">Synchronisation Calendrier</h3>
+                    <p className="text-xs text-zinc-500">Apple Calendar, Google Calendar, Outlook</p>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4">
+                  Abonnez votre calendrier mobile à vos rendez-vous Inkflow. L’URL est sécurisée par un token unique.
+                </p>
+                {(() => {
+                  const profileRecord = profile as Record<string, unknown> | undefined;
+                  const hasIcalColumn = profileRecord && 'ical_feed_token' in profileRecord;
+                  const token = (hasIcalColumn && profileRecord?.ical_feed_token) ? String(profileRecord.ical_feed_token) : null;
+                  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://inkflow.app';
+                  const feedUrl = token ? `${origin}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  const host = typeof window !== 'undefined' ? window.location.host : 'inkflow.app';
+                  const webcalUrl = token ? `webcal://${host}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  const googleCalUrl = feedUrl ? `https://www.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}` : null;
+
+                  const handleGenerateToken = async () => {
+                    if (!hasIcalColumn) {
+                      toast.error('Migration calendrier requise', { description: 'Exécutez la migration ical_feed_token dans Supabase.' });
+                      return;
+                    }
+                    setGeneratingCalendarToken(true);
+                    try {
+                      const newToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                        .map((b) => b.toString(16).padStart(2, '0'))
+                        .join('');
+                      await updateProfile({ ical_feed_token: newToken } as any);
+                      await refreshProfile();
+                      toast.success('Lien généré', { description: 'Vous pouvez copier l’URL et l’ajouter à votre calendrier.' });
+                    } catch (err) {
+                      toast.error('Erreur', { description: err instanceof Error ? err.message : 'Impossible de générer le lien.' });
+                    } finally {
+                      setGeneratingCalendarToken(false);
+                    }
+                  };
+
+                  const handleCopy = () => {
+                    if (!feedUrl) return;
+                    navigator.clipboard.writeText(feedUrl).then(
+                      () => toast.success('Lien copié dans le presse-papier'),
+                      () => toast.error('Copie impossible')
+                    );
+                  };
+
+                  return (
+                    <div className="space-y-4">
+                      {feedUrl ? (
+                        <>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={feedUrl}
+                              className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-mono truncate"
+                              aria-label="URL du flux calendrier"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCopy}
+                              className="shrink-0 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors flex items-center gap-2"
+                            >
+                              <Copy size={16} />
+                              Copier
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <a
+                              href={webcalUrl ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+                            >
+                              <Calendar size={16} />
+                              Apple Calendar
+                            </a>
+                            <a
+                              href={googleCalUrl ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+                            >
+                              <ExternalLink size={16} />
+                              Google Calendar
+                            </a>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleGenerateToken}
+                          disabled={generatingCalendarToken || !hasIcalColumn}
+                          className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {generatingCalendarToken ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
+                          {generatingCalendarToken ? 'Génération…' : 'Générer le lien'}
+                        </button>
+                      )}
+                      {!hasIcalColumn && (
+                        <p className="text-xs text-amber-500/80">
+                          Exécutez la migration <code className="bg-white/10 px-1 rounded">migration-ical-feed-token.sql</code> dans Supabase pour activer le lien sécurisé.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { 
-  PenTool, Instagram, Zap, ArrowLeft, Loader2, X, CheckCircle, Clock, 
-  Mail, User, MessageSquare, Share2, Phone, Calendar, Euro
-} from 'lucide-react';
+import { PenTool, ArrowLeft, Loader2, X, CheckCircle, Clock, Euro } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import type { Artist, Flash } from '../types/supabase';
 import { CustomProjectForm } from './CustomProjectForm';
 import { bookingFormSchema, type BookingFormData } from '../utils/validation';
-import { PublicProfileCTA } from './PublicProfileCTA';
-import { toast } from 'sonner';
+import { usePublicArtist, type ArtistVitrine } from '../hooks/usePublicArtist';
+import { ArtistHero } from './vitrine/ArtistHero';
+import { FlashGallery } from './vitrine/FlashGallery';
+import { BookingCTA } from './vitrine/BookingCTA';
+import { AIButton } from './vitrine/AIButton';
 
 interface BookingDrawerProps {
   flash: Flash;
@@ -22,9 +22,11 @@ interface BookingDrawerProps {
   onClose: () => void;
   onSuccess: () => void;
   theme: ReturnType<typeof getThemeClasses>;
+  /** Créneau préféré (ex. venant de /:slug/booking) au format datetime-local YYYY-MM-DDTHH:mm */
+  initialDateSouhaitee?: string;
 }
 
-const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, onClose, onSuccess, theme }) => {
+const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, onClose, onSuccess, theme, initialDateSouhaitee }) => {
   const {
     register,
     handleSubmit,
@@ -52,14 +54,20 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
       ? 'bg-white text-black hover:bg-zinc-100'
       : `${theme.primary} ${theme.primaryHover} text-white`;
 
-  // Reset form when drawer opens/closes
+  // Reset form when drawer opens/closes; prefill date if coming from booking page
   useEffect(() => {
     if (isOpen) {
-      reset();
+      reset({
+        client_name: '',
+        client_email: '',
+        client_phone: '',
+        date_souhaitee: initialDateSouhaitee || '',
+        commentaire: '',
+      });
       setError(null);
       setSuccess(false);
     }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, initialDateSouhaitee]);
 
   const onSubmit = async (data: BookingFormData) => {
     setError(null);
@@ -186,7 +194,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl z-50 max-h-[90vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 bg-[#0A0A0A] border-t border-white/10 rounded-t-3xl z-50 max-h-[90vh] overflow-y-auto"
       >
         <div className="p-6">
           {/* Handle */}
@@ -444,27 +452,27 @@ const getThemeClasses = (themeColor: string = 'amber') => {
 
 export const PublicArtistPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [artist, setArtist] = useState<Artist | null>(null);
-  const [flashs, setFlashs] = useState<Flash[]>([]);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const { artist, flashs, loading, error: fetchError, notFound, refresh } = usePublicArtist(slug);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'flashs' | 'project'>('flashs');
   const [selectedFlash, setSelectedFlash] = useState<Flash | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [bookingFlashId, setBookingFlashId] = useState<string | null>(null);
+  // Créneau choisi sur la page /:slug/booking (format datetime-local pour le champ date_souhaitee)
+  const preferredSlot = (location.state as { preferredSlot?: { iso: string; date: string; time: string } } | undefined)?.preferredSlot;
+  const initialDateSouhaitee = preferredSlot?.iso ? preferredSlot.iso.slice(0, 16) : undefined;
+
+  const artistVitrine = artist as ArtistVitrine | null;
   
-  // Obtenir les classes du thème (doit être après que artist soit chargé)
-  const themeColor = artist ? (artist.theme_color || artist.accent_color || 'amber') : 'amber';
+  const themeColor = artist ? (artist.theme_color || artist.accent_color || 'violet') : 'violet';
   const theme = getThemeClasses(themeColor);
   const accentHex = artist?.theme_accent_hex || null;
   const secondaryHex = artist?.theme_secondary_hex || null;
-  const hasCustomHex = Boolean(accentHex);
-  const glowA = accentHex || (themeColor === 'amber' ? '#fbbf24' : '#9B5DE5');
-  const glowB = secondaryHex || (themeColor === 'amber' ? '#00BBF9' : '#00BBF9');
+  const glowA = accentHex || (themeColor === 'amber' ? '#fbbf24' : '#8b5cf6');
+  const glowB = secondaryHex || (themeColor === 'amber' ? '#00BBF9' : '#a78bfa');
 
-  // Préparer les données SEO
   const seoTitle = artist 
-    ? `${artist.nom_studio} - Tatoueur${artist.ville ? ` à ${artist.ville}` : ''} | InkFlow`
+    ? `${artist.nom_studio} - Tatoueur${artistVitrine?.ville ? ` à ${artistVitrine.ville}` : ''} | InkFlow`
     : 'Artiste InkFlow';
   const seoDescription = artist?.bio_instagram || 'Découvrez mes flashs et projets sur InkFlow. Réservez votre créneau de tatouage en ligne.';
   const seoImage = artist?.avatar_url 
@@ -472,278 +480,36 @@ export const PublicArtistPage: React.FC = () => {
     : `${typeof window !== 'undefined' ? window.location.origin : ''}/inkflow-logo-v2.png`;
   const seoUrl = typeof window !== 'undefined' ? window.location.href : '';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        setError('Supabase n\'est pas configuré.');
-        setLoading(false);
-        return;
-      }
-
-      if (!slug) {
-        setError('Slug manquant');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Récupérer l'artiste
-        const { data: artistData, error: artistError } = await supabase
-          .from('artists')
-          .select('*')
-          .eq('slug_profil', slug)
-          .single();
-
-        if (artistError) {
-          console.error('Error fetching artist:', artistError);
-          if (artistError.code === 'PGRST116') {
-            setError(`Artiste "${slug}" non trouvé. Vérifiez que le slug est correct.`);
-          } else {
-            setError(`Erreur lors du chargement: ${artistError.message || 'Erreur inconnue'}`);
-          }
-          setLoading(false);
-          return;
-        }
-
-        if (!artistData) {
-          setError(`Artiste "${slug}" non trouvé`);
-          setLoading(false);
-          return;
-        }
-
-        setArtist(artistData);
-
-        // Récupérer les flashs disponibles
-        const { data: flashsData, error: flashsError } = await supabase
-          .from('flashs')
-          .select('*')
-          .eq('artist_id', artistData.id)
-          .eq('statut', 'available')
-          .order('created_at', { ascending: false });
-
-        if (flashsError) {
-          console.error('Error fetching flashs:', flashsError);
-          // Ne pas bloquer l'affichage si les flashs ne peuvent pas être chargés
-          setFlashs([]);
-        } else {
-          setFlashs(flashsData || []);
-        }
-      } catch (err: any) {
-        console.error('Error fetching data:', err);
-        const errorMessage = err?.message || 'Erreur lors du chargement';
-        
-        // Gérer les erreurs de parsing JSON spécifiquement
-        if (errorMessage.includes('JSON') || errorMessage.includes('Unexpected token')) {
-          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
-        } else {
-          setError(`Erreur lors du chargement: ${errorMessage}`);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [slug]);
-
-  const handleShare = async () => {
-    if (typeof window === 'undefined') return;
-    
-    const url = window.location.href;
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: `${artist?.nom_studio} - InkFlow`,
-          text: `Découvrez les flashs disponibles de ${artist?.nom_studio}`,
-          url: url,
-        });
-      } catch (err) {
-        // User cancelled or error
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(url);
-        }
-      }
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-    }
-  };
-
-  const scrollToTabs = () => {
-    if (typeof window === 'undefined') return;
-    const el = document.getElementById('public-profile-tabs');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleFlashClick = (flash: Flash) => {
-    setSelectedFlash(flash);
-    setIsDrawerOpen(true);
-  };
-
   const handleBookingSuccess = () => {
-    if (artist) {
-      supabase
-        .from('flashs')
-        .select('*')
-        .eq('artist_id', artist.id)
-        .eq('statut', 'available')
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (data) setFlashs(data);
-        });
-    }
-  };
-
-  const handleDirectBooking = async (flash: Flash, e: React.MouseEvent) => {
-    e.stopPropagation(); // Empêcher l'ouverture du drawer
-    
-    if (!artist) return;
-
-    setBookingFlashId(flash.id);
-    setError(null);
-
-    try {
-      // Calculer l'acompte
-      const depositAmount = flash.deposit_amount !== null && flash.deposit_amount !== undefined
-        ? flash.deposit_amount
-        : Math.round((flash.prix * (artist.deposit_percentage || 30)) / 100);
-
-      // Appeler l'API pour créer la session Stripe Checkout
-      const response = await fetch('/api/create-flash-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          flash_id: flash.id,
-        }),
-      });
-
-      // Vérifier si la réponse est vide ou invalide
-      const contentType = response.headers.get('content-type');
-      const isJson = contentType && contentType.includes('application/json');
-      
-      // Lire le texte de la réponse d'abord
-      const text = await response.text();
-      
-      // Si la réponse est vide ou n'est pas du JSON
-      if (!text || text.trim() === '') {
-        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-        if (isDevelopment) {
-          throw new Error(
-            'Les routes API ne fonctionnent qu\'en production sur Vercel. ' +
-            'Déployez votre projet sur Vercel pour tester les paiements.'
-          );
-        } else {
-          throw new Error('Réponse vide du serveur. Vérifiez que la fonction serverless est déployée.');
-        }
-      }
-
-      // Parser le JSON seulement si c'est du JSON valide
-      let data;
-      if (isJson) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError, 'Response text:', text);
-          throw new Error('Réponse invalide du serveur. Vérifiez les logs Vercel.');
-        }
-      } else {
-        // Si ce n'est pas du JSON, c'est probablement une erreur HTML (404, etc.)
-        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-        if (response.status === 404) {
-          if (isDevelopment) {
-            throw new Error(
-              'Route API non trouvée. Les routes API ne fonctionnent qu\'en production sur Vercel.'
-            );
-          } else {
-            throw new Error('Route API non trouvée. Vérifiez que la fonction serverless est déployée sur Vercel.');
-          }
-        }
-        throw new Error(`Erreur serveur (${response.status}): ${text.substring(0, 100)}`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || `Erreur serveur (${response.status})`);
-      }
-
-      if (data?.url) {
-        // Rediriger vers Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error('URL de paiement manquante dans la réponse');
-      }
-    } catch (err: any) {
-      console.error('Direct booking error:', err);
-      
-      // Nettoyer le message d'erreur pour l'utilisateur
-      let errorMessage = 'Erreur lors de la réservation. Veuillez réessayer.';
-      
-      if (err.message) {
-        // Messages d'erreur spécifiques et clairs
-        if (err.message.includes('Unexpected end of JSON input') || err.message.includes('Failed to execute')) {
-          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-          errorMessage = isDevelopment
-            ? 'Les routes API ne fonctionnent qu\'en production sur Vercel. Déployez votre projet pour tester les paiements.'
-            : 'Erreur de communication avec le serveur. Veuillez réessayer ou contacter le support.';
-        } else if (err.message.includes('Route API non trouvée') || err.message.includes('404')) {
-          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
-          errorMessage = isDevelopment
-            ? 'Route API non trouvée. Les routes API ne fonctionnent qu\'en production sur Vercel.'
-            : 'Fonction de paiement non disponible. Veuillez contacter le support.';
-        } else if (err.message.includes('Stripe') || err.message.includes('paiement')) {
-          errorMessage = err.message;
-        } else {
-          // Pour les autres erreurs, utiliser le message original
-          errorMessage = err.message;
-        }
-      }
-      
-      setError(errorMessage);
-      toast.error('Erreur', {
-        description: errorMessage,
-        duration: 5000,
-      });
-      setBookingFlashId(null);
-    }
-  };
-
-  // Calculer l'acompte pour un flash
-  const calculateDeposit = (flash: Flash): number => {
-    if (!artist) return 0;
-    if (flash.deposit_amount !== null && flash.deposit_amount !== undefined) {
-      return flash.deposit_amount;
-    }
-    return Math.round((flash.prix * (artist.deposit_percentage || 30)) / 100);
+    refresh();
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="animate-spin text-amber-400 mx-auto mb-4" size={48} />
-          <p className="text-zinc-500">Chargement...</p>
+          <Loader2 className="animate-spin text-violet-400 mx-auto mb-4" size={48} aria-hidden />
+          <p className="text-zinc-500 text-sm md:text-base">Chargement...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !artist) {
-    // Nettoyer le message d'erreur pour éviter d'afficher des erreurs techniques
-    const displayError = error && error.includes('Unexpected end of JSON input')
-      ? 'Erreur de communication avec le serveur. Veuillez réessayer.'
-      : error && error.includes('Failed to execute')
-      ? 'Erreur de communication avec le serveur. Veuillez réessayer.'
-      : error;
-    
+  const displayError = fetchError && fetchError !== 'ARTIST_NOT_FOUND'
+    ? (fetchError.includes('Unexpected end of JSON input') || fetchError.includes('Failed to execute')
+        ? 'Erreur de communication avec le serveur. Veuillez réessayer.'
+        : fetchError)
+    : error;
+
+  if ((notFound || fetchError) && !artist) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <PenTool className="text-red-400" size={40} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">404</h1>
-          <p className="text-slate-400 mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">404</h1>
+          <p className="text-slate-400 text-sm md:text-base mb-6 min-h-[14px]">
             {displayError || "Cet artiste n'existe pas ou n'a pas encore configuré son profil."}
           </p>
           <Link
@@ -758,321 +524,120 @@ export const PublicArtistPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans antialiased overflow-x-hidden">
-      {/* Animated Background Elements (Landing-like) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute top-1/4 -left-32 w-96 h-96 rounded-full blur-[120px] animate-pulse-glow"
-          style={{ backgroundColor: glowA, opacity: 0.08 }}
-        />
-        <div
-          className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full blur-[120px] animate-pulse-glow"
-          style={{ backgroundColor: glowB, opacity: 0.08, animationDelay: '1.5s' }}
-        />
-      </div>
+    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans antialiased overflow-x-hidden selection:bg-violet-500 selection:text-white">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:image" content={seoImage} />
+        <meta property="og:url" content={seoUrl} />
+        <meta property="og:type" content="profile" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content={seoImage} />
+      </Helmet>
 
-      {/* Header Fixe */}
-      <header className="sticky top-0 z-40 glass border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-lg font-display font-bold tracking-tight text-white">
-              INK<span style={hasCustomHex ? { color: glowA } : undefined} className={hasCustomHex ? '' : 'text-zinc-500'}>FLOW</span>
-            </span>
-          </Link>
-          <button
-            onClick={handleShare}
-            className="p-2 text-zinc-400 hover:text-white transition-colors"
-          >
-            <Share2 size={20} />
-          </button>
+      {/* Effets de lumière (ambiance) — personnalisables depuis le dashboard */}
+      {(artistVitrine?.vitrine_show_glow !== false) && (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
+          <div
+            className="absolute top-1/4 -left-32 w-96 h-96 rounded-full blur-[120px] opacity-[0.08]"
+            style={{ backgroundColor: glowA }}
+          />
+          <div
+            className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full blur-[120px] opacity-[0.08]"
+            style={{ backgroundColor: glowB }}
+          />
         </div>
-      </header>
+      )}
 
-      {/* Hero Section */}
-      <section className="px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center">
-          {/* Avatar */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.1 }}
-            className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden ${
-              artist.avatar_url 
-                ? '' 
-                : `bg-gradient-to-br ${theme.primary} shadow-[0_0_30px_rgba(0,0,0,0.3)]`
-            }`}
-          >
-            {artist.avatar_url ? (
-              <img
-                src={`${artist.avatar_url}${artist.avatar_url.includes('?') ? '&' : '?'}v=${new Date().getTime()}`}
-                alt={`Avatar de ${artist.nom_studio} - Tatoueur professionnel`}
-                className="w-full h-full object-cover"
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  const parent = (e.target as HTMLImageElement).parentElement;
-                  if (parent) {
-                    parent.innerHTML = `<span class="text-3xl font-black text-black">${artist.nom_studio[0]?.toUpperCase()}</span>`;
-                    parent.className += ` bg-gradient-to-br ${theme.primary}`;
-                  }
-                }}
-              />
-            ) : (
-              <span className="text-3xl font-black text-black">
-                {artist.nom_studio[0]?.toUpperCase()}
-              </span>
-            )}
-          </motion.div>
+      <main className="relative max-w-6xl mx-auto px-4 pt-24 pb-20">
+        <ArtistHero artist={artistVitrine!} slug={slug ?? ''} />
 
-          {/* Nom */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-4xl md:text-5xl font-display font-black text-white mb-4 tracking-tight"
-          >
-            {artist.nom_studio}
-          </motion.h1>
-
-          {/* Bio */}
-          {artist.bio_instagram && (
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-lg text-zinc-400 mb-6 max-w-xl mx-auto"
-            >
-              {artist.bio_instagram}
-            </motion.p>
-          )}
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-6 text-zinc-400"
-          >
-            <div className="flex items-center gap-2">
-              <Zap size={18} className={hasCustomHex ? '' : theme.icon} style={hasCustomHex ? { color: glowA } : undefined} />
-              <span className="text-sm font-medium">{flashs.length} Flashs disponibles</span>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Tabs Navigation */}
-      <section id="public-profile-tabs" className="border-b border-white/5 sticky top-[73px] z-30 bg-[#050505]/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex">
+        {/* Tabs: Créations / Projet sur mesure */}
+        <section id="public-profile-tabs" className="border-b border-white/5 mt-16 md:mt-24">
+          <div className="flex justify-center gap-2 py-4">
             <button
+              type="button"
               onClick={() => setActiveTab('flashs')}
-              className={`flex-1 px-6 py-4 font-bold transition-colors relative ${
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
                 activeTab === 'flashs'
-                  ? 'text-white'
-                  : 'text-zinc-500'
+                  ? 'bg-white text-[#0a0a0a] shadow-lg'
+                  : 'text-white/60 hover:text-white bg-white/5'
               }`}
+              aria-pressed={activeTab === 'flashs'}
             >
-              <span className="flex items-center justify-center gap-2">
-                <Zap size={18} />
-                Flashs
-              </span>
-              {activeTab === 'flashs' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${hasCustomHex ? '' : theme.primary}`}
-                  style={hasCustomHex ? { backgroundColor: glowA } : undefined}
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                />
-              )}
+              Créations
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('project')}
-              className={`flex-1 px-6 py-4 font-bold transition-colors relative ${
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
                 activeTab === 'project'
-                  ? 'text-white'
-                  : 'text-zinc-500'
+                  ? 'bg-white text-[#0a0a0a] shadow-lg'
+                  : 'text-white/60 hover:text-white bg-white/5'
               }`}
+              aria-pressed={activeTab === 'project'}
             >
-              <span className="flex items-center justify-center gap-2">
-                <MessageSquare size={18} />
-                Projet Perso
-              </span>
-              {activeTab === 'project' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${hasCustomHex ? '' : theme.primary}`}
-                  style={hasCustomHex ? { backgroundColor: glowA } : undefined}
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                />
-              )}
+              Projet sur mesure
             </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Content */}
-      <AnimatePresence mode="wait">
-        {activeTab === 'flashs' ? (
-          <motion.section
-            key="flashs"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            className="px-4 py-8 pb-24"
-          >
-            <div className="max-w-7xl mx-auto">
-              {/* Header Section */}
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-display font-black text-white mb-3 flex items-center justify-center gap-2">
-                  <Zap className={hasCustomHex ? '' : theme.icon} style={hasCustomHex ? { color: glowA } : undefined} size={32} />
-                  Flashs Disponibles
-                </h2>
-                <p className="text-zinc-400 text-lg">Premier arrivé, premier servi. Réservez votre créneau instantanément.</p>
-              </div>
-
-              {/* Error Message */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'flashs' ? (
+            <motion.section
+              key="flashs"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="mt-16 md:mt-24"
+            >
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 max-w-2xl mx-auto"
+                  className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
                 >
-                  <X className="text-red-400 shrink-0" size={20} />
+                  <X className="text-red-400 shrink-0" size={20} aria-hidden />
                   <p className="text-red-300 text-sm flex-1">{error}</p>
                   <button
+                    type="button"
                     onClick={() => setError(null)}
                     className="text-red-400/60 hover:text-red-400"
+                    aria-label="Fermer"
                   >
                     <X size={18} />
                   </button>
                 </motion.div>
               )}
+              <FlashGallery
+                flashs={flashs}
+                artist={artistVitrine!}
+                artistSlug={slug ?? ''}
+              />
+            </motion.section>
+          ) : (
+            <motion.section
+              key="project"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="py-10 pb-28"
+            >
+              <div className="max-w-2xl mx-auto">
+                <CustomProjectForm artistId={artist.id} />
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </main>
 
-              {/* Afficher uniquement les flashs réels de la base de données */}
-              {(() => {
-                if (flashs.length === 0) {
-                  return (
-                    <div className="text-center py-16">
-                      <div className="w-24 h-24 glass rounded-full flex items-center justify-center mx-auto mb-6">
-                        <PenTool className="text-zinc-600" size={48} />
-                      </div>
-                      <p className="text-zinc-400 text-lg">Aucun flash disponible pour le moment.</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {flashs.map((flash, index) => {
-                      const depositAmount = calculateDeposit(flash);
-                      const isBooking = bookingFlashId === flash.id;
-                      const isAvailable = flash.statut === 'available' && flash.stock_current < flash.stock_limit;
-                      
-                      return (
-                        <motion.div
-                          key={flash.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="group relative glass rounded-2xl overflow-hidden transition-all hover:bg-white/10"
-                        >
-                          <div className="aspect-square relative overflow-hidden bg-black/40">
-                            {flash.image_url ? (
-                              <img
-                                src={flash.image_url}
-                                alt={`Tatouage ${flash.title} - ${artist?.nom_studio || 'Artiste'}`}
-                                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-                                loading="lazy"
-                                decoding="async"
-                                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231e293b" width="400" height="400"/%3E%3Ctext fill="%23475569" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage%3C/text%3E%3C/svg%3E';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                                <PenTool size={48} />
-                              </div>
-                            )}
-                            <div className={`absolute top-2 right-2 ${theme.badge} backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full`}>
-                              {isAvailable ? 'Disponible' : 'Indisponible'}
-                            </div>
-                          </div>
-                          <div className="p-4">
-                            <h3 className="font-bold text-white mb-2 line-clamp-1">{flash.title}</h3>
-                            <div className="flex items-center justify-between mb-3">
-                              <span
-                                className={`${hasCustomHex ? '' : theme.primaryText} font-mono font-bold text-lg`}
-                                style={hasCustomHex ? { color: glowA } : undefined}
-                              >
-                                {Math.round(flash.prix / 100)}€
-                              </span>
-                              <span className="text-zinc-400 text-sm flex items-center gap-1">
-                                <Clock size={14} /> {flash.duree_minutes}min
-                              </span>
-                            </div>
-                            
-                            {/* Bouton de réservation directe */}
-                            {isAvailable ? (
-                              <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={(e) => handleDirectBooking(flash, e)}
-                                disabled={isBooking}
-                                style={hasCustomHex ? { background: `linear-gradient(135deg, ${accentHex}, ${secondaryHex || accentHex})` } : undefined}
-                                className={`w-full font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                                  hasCustomHex 
-                                    ? 'text-white hover:brightness-110' 
-                                    : 'bg-gradient-to-r from-amber-400 to-amber-600 text-white hover:from-amber-500 hover:to-amber-700'
-                                }`}
-                              >
-                                {isBooking ? (
-                                  <>
-                                    <Loader2 className="animate-spin" size={18} />
-                                    <span>Redirection...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Zap size={18} />
-                                    <span>Réserver ({Math.round(depositAmount / 100)}€)</span>
-                                  </>
-                                )}
-                              </motion.button>
-                            ) : (
-                              <div className="w-full bg-zinc-800/50 text-zinc-500 font-medium py-3 rounded-xl text-center text-sm">
-                                Indisponible
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          </motion.section>
-        ) : (
-          <motion.section
-            key="project"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            className="px-4 py-8 pb-24"
-          >
-            <div className="max-w-3xl mx-auto">
-              <CustomProjectForm artistId={artist.id} />
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
-
-      {/* Booking Drawer */}
+      {/* Booking Drawer (conservé pour usage futur ou depuis URL) */}
       <AnimatePresence>
         {selectedFlash && (
           <BookingDrawer
@@ -1085,61 +650,22 @@ export const PublicArtistPage: React.FC = () => {
             }}
             onSuccess={handleBookingSuccess}
             theme={theme}
+            initialDateSouhaitee={initialDateSouhaitee}
           />
         )}
       </AnimatePresence>
 
-      {/* Sticky CTA (Mobile) */}
-      <PublicProfileCTA
-        theme={theme}
-        themeColor={themeColor}
-        accentHex={accentHex}
-        secondaryHex={secondaryHex}
-        artistEmail={artist.email}
-        artistName={artist.nom_studio}
-        profileUrl={typeof window !== 'undefined' ? window.location.href : undefined}
-        isHidden={isDrawerOpen}
-        onSelectTab={(tab) => setActiveTab(tab)}
-        onScrollToTabs={scrollToTabs}
-      />
-
-      {/* Footer Légal */}
-      <footer className="border-t border-white/5 py-6 mt-12 bg-[#0a0a0a]/40 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-            <div className="flex items-center gap-1">
-              <span>Propulsé par</span>
-              <span className="font-bold text-zinc-300">InkFlow</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('CGV - Fonctionnalité à venir');
-                }}
-                className="hover:text-white transition-colors"
-              >
-                CGV
-              </a>
-              <span className="text-zinc-700">•</span>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Mentions Légales - Fonctionnalité à venir');
-                }}
-                className="hover:text-white transition-colors"
-              >
-                Mentions Légales
-              </a>
-            </div>
-            <div className="text-zinc-600">
-              &copy; 2024 InkFlow SaaS
-            </div>
-          </div>
-        </div>
+      {/* Footer vitrine premium */}
+      <footer className="mt-32 py-12 border-t border-white/5 text-center text-white/30 text-xs uppercase tracking-[0.2em]">
+        © 2026 Inkflow • {artist.nom_studio}
+        {artistVitrine?.ville ? ` Studio ${artistVitrine.ville}` : ''}
       </footer>
+
+      {/* Mobile CTA fixe — style premium */}
+      <BookingCTA artistSlug={slug ?? ''} isHidden={isDrawerOpen} />
+
+      {/* Bouton flottant consultant IA (au-dessus du CTA mobile) */}
+      <AIButton artistName={artist.nom_studio} />
     </div>
   );
 };

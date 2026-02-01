@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIP } from '../utils/rateLimit';
-import { validateProjectSubmission, escapeHtml, sanitizeText } from '../utils/validation';
+import { validateProjectSubmission } from '../utils/validation';
+import {
+  sendAppointmentNotification,
+  sendAppointmentConfirmationToClient,
+} from '../services/appointmentNotification';
 
 type SubmitProjectBody = {
   artist_id: string;
@@ -39,39 +43,6 @@ function requireEnv(name: string) {
   const v = process.env[name];
   return v && v.trim() ? v.trim() : null;
 }
-
-async function sendResendEmail(args: { to: string; subject: string; html: string; text: string; reply_to?: string }) {
-  const apiKey = requireEnv('RESEND_API_KEY');
-  if (!apiKey) throw new Error('Missing RESEND_API_KEY');
-
-  const from = requireEnv('RESEND_FROM_EMAIL') || 'InkFlow <onboarding@resend.dev>';
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [args.to],
-      subject: args.subject,
-      html: args.html,
-      text: args.text,
-      reply_to: args.reply_to,
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = (data as any)?.message || (data as any)?.error || `Resend error (${res.status})`;
-    throw new Error(msg);
-  }
-
-  return data;
-}
-
-// escapeHtml and sanitizeText are now imported from utils/validation
 
 export default async function handler(req: any, res: any) {
   // Wrap everything in try-catch to handle unexpected errors
@@ -234,50 +205,60 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // 4) Email notify (non-blocking)
-  // All user input is sanitized with escapeHtml() to prevent HTML injection/XSS
-  try {
-    const subject = `New project request from ${clientName}`;
-    const safeStudio = escapeHtml(artist.nom_studio || 'InkFlow');
-    const safeClient = escapeHtml(clientName);
-    const safeEmail = escapeHtml(clientEmail);
-    const safeDesc = escapeHtml(description); // Prevents HTML injection in emails
+  // 4) Notifications email (robuste : retry 1x après 30s, DB "email_failed" si échec définitif, ne bloque pas la création)
+  const siteBaseUrl =
+    requireEnv('SITE_URL') ||
+    (req.headers?.origin ? String(req.headers.origin).replace(/\/$/, '') : '') ||
+    'https://inkflow.app';
+  const budgetFormatted =
+    body.budget_max != null ? `${Math.round(body.budget_max / 100)} €` : 'Non indiqué';
 
-    const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.5">
-        <h2 style="margin:0 0 8px 0;">New project request</h2>
-        <p style="margin:0 0 12px 0;">
-          Studio: <strong>${safeStudio}</strong><br/>
-          From: <strong>${safeClient}</strong> (${safeEmail})
-        </p>
-        <div style="padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;">
-          <div style="font-weight:700;margin-bottom:6px;">Description</div>
-          <pre style="margin:0;white-space:pre-wrap;">${safeDesc}</pre>
-        </div>
-        <p style="margin:12px 0 0 0;color:#6b7280;font-size:12px;">
-          Project ID: ${project.id}
-        </p>
-      </div>
-    `.trim();
+  const onEmailFailed = async (projectId: string) => {
+    try {
+      await supabase
+        .from('projects')
+        .update({ artist_notification_status: 'failed' })
+        .eq('id', projectId);
+    } catch (e) {
+      console.error('[submit-project-request] Failed to set artist_notification_status=failed:', e);
+    }
+  };
 
-    // Plain text version (sanitized)
-    const text = [
-      `New project request`,
-      `Studio: ${sanitizeText(artist.nom_studio || 'InkFlow')}`,
-      `From: ${sanitizeText(clientName)} (${clientEmail})`,
-      '',
-      `Description:`,
-      sanitizeText(description),
-      '',
-      `Project ID: ${project.id}`,
-    ].join('\n');
+  const notifResult = await sendAppointmentNotification({
+    projectId: project.id,
+    artistEmail: artist.email,
+    artistStudioName: artist.nom_studio || undefined,
+    clientName: clientName || 'Client',
+    clientEmail,
+    bodyPart: body.body_part,
+    style: body.style,
+    sizeCm: body.size_cm,
+    budgetFormatted,
+    description,
+    siteBaseUrl,
+    onEmailFailed,
+  });
 
-    await sendResendEmail({ to: artist.email, subject, html, text, reply_to: clientEmail });
-  } catch {
-    // ignore email failures
+  if (notifResult.ok) {
+    try {
+      await supabase
+        .from('projects')
+        .update({ artist_notification_status: 'sent' })
+        .eq('id', project.id);
+    } catch {
+      // optional: column may not exist if migration not run
+    }
   }
 
-    return json(
+  // Bonus : email de confirmation au client (non bloquant)
+  sendAppointmentConfirmationToClient({
+    clientEmail,
+    clientName: clientName || 'Client',
+    artistStudioName: artist.nom_studio || 'le studio',
+    siteBaseUrl,
+  }).catch((err) => console.error('[submit-project-request] Client confirmation email failed:', err));
+
+  return json(
       res,
       200,
       { success: true, project_id: project.id },

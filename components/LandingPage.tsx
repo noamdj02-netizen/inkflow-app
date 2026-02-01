@@ -452,10 +452,10 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { emoji: "🐍", title: "Serpent", price: 180, views: 234 },
-                      { emoji: "🦋", title: "Papillon", price: 150, views: 189 },
-                      { emoji: "🌿", title: "Fougère", price: 120, views: 156 },
-                      { emoji: "🌙", title: "Lune", price: 200, views: 312 },
+                      { image: "/images/demo-flashs/flash1.png", title: "Serpent", price: 180, views: 234 },
+                      { image: "/images/demo-flashs/flash2.png", title: "Papillon", price: 150, views: 189 },
+                      { image: "/images/demo-flashs/flash3.png", title: "Portrait", price: 120, views: 156 },
+                      { image: "/images/demo-flashs/flash4.png", title: "Lune", price: 200, views: 312 },
                     ].map((flash, index) => (
                       <motion.div 
                         key={index}
@@ -466,8 +466,12 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                         whileHover={{ scale: 1.03, y: -5 }}
                         className="group cursor-pointer"
                       >
-                        <div className="aspect-[4/5] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center text-5xl mb-3 border border-white/5 group-hover:border-white/20 transition-all relative overflow-hidden">
-                          <span className="group-hover:scale-110 transition-transform">{flash.emoji}</span>
+                        <div className="aspect-[4/5] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center mb-3 border border-white/5 group-hover:border-white/20 transition-all relative overflow-hidden">
+                          <img
+                            src={flash.image}
+                            alt={flash.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
                           {/* Hover Overlay */}
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                             <div className="flex items-center gap-1 text-white text-xs">

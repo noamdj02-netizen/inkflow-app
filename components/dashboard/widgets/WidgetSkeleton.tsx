@@ -1,9 +1,37 @@
 /**
- * Skeleton components for widget loading states
+ * Skeleton components for widget loading states.
+ * Fallback d'erreur réutilisable pour les widgets dashboard.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+
+/** Fallback d'erreur avec message clair et bouton Réessayer */
+export const WidgetErrorFallback: React.FC<{
+  message?: string;
+  onRetry?: () => void;
+  className?: string;
+}> = ({ message = 'Impossible de charger les données.', onRetry, className = '' }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className={`glass rounded-2xl p-6 border border-white/10 flex flex-col items-center justify-center min-h-[140px] text-center ${className}`}
+  >
+    <AlertCircle className="text-amber-400 mb-3" size={28} />
+    <p className="text-sm text-zinc-400 mb-4">{message}</p>
+    {onRetry && (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-colors"
+      >
+        <RefreshCw size={14} />
+        Réessayer
+      </button>
+    )}
+  </motion.div>
+);
 
 export const WidgetSkeleton: React.FC<{ className?: string }> = ({ className = '' }) => {
   return (

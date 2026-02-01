@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { SWRConfig } from 'swr';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
@@ -32,6 +33,7 @@ const DashboardClients = lazy(() => import('./components/dashboard/DashboardClie
 const DashboardFinance = lazy(() => import('./components/dashboard/DashboardFinance').then(m => ({ default: m.DashboardFinance })));
 const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSettings').then(m => ({ default: m.DashboardSettings })));
 const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
+const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
 
 // Skeleton de chargement réutilisable
 const LoadingSkeleton: React.FC = () => (
@@ -50,6 +52,15 @@ const App: React.FC = () => {
         <BrowserRouter>
           <ArtistProfileProvider>
             <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-amber-400 selection:text-black overflow-x-hidden w-full">
+              <SWRConfig
+                value={{
+                  dedupingInterval: 2000,
+                  revalidateOnFocus: true,
+                  revalidateOnReconnect: true,
+                  errorRetryCount: 2,
+                  keepPreviousData: true,
+                }}
+              >
               <Toaster
                 theme="dark"
                 position="top-center"
@@ -72,6 +83,8 @@ const App: React.FC = () => {
                   
                   {/* Public Artist Page (Vitrine) - Lazy loaded */}
                   <Route path="/p/:slug" element={<PublicArtistPage />} />
+                  {/* Réservation : calendrier créneaux (avant /:slug) */}
+                  <Route path="/:slug/booking" element={<PublicBookingPage />} />
                   {/* Public Artist Page (Vitrine) - URL courte (doit être en dernier) */}
                   <Route path="/:slug" element={<PublicArtistPage />} />
                   
@@ -121,6 +134,7 @@ const App: React.FC = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              </SWRConfig>
             </div>
           </ArtistProfileProvider>
         </BrowserRouter>

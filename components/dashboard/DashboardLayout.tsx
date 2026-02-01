@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { prefetchDashboard } from '../../hooks/useDashboardSWR';
 import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
 import { Skeleton } from '../common/Skeleton';
 
@@ -37,6 +38,11 @@ export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { loading: dataLoading, stats, recentBookings, pendingProjects } = useDashboardData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Prefetch des données critiques au montage (cache SWR, revalidation en arrière-plan)
+  React.useEffect(() => {
+    if (user?.id) prefetchDashboard(user.id);
+  }, [user?.id]);
 
   // Prevent body scroll when drawer is open
   React.useEffect(() => {
@@ -434,7 +440,7 @@ export const DashboardLayout: React.FC = () => {
                         {project.body_part} • {project.style}
                       </div>
                       <div className="text-xs text-zinc-600">
-                        {project.client_email} • {new Date(project.created_at).toLocaleDateString('fr-FR')}
+                        {project.client_name ?? project.client_email ?? '—'} • {new Date(project.created_at).toLocaleDateString('fr-FR')}
                       </div>
                     </div>
                   </motion.div>
