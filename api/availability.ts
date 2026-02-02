@@ -1,7 +1,7 @@
 /**
  * API: créneaux disponibles pour un artiste (vitrine réservation).
  * GET /api/availability?slug=noam
- * Retourne les créneaux sur les 30 prochains jours (par défaut Lun-Ven 9h-18h, hors créneaux déjà réservés).
+ * Retourne les créneaux sur les 30 prochains jours (Lun-Ven 9h-18h dans le fuseau de l'artiste).
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -26,6 +26,40 @@ const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5];
 const DEFAULT_START_HOUR = 9;
 const DEFAULT_END_HOUR = 18;
 const SLOT_DURATION_MINUTES = 60;
+const DEFAULT_TZ = 'Europe/Paris';
+
+/** Retourne l'offset en heures (local - UTC) pour un jour donné dans un fuseau IANA. */
+function getTimezoneOffsetHours(year: number, month: number, day: number, timeZone: string): number {
+  try {
+    const utcMidnight = Date.UTC(year, month, day, 0, 0, 0);
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      hour12: false,
+      minute: '2-digit',
+    });
+    const parts = formatter.formatToParts(new Date(utcMidnight));
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
+    const minute = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
+    return hour + minute / 60;
+  } catch {
+    return 1; // fallback Europe/Paris winter
+  }
+}
+
+/** Crée un Date UTC correspondant à (année, mois, jour, heure locale) dans le fuseau donné. */
+function localToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  timeZone: string
+): Date {
+  const offsetHours = getTimezoneOffsetHours(year, month, day, timeZone);
+  const utcMs = Date.UTC(year, month, day, hour - offsetHours, minute, 0);
+  return new Date(utcMs);
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
@@ -49,7 +83,7 @@ export default async function handler(req: any, res: any) {
 
     const { data: artist, error: artistError } = await supabase
       .from('artists')
-      .select('id, nom_studio')
+      .select('id, nom_studio, timezone')
       .eq('slug_profil', slug)
       .single();
 
@@ -57,9 +91,13 @@ export default async function handler(req: any, res: any) {
       return json(res, 404, { error: 'Artiste introuvable' });
     }
 
+    // timezone : colonne optionnelle (migration-artist-timezone.sql). Sinon Europe/Paris.
+    const timeZone =
+      (artist as { timezone?: string }).timezone != null
+        ? String((artist as { timezone?: string }).timezone).trim() || DEFAULT_TZ
+        : DEFAULT_TZ;
     const now = new Date();
-    const endRange = new Date(now);
-    endRange.setDate(endRange.getDate() + 30);
+    const endRange = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const { data: bookings } = await supabase
       .from('bookings')
@@ -77,16 +115,16 @@ export default async function handler(req: any, res: any) {
     const slots: { date: string; time: string; iso: string; displayDate: string }[] = [];
 
     for (let d = 0; d < 30; d++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() + d);
-      date.setHours(0, 0, 0, 0);
+      const utcDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d, 0, 0, 0));
+      const y = utcDay.getUTCFullYear();
+      const m = utcDay.getUTCMonth();
+      const day = utcDay.getUTCDate();
 
-      const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+      const dayOfWeek = utcDay.getUTCDay() === 0 ? 7 : utcDay.getUTCDay();
       if (!DEFAULT_WORK_DAYS.includes(dayOfWeek)) continue;
 
       for (let hour = DEFAULT_START_HOUR; hour < DEFAULT_END_HOUR; hour++) {
-        const slotStart = new Date(date);
-        slotStart.setHours(hour, 0, 0, 0);
+        const slotStart = localToUtc(y, m, day, hour, 0, timeZone);
         const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MINUTES * 60 * 1000);
 
         if (slotStart.getTime() < now.getTime()) continue;
@@ -100,16 +138,26 @@ export default async function handler(req: any, res: any) {
         if (isBooked) continue;
 
         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+        const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         slots.push({
-          date: date.toISOString().slice(0, 10),
+          date: dateStr,
           time: timeStr,
           iso: slotStart.toISOString(),
-          displayDate: date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
+          displayDate: utcDay.toLocaleDateString('fr-FR', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            timeZone,
+          }),
         });
       }
     }
 
-    return json(res, 200, { slots, artistName: artist?.nom_studio ?? null });
+    return json(res, 200, {
+      slots,
+      artistName: artist?.nom_studio ?? null,
+      timezone: timeZone,
+    });
   } catch (err) {
     console.error('Availability API error:', err);
     return json(res, 500, { error: 'Erreur serveur' });

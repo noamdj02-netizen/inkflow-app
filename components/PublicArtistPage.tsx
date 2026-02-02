@@ -121,70 +121,37 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
         return;
       }
 
-      // --- 1. Vérification stricte des doublons : aucun autre RDV (pending/confirmed) sur ce créneau
-      const { data: overlappingBookings, error: overlapError } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('artist_id', artist.id)
-        .in('statut_booking', ['pending', 'confirmed'])
-        .lt('date_debut', dateFin.toISOString())
-        .gt('date_fin', dateDebut.toISOString())
-        .limit(1);
-
-      if (overlapError) {
-        console.error('Overlap check error:', overlapError);
-        setError('Impossible de vérifier la disponibilité du créneau. Réessayez.');
+      // --- 1. Créer la réservation côté serveur (API sécurisée, évite RLS anon)
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const createRes = await fetch(`${origin}/api/create-booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: artist.slug_profil,
+          flash_id: flash.id,
+          date_debut_iso: dateDebut.toISOString(),
+          duree_minutes: flash.duree_minutes,
+          client_email: data.client_email.trim(),
+          client_name: data.client_name?.trim() || undefined,
+          client_phone: data.client_phone?.trim() || undefined,
+        }),
+      });
+      const createJson = await createRes.json();
+      if (!createRes.ok || !createJson.booking_id) {
+        setError(createJson.error || 'Impossible d\'enregistrer la réservation.');
         return;
       }
-      if (overlappingBookings && overlappingBookings.length > 0) {
-        setError('Ce créneau n\'est plus disponible. Choisissez une autre date ou heure.');
-        return;
-      }
+      const bookingData = { id: createJson.booking_id };
 
-      // --- 2. Créer la réservation avec statuts explicites (pending = demande en attente)
-      const insertPayload = {
-        artist_id: artist.id,
-        flash_id: flash.id,
-        client_email: data.client_email.trim(),
-        client_name: data.client_name?.trim() || null,
-        client_phone: data.client_phone?.trim() || null,
-        date_debut: dateDebut.toISOString(),
-        date_fin: dateFin.toISOString(),
-        duree_minutes: flash.duree_minutes,
-        prix_total: flash.prix,
-        deposit_amount: depositAmount,
-        deposit_percentage: depositPercentage,
-        statut_paiement: 'pending' as const,
-        statut_booking: 'pending' as const,
-      };
-
-      const { data: bookingData, error: insertError } = await supabase
-        .from('bookings')
-        .insert(insertPayload)
-        .select()
-        .single();
-
-      if (insertError) {
-        const msg = getBookingErrorMessage(insertError);
-        setError(msg);
-        return;
-      }
-
-      if (!bookingData?.id) {
-        setError('La réservation n\'a pas été enregistrée. Réessayez.');
-        return;
-      }
-
-      // --- 3. Configuration Stripe
+      // --- 2. Configuration Stripe (Edge Function)
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       if (!supabaseUrl || !supabaseAnonKey) {
-        await rollbackBooking(bookingData.id);
+        await cancelPendingBooking(bookingData.id, origin);
         setError('Configuration serveur manquante. Contactez le support.');
         return;
       }
 
-      // --- 4. Créer la session Stripe (paiement acompte)
       let sessionData: { url?: string } | null = null;
       let sessionError: Error | null = null;
 
@@ -197,8 +164,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
             client_name: data.client_name,
             booking_id: bookingData.id,
             artist_id: artist.id,
-            success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/cancel`,
+            success_url: `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/payment/cancel?booking_id=${bookingData.id}`,
           },
         });
         sessionData = response.data as { url?: string } | null;
@@ -209,7 +176,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
       }
 
       if (sessionError || !sessionData?.url) {
-        await rollbackBooking(bookingData.id);
+        await cancelPendingBooking(bookingData.id, origin);
         const msg = sessionError?.message
           ? getStripeErrorMessage(sessionError.message)
           : 'URL de paiement non reçue. Réessayez ou contactez l\'artiste.';
@@ -217,7 +184,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
         return;
       }
 
-      // --- 5. Redirection vers Stripe Checkout
+      // --- 3. Redirection vers Stripe Checkout
       if (typeof window !== 'undefined' && sessionData.url) {
         window.location.href = sessionData.url;
       }
@@ -227,12 +194,16 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
     }
   };
 
-  // Annule la réservation en base si le paiement n'a pas pu être initié (évite les orphelins)
-  const rollbackBooking = async (bookingId: string) => {
+  // Annule une réservation pending côté serveur (libère le créneau si paiement non initié ou annulé)
+  const cancelPendingBooking = async (bookingId: string, baseUrl: string) => {
     try {
-      await supabase.from('bookings').delete().eq('id', bookingId);
+      await fetch(`${baseUrl}/api/cancel-pending-booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
     } catch (e) {
-      console.error('Rollback booking failed:', e);
+      console.error('Cancel pending booking failed:', e);
     }
   };
 
