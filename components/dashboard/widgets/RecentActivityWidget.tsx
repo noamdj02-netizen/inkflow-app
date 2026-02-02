@@ -53,25 +53,25 @@ export const RecentActivityWidget: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl p-6 border border-white/10"
+      className="glass rounded-2xl p-4 border border-white/10"
     >
-      <h3 className="text-lg font-semibold text-white mb-4">Activité récente</h3>
-      <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-white mb-3">Activité récente</h3>
+      <div className="space-y-2">
         {activities.length === 0 ? (
-          <p className="text-sm text-zinc-400 text-center py-8">Aucune activité récente</p>
+          <p className="text-xs text-zinc-400 text-center py-4">Aucune activité récente</p>
         ) : (
           activities.map((activity) => (
             <div
               key={activity.id}
-              className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
+              className="flex items-start gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+              <div className="mt-0.5 shrink-0">{getActivityIcon(activity.type)}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate">{activity.title}</p>
+                <p className="text-xs font-medium text-white truncate">{activity.title}</p>
                 {activity.client && (
-                  <p className="text-xs text-zinc-400 mt-1">{activity.client}</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">{activity.client}</p>
                 )}
-                <p className="text-xs text-zinc-500 mt-1">{formatDate(activity.date)}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">{formatDate(activity.date)}</p>
               </div>
             </div>
           ))

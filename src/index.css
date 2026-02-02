@@ -157,3 +157,22 @@ html, body {
 .animate-ai-slide-in {
   animation: ai-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Hero background - grid pattern (Linear/Vercel style) */
+.hero-bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Hero vignette - assombrissement des bords */
+.hero-vignette {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 0%,
+    rgba(3, 3, 3, 0.4) 70%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}

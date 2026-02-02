@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <main id="main-content" className="w-full max-w-md relative z-10" role="main">
         {/* Bouton Retour */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -90,11 +90,11 @@ export const LoginPage: React.FC = () => {
         >
           <div className="inline-flex items-center gap-2 mb-6">
             <span className="text-4xl font-display font-bold tracking-tight text-white">
-              INK<span className="text-zinc-500">FLOW</span>
+              INK<span className="text-zinc-400">FLOW</span>
             </span>
           </div>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Connexion</h1>
-          <p className="text-zinc-500">Accédez à votre espace tatoueur</p>
+          <p className="text-zinc-400">Accédez à votre espace tatoueur</p>
         </motion.div>
 
         {/* Formulaire */}
@@ -270,7 +270,7 @@ export const LoginPage: React.FC = () => {
         >
           © 2025 InkFlow. Tous droits réservés.
         </motion.p>
-      </div>
+      </main>
     </div>
   );
 };

@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { SWRConfig } from 'swr';
-import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { LandingPage } from './components/LandingPage';
@@ -10,6 +9,9 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { RedirectToHome } from './components/common/RedirectToHome';
+import { DelayedFallback } from './components/common/DelayedFallback';
+import { PlaceholderPage } from './components/PlaceholderPage';
 
 // Lazy load components pour code splitting (réduction du bundle initial ~60%)
 const OnboardingPage = lazy(() => import('./components/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
@@ -34,16 +36,9 @@ const DashboardFinance = lazy(() => import('./components/dashboard/DashboardFina
 const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSettings').then(m => ({ default: m.DashboardSettings })));
 const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
 const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
+const AproposPage = lazy(() => import('./components/AproposPage').then(m => ({ default: m.AproposPage })));
 
-// Skeleton de chargement réutilisable
-const LoadingSkeleton: React.FC = () => (
-  <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-    <div className="text-center">
-      <Loader2 className="animate-spin text-amber-400 mx-auto mb-4" size={48} />
-      <p className="text-slate-400">Chargement...</p>
-    </div>
-  </div>
-);
+// Fallback retardé : spinner seulement si chargement > 300ms (évite flash sur navigations rapides)
 
 const App: React.FC = () => {
   return (
@@ -69,9 +64,9 @@ const App: React.FC = () => {
                   className: 'glass border border-white/10 text-white',
                 }}
               />
-              <Suspense fallback={<LoadingSkeleton />}>
+              <Suspense fallback={<DelayedFallback />}>
                 <Routes>
-                  {/* Public Routes - Importées normalement pour FCP rapide */}
+                  {/* Homepage — route explicite en premier pour accès instantané, pas de redirection */}
                   <Route path="/" element={<LandingPage onNavigate={() => {}} />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
@@ -96,6 +91,9 @@ const App: React.FC = () => {
                   <Route path="/client" element={<ClientHome onNavigate={() => {}} />} />
                   <Route path="/flashs" element={<FlashGallery />} />
                   <Route path="/project" element={<CustomProjectForm />} />
+                  <Route path="/apropos" element={<AproposPage />} />
+                  <Route path="/mentions-legales" element={<PlaceholderPage title="Mentions légales" description="Cette page sera bientôt disponible." icon="file" />} />
+                  <Route path="/contact" element={<PlaceholderPage title="Contact" description="Cette page sera bientôt disponible." icon="mail" />} />
                   
                   {/* Protected Routes - Lazy loaded */}
                   <Route
@@ -130,8 +128,8 @@ const App: React.FC = () => {
                     <Route path="settings/care-sheets" element={<DashboardCareSheets />} />
                   </Route>
                   
-                  {/* Redirect unknown routes to home */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  {/* Redirection unique vers home — évite boucle de redirection */}
+                  <Route path="*" element={<RedirectToHome />} />
                 </Routes>
               </Suspense>
               </SWRConfig>

@@ -64,8 +64,20 @@ export default async function handler(req: any, res: any) {
   const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : null;
   if (!token) return json(res, 401, { success: false, error: 'Missing Authorization token' });
 
+  // Normalize body (Vercel can send string or pre-parsed object)
+  let rawBody: unknown = req.body;
+  if (typeof req.body === 'string') {
+    try {
+      rawBody = req.body ? JSON.parse(req.body) : {};
+    } catch {
+      return json(res, 400, { success: false, error: 'Invalid JSON body' });
+    }
+  } else if (req.body == null) {
+    rawBody = {};
+  }
+
   // Validate input with Zod (strict mode)
-  const bodyParseResult = careInstructionsSchema.safeParse(req.body);
+  const bodyParseResult = careInstructionsSchema.safeParse(rawBody);
   if (!bodyParseResult.success) {
     const firstError = bodyParseResult.error.issues[0];
     return json(res, 400, {

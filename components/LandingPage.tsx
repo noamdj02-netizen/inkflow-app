@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Star, ChevronLeft, ChevronRight, Check, Shield, Users, Calendar, CreditCard, LayoutGrid, Filter, BarChart3, Clock, MapPin, Instagram, Sparkles, Zap, TrendingUp, Eye, Heart } from 'lucide-react';
+import { ArrowRight, Star, ChevronLeft, ChevronRight, ChevronDown, Check, Shield, Users, Calendar, CreditCard, LayoutGrid, Filter, BarChart3, Clock, MapPin, Instagram, Sparkles, Zap, TrendingUp, Eye, Heart, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LandingPageProps {
@@ -56,9 +56,46 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: "easeOut" } }
 };
 
+const faqItems: { question: string; answer: string }[] = [
+  {
+    question: "Est-ce une application mobile ou un site web ?",
+    answer: "C'est une Web App progressive (PWA). Vous n'avez rien à télécharger sur l'App Store : elle s'installe directement depuis votre navigateur et fonctionne comme une application native sur iPhone et Android.",
+  },
+  {
+    question: "Le système de paiement prend-il une commission ?",
+    answer: "InkFlow ne prend aucune commission sur vos tatouages. Nous utilisons Stripe pour sécuriser les acomptes, qui applique ses propres frais bancaires standards (environ 1.4% + 0.25€), mais nous ne touchons rien dessus.",
+  },
+  {
+    question: "Puis-je personnaliser ma vitrine ?",
+    answer: "Absolument. Votre vitrine est votre identité. Vous pouvez modifier les couleurs, la disposition des flashs et afficher vos réseaux sociaux pour qu'elle corresponde à votre style artistique.",
+  },
+  {
+    question: "Est-ce que mes clients doivent créer un compte ?",
+    answer: "Non, nous avons simplifié le processus au maximum. Vos clients peuvent réserver un flash ou demander un projet sans créer de compte complexe, pour ne pas perdre de conversions.",
+  },
+  {
+    question: "Comment fonctionne la gestion des acomptes ?",
+    answer: "C'est automatique. Lors de la réservation, vous pouvez exiger un acompte (ex: 30% ou montant fixe). Le créneau n'est bloqué que lorsque le client a payé. Fini les lapins !",
+  },
+  {
+    question: "Mes données et celles de mes clients sont-elles sécurisées ?",
+    answer: "La sécurité est notre priorité. Toutes les données sont chiffrées et nous respectons strictement les normes RGPD. Vos fichiers clients restent privés et vous appartiennent.",
+  },
+  {
+    question: "Puis-je importer ma liste de clients actuelle ?",
+    answer: "Oui, nous proposons une fonctionnalité d'importation facile pour ne pas repartir de zéro. Vous retrouverez tout votre historique dès le premier jour.",
+  },
+  {
+    question: "Que se passe-t-il si j'ai un problème technique ?",
+    answer: "Notre support est dédié aux tatoueurs. En cas de bug ou de question, vous avez accès à une assistance prioritaire directement depuis votre tableau de bord.",
+  },
+];
+
 export const LandingPage: React.FC<LandingPageProps> = () => {
   const navigate = useNavigate();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -66,6 +103,17 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
     }, 6000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const nextTestimonial = () => {
     setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
@@ -76,7 +124,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
       <Helmet>
         <title>InkFlow | La Plateforme Premium pour Tatoueurs</title>
         <meta 
@@ -89,11 +137,31 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
         <meta property="og:description" content="La solution élégante de gestion et réservation pour tatoueurs professionnels." />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
-      
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+
+      {/* Hero Background - fond immersif luxe (z-0) : encre noire + glows subtils */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden>
+        {/* Base bleu minuit profond + grille technique */}
+        <div className="absolute inset-0 bg-[#02040a] hero-bg-grid" />
+        {/* Glow principal — Bleu Abyssal (haut/gauche), profondeur sous-marine */}
+        <div
+          className="absolute w-[520px] h-[520px] rounded-full blur-[150px] opacity-[0.10] animate-pulse-glow"
+          style={{
+            top: '-15%',
+            left: '-10%',
+            background: '#1e3a8a',
+          }}
+        />
+        {/* Glow secondaire — Gris-Bleu Anthracite (bas/droite), contraste froid */}
+        <div
+          className="absolute w-[480px] h-[480px] rounded-full blur-[150px] opacity-[0.10] animate-pulse-glow"
+          style={{
+            bottom: '-12%',
+            right: '-8%',
+            background: '#334155',
+          }}
+        />
+        {/* Vignette */}
+        <div className="absolute inset-0 hero-vignette" />
       </div>
 
       {/* Navigation - Glass Effect */}
@@ -111,16 +179,19 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
           </div>
           
           <div className="hidden md:flex items-center gap-10">
-            <a href="#features" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+            <a href="#features" className="text-sm text-zinc-300 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center" aria-label="Aller à la section Fonctionnalités">
               Fonctionnalités
             </a>
-            <a href="#showcase" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+            <a href="#showcase" className="text-sm text-zinc-300 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center" aria-label="Aller à la section Portfolio">
               Portfolio
             </a>
-            <a href="#pricing" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+            <a href="#pricing" className="text-sm text-zinc-300 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center" aria-label="Aller à la section Tarifs">
               Tarifs
             </a>
-            <a href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center">
+            <a href="#faq" className="text-sm text-zinc-300 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center" aria-label="Aller à la section FAQ">
+              FAQ
+            </a>
+            <a href="/login" className="text-sm text-zinc-300 hover:text-white transition-colors tracking-wide py-2 min-h-[44px] flex items-center" aria-label="Se connecter">
               Connexion
             </a>
             <motion.button 
@@ -133,18 +204,110 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             </motion.button>
           </div>
 
+          {/* Mobile / tablet (< md): bouton hamburger pour ouvrir le tiroir */}
           <motion.button 
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/register')}
-            className="md:hidden bg-white text-black px-5 py-2.5 text-sm font-semibold min-h-[44px]"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="md:hidden p-2 -mr-2 text-zinc-300 hover:text-white transition-colors rounded-lg hover:bg-white/5 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Ouvrir le menu"
           >
-            Commencer
+            <Menu size={24} />
           </motion.button>
         </div>
       </motion.nav>
 
-      {/* Hero Section */}
-      <section className="min-h-screen flex flex-col justify-center px-4 md:px-6 pt-20 md:pt-24 pb-8 relative">
+      {/* Tiroir navigation mobile */}
+      <AnimatePresence mode="wait">
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
+              aria-hidden
+            />
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-l border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
+              aria-label="Menu de navigation"
+            >
+              <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <span className="text-lg font-display font-bold tracking-tight text-white">
+                  INK<span className="text-zinc-500">FLOW</span>
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 -mr-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5"
+                  aria-label="Fermer le menu"
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+              <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                <a
+                  href="#features"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  Fonctionnalités
+                </a>
+                <a
+                  href="#showcase"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  Portfolio
+                </a>
+                <a
+                  href="#pricing"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  Tarifs
+                </a>
+                <a
+                  href="#faq"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  FAQ
+                </a>
+                <a
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                >
+                  Connexion
+                </a>
+                <div className="pt-4 mt-4 border-t border-white/5">
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigate('/register');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl font-semibold hover:bg-zinc-100 transition-colors text-sm"
+                  >
+                    Commencer
+                    <ArrowRight size={18} />
+                  </motion.button>
+                </div>
+              </nav>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <main id="main-content" role="main" className="relative z-10">
+      {/* Hero Section — Mobile First: centré et aéré sur petit écran */}
+      <section className="min-h-screen flex flex-col justify-center px-4 md:px-6 pt-24 pb-20 md:pt-24 md:pb-8 relative" aria-label="Présentation">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left - Text */}
@@ -152,10 +315,11 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               initial="hidden"
               animate="visible"
               variants={staggerContainer}
+              className="flex flex-col items-center text-center sm:items-stretch sm:text-left mx-auto w-full max-w-md sm:max-w-none"
             >
               <motion.div 
                 variants={fadeInUp}
-                className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full glass text-[10px] md:text-xs text-zinc-400 tracking-wider uppercase mb-6 md:mb-8"
+                className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full glass text-[10px] md:text-xs text-zinc-300 tracking-wider uppercase mb-4 md:mb-5 w-[241px]"
               >
                 <Sparkles size={12} className="text-amber-400" />
                 Pour les artistes exigeants
@@ -163,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               
               <motion.h1 
                 variants={fadeInUp}
-                className="text-4xl md:text-5xl lg:text-7xl font-display font-bold leading-[1.1] md:leading-[1.05] mb-6 md:mb-8 tracking-tight"
+                className="text-5xl md:text-5xl lg:text-7xl font-display font-bold leading-[1.08] md:leading-[1.05] mb-6 md:mb-8 tracking-tight"
               >
                 <span className="gradient-text">Maîtrisez</span>
                 <br />
@@ -176,7 +340,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               
               <motion.p 
                 variants={fadeInUp}
-                className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8 md:mb-10 max-w-md"
+                className="text-zinc-300 text-base md:text-lg leading-relaxed mb-10 md:mb-10 max-w-md sm:max-w-md"
               >
                 Une plateforme élégante pour gérer vos réservations, 
                 présenter vos flashs et recevoir vos paiements. 
@@ -185,30 +349,38 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               
               <motion.div 
                 variants={fadeInUp}
-                className="flex flex-col sm:flex-row gap-3 md:gap-4"
+                className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto items-center"
               >
                 <motion.button 
                   whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.1)" }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate('/register')}
-                  className="group bg-white text-black px-6 md:px-8 py-3.5 md:py-4 font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 min-h-[48px]"
+                  className="group bg-white text-black px-6 md:px-8 py-3.5 md:py-4 font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 min-h-[48px] w-full sm:w-auto"
                 >
                   Essai gratuit
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/apropos')}
+                  className="border border-white/50 text-white bg-transparent hover:bg-white/10 px-6 md:px-8 py-3.5 md:py-4 font-medium transition-all flex items-center justify-center gap-2 min-h-[48px] w-full sm:w-auto"
+                >
+                  Qui sommes-nous ?
+                </motion.button>
               </motion.div>
 
-              {/* Trust badges */}
+              {/* Trust badges — colonne centrée sur mobile */}
               <motion.div 
                 variants={fadeInUp}
-                className="mt-10 md:mt-16 flex flex-wrap items-center gap-4 md:gap-8"
+                className="mt-10 md:mt-16 flex flex-col sm:flex-row sm:flex-wrap items-center justify-center sm:justify-start space-y-3 sm:space-y-0 gap-4 md:gap-8"
               >
-                <div className="flex items-center gap-2 text-zinc-500 text-xs md:text-sm">
-                  <Shield size={14} />
+                <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                  <Shield size={16} className="shrink-0" />
                   <span>Paiements sécurisés</span>
                 </div>
-                <div className="flex items-center gap-2 text-zinc-500 text-xs md:text-sm">
-                  <Users size={14} />
+                <div className="flex items-center gap-2 text-zinc-500 text-sm">
+                  <Users size={16} className="shrink-0" />
                   <span>+500 artistes</span>
                 </div>
               </motion.div>
@@ -470,6 +642,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                           <img
                             src={flash.image}
                             alt={flash.title}
+                            loading="lazy"
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           {/* Hover Overlay */}
@@ -568,18 +741,24 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             {/* Navigation */}
             <div className="flex justify-center items-center gap-3 md:gap-4 mt-8 md:mt-10">
               <motion.button
+                type="button"
+                aria-label="Témoignage précédent"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={prevTestimonial}
-                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
+                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
               >
                 <ChevronLeft size={18} />
               </motion.button>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2" role="tablist" aria-label="Témoignages">
                 {testimonials.map((_, index) => (
                   <button
                     key={index}
+                    type="button"
+                    role="tab"
+                    aria-label={`Voir le témoignage ${index + 1}`}
+                    aria-selected={index === currentTestimonial}
                     onClick={() => setCurrentTestimonial(index)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       index === currentTestimonial
@@ -591,10 +770,12 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               </div>
               
               <motion.button
+                type="button"
+                aria-label="Témoignage suivant"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={nextTestimonial}
-                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
+                className="w-11 h-11 md:w-10 md:h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-white/30 transition-colors min-h-[44px]"
               >
                 <ChevronRight size={18} />
               </motion.button>
@@ -615,13 +796,13 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             variants={staggerContainer}
             className="text-center mb-12 md:mb-20"
           >
-            <motion.p variants={fadeInUp} className="text-zinc-500 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
+            <motion.p variants={fadeInUp} className="text-zinc-400 text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-3 md:mb-4">
               Tarifs
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
               Simple et transparent
             </motion.h2>
-            <motion.p variants={fadeInUp} className="text-zinc-500 text-sm md:text-base mt-4 md:mt-6">
+            <motion.p variants={fadeInUp} className="text-zinc-400 text-sm md:text-base mt-4 md:mt-6">
               Un seul no-show évité rembourse votre abonnement.
             </motion.p>
           </motion.div>
@@ -642,14 +823,15 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             >
               <div className="mb-6 md:mb-8">
                 <h3 className="text-lg md:text-xl font-display font-semibold mb-2">Starter</h3>
-                <p className="text-zinc-500 text-xs md:text-sm">Pour démarrer</p>
+                <p className="text-zinc-400 text-xs md:text-sm">Pour démarrer</p>
               </div>
               <div className="mb-6 md:mb-8">
                 <span className="text-4xl md:text-5xl font-display font-bold">29€</span>
-                <span className="text-zinc-500 text-sm">/mois</span>
+                <span className="text-zinc-400 text-sm">/mois</span>
               </div>
               <a 
                 href="https://buy.stripe.com/9B6eV6cuG4qDe0e4NSfUQ06"
+                aria-label="Commencer avec l'offre Starter"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full py-3.5 md:py-4 border border-white/10 text-center font-semibold hover:bg-white/5 transition-colors mb-6 md:mb-8 text-sm md:text-base min-h-[48px] flex items-center justify-center"
@@ -678,16 +860,17 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               </div>
               <div className="mb-6 md:mb-8 mt-2 md:mt-0">
                 <h3 className="text-lg md:text-xl font-display font-semibold mb-2">Pro</h3>
-                <p className="text-zinc-500 text-xs md:text-sm">Pour les établis</p>
+                <p className="text-zinc-400 text-xs md:text-sm">Pour les établis</p>
               </div>
               <div className="mb-6 md:mb-8">
                 <span className="text-4xl md:text-5xl font-display font-bold">49€</span>
-                <span className="text-zinc-500 text-sm">/mois</span>
+                <span className="text-zinc-400 text-sm">/mois</span>
               </div>
               <motion.a 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 href="https://buy.stripe.com/14A7sE52eaP13lA6W0fUQ07"
+                aria-label="Choisir l'offre Pro"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full py-3.5 md:py-4 bg-white text-black text-center font-bold hover:bg-zinc-100 transition-colors mb-6 md:mb-8 text-sm md:text-base min-h-[48px] flex items-center justify-center"
@@ -740,6 +923,70 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
         </div>
       </section>
 
+      {/* FAQ — Foire Aux Questions */}
+      <section id="faq" className="py-16 md:py-24 px-4 md:px-6 relative" aria-labelledby="faq-heading">
+        <div className="max-w-6xl mx-auto">
+          <motion.h2
+            id="faq-heading"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-2xl md:text-3xl font-display font-bold text-white mb-10 md:mb-12 text-center"
+          >
+            Foire aux questions
+          </motion.h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            {faqItems.map((item, index) => {
+              const isOpen = faqOpen === index;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.03 }}
+                  viewport={{ once: true }}
+                  className="border border-white/10 rounded-lg overflow-hidden bg-white/[0.02] hover:border-white/15 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setFaqOpen(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between gap-4 text-left px-4 md:px-5 py-4 md:py-5 min-h-[56px] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#02040a]"
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${index}`}
+                    id={`faq-question-${index}`}
+                  >
+                    <span className="text-sm md:text-base font-medium text-white pr-2">
+                      {item.question}
+                    </span>
+                    <ChevronDown
+                      size={20}
+                      className={`flex-shrink-0 text-zinc-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                      aria-hidden
+                    />
+                  </button>
+                  <motion.div
+                    id={`faq-answer-${index}`}
+                    role="region"
+                    aria-labelledby={`faq-question-${index}`}
+                    initial={false}
+                    animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 md:px-5 pb-4 md:pb-5 pt-0">
+                      <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
+                        {item.answer}
+                      </p>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-16 md:py-32 px-4 md:px-6">
         <motion.div 
@@ -770,13 +1017,14 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </motion.button>
           <p className="text-xs md:text-sm text-zinc-600 mt-4 md:mt-6">
-            14 jours gratuits • Sans carte bancaire
+            14 jours gratuits
           </p>
         </motion.div>
       </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-8 md:py-12 px-4 md:px-6">
+      <footer className="border-t border-white/5 py-8 md:py-12 px-4 md:px-6" role="contentinfo">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
           <div className="text-xl md:text-2xl font-display font-bold tracking-tight">
             INK<span className="text-zinc-500">FLOW</span>
@@ -784,9 +1032,9 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
           <div className="text-zinc-600 text-xs md:text-sm">
             © 2025 InkFlow. Tous droits réservés.
           </div>
-          <div className="flex gap-6 md:gap-8 text-xs md:text-sm text-zinc-500">
-            <a href="#" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center">Mentions légales</a>
-            <a href="#" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center">Contact</a>
+          <div className="flex gap-6 md:gap-8 text-xs md:text-sm text-zinc-400">
+            <a href="/mentions-legales" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center" aria-label="Mentions légales">Mentions légales</a>
+            <a href="/contact" className="hover:text-white transition-colors py-2 min-h-[44px] flex items-center" aria-label="Contact">Contact</a>
           </div>
         </div>
       </footer>

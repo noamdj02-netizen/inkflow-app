@@ -58,22 +58,34 @@ serve(async (req) => {
       const bookingId = session.metadata?.booking_id;
 
       if (bookingId) {
-        // Mettre à jour le statut du booking dans Supabase
         const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-        
         const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-        
+
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+        // Mettre à jour le booking : acompte payé + réservation confirmée
         await supabase
           .from('bookings')
           .update({
             statut_paiement: 'deposit_paid',
-            stripe_deposit_intent_id: session.payment_intent,
+            statut_booking: 'confirmed',
+            stripe_deposit_intent_id: session.payment_intent ?? session.id,
             updated_at: new Date().toISOString(),
           })
           .eq('id', bookingId);
+
+        // Déclencher l'envoi des emails (tatoueur + client) de façon asynchrone :
+        // on n'attend pas la réponse pour ne pas ralentir le webhook ni la page client
+        const functionsUrl = `${supabaseUrl}/functions/v1/send-booking-notifications`;
+        fetch(functionsUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({ booking_id: bookingId }),
+        }).catch((err) => console.error('send-booking-notifications trigger failed:', err));
       }
     }
 

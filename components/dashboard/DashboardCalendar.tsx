@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, Loader2, X, User, Mail, Phone, Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Calendar, Plus, Loader2, X, User, Mail, Phone, Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
 import { Skeleton } from '../common/Skeleton';
 import { ImageSkeleton } from '../common/ImageSkeleton';
@@ -89,8 +91,10 @@ const EventModal: React.FC<EventModalProps> = ({ event, isOpen, onClose, onStatu
       >
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+            aria-label="Fermer"
+            className="absolute top-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 text-zinc-500 hover:text-white transition-colors touch-manipulation"
           >
             <X size={20} />
           </button>
@@ -240,6 +244,7 @@ const EventModal: React.FC<EventModalProps> = ({ event, isOpen, onClose, onStatu
 
 export const DashboardCalendar: React.FC = () => {
   const { user } = useAuth();
+  const { profile } = useArtistProfile();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -358,9 +363,28 @@ export const DashboardCalendar: React.FC = () => {
     if (!user) return;
     setNewRDVError(null);
     setNewRDVSaving(true);
+
+    const start = new Date(newRDVForm.date_debut);
+    const end = new Date(start.getTime() + newRDVForm.duree_minutes * 60 * 1000);
+
     try {
-      const start = new Date(newRDVForm.date_debut);
-      const end = new Date(start.getTime() + newRDVForm.duree_minutes * 60 * 1000);
+      // Vérification doublon : aucun autre RDV (pending/confirmed) sur ce créneau
+      const { data: overlapping } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('artist_id', user.id)
+        .in('statut_booking', ['pending', 'confirmed'])
+        .lt('date_debut', end.toISOString())
+        .gt('date_fin', start.toISOString())
+        .limit(1);
+
+      if (overlapping && overlapping.length > 0) {
+        setNewRDVError('Ce créneau est déjà pris. Choisissez une autre date ou heure.');
+        toast.error('Créneau indisponible', { description: 'Un rendez-vous existe déjà sur ce créneau.' });
+        setNewRDVSaving(false);
+        return;
+      }
+
       const { error: insertError } = await supabase
         .from('bookings')
         .insert({
@@ -380,13 +404,23 @@ export const DashboardCalendar: React.FC = () => {
           statut_booking: 'confirmed',
           statut_paiement: 'pending',
         });
-      if (insertError) throw insertError;
+
+      if (insertError) {
+        const msg = insertError.code === '23505'
+          ? 'Ce créneau est déjà pris.'
+          : insertError.message || 'Erreur lors de la création du RDV';
+        setNewRDVError(msg);
+        toast.error('Erreur', { description: msg });
+        setNewRDVSaving(false);
+        return;
+      }
+
       toast.success('RDV créé', { description: 'Le rendez-vous a été ajouté au calendrier.' });
       setIsNewRDVOpen(false);
       setNewRDVForm({ client_name: '', client_email: '', client_phone: '', date_debut: '', duree_minutes: 60 });
       fetchBookings();
-    } catch (err: any) {
-      const msg = err?.message || 'Erreur lors de la création du RDV';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la création du RDV';
       setNewRDVError(msg);
       toast.error('Erreur', { description: msg });
     } finally {
@@ -432,46 +466,51 @@ export const DashboardCalendar: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#050505] min-h-0">
-      {/* Header */}
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
-                <Calendar className="text-brand-purple" size={20} />
+      {/* Header — responsive mobile: pas de débordement, touch targets ≥ 44px */}
+      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-display font-bold text-white flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 glass rounded-xl flex items-center justify-center shrink-0">
+                <Calendar className="text-brand-purple" size={18} />
               </div>
-              Calendrier
+              <span className="truncate">Calendrier</span>
             </h1>
-            <div className="flex items-center gap-1 glass rounded-xl p-1">
+            <div className="flex items-center gap-0.5 sm:gap-1 glass rounded-xl p-0.5 sm:p-1 shrink-0">
               <button
+                type="button"
+                aria-label="Semaine précédente"
                 onClick={() => {
                   const prevWeek = new Date(currentWeek);
                   prevWeek.setDate(prevWeek.getDate() - 7);
                   setCurrentWeek(prevWeek);
                 }}
-                className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={20} />
               </button>
-              <span className="px-4 py-1 text-zinc-300 text-sm font-medium min-w-[150px] text-center">
+              <span className="px-2 sm:px-4 py-2 text-zinc-300 text-xs sm:text-sm font-medium min-w-[100px] sm:min-w-[150px] text-center">
                 {weekDays[0].toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
               </span>
               <button
+                type="button"
+                aria-label="Semaine suivante"
                 onClick={() => {
                   const nextWeek = new Date(currentWeek);
                   nextWeek.setDate(nextWeek.getDate() + 7);
                   setCurrentWeek(nextWeek);
                 }}
-                className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors touch-manipulation"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={20} />
               </button>
             </div>
             <button
+              type="button"
               onClick={() => setCurrentWeek(new Date())}
-              className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white glass rounded-lg hover:bg-white/10 transition-colors"
+              className="min-h-[44px] px-3 py-2 sm:py-1.5 text-sm text-zinc-400 hover:text-white glass rounded-lg hover:bg-white/10 transition-colors touch-manipulation"
             >
-              Aujourd'hui
+              Aujourd&apos;hui
             </button>
           </div>
           <button
@@ -487,12 +526,50 @@ export const DashboardCalendar: React.FC = () => {
               setNewRDVError(null);
               setIsNewRDVOpen(true);
             }}
-            className="flex items-center gap-2 bg-white text-black px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors"
+            className="min-h-[44px] flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors touch-manipulation shrink-0 w-full sm:w-auto"
           >
             <Plus size={16}/> Nouveau RDV
           </button>
         </div>
       </header>
+
+      {/* Section Mes disponibilités — synchronisée avec la page réservation (slug) */}
+      <section aria-labelledby="dispo-heading" className="px-4 sm:px-6 py-3 flex-shrink-0 border-b border-white/5 bg-[#0a0a0a]/40">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0" aria-hidden>
+              <Clock className="text-brand-cyan" size={18} />
+            </div>
+            <div>
+              <h2 id="dispo-heading" className="text-sm font-semibold text-white">Mes disponibilités</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Les créneaux proposés aux clients sur votre page réservation sont calculés à partir de ce calendrier. Les créneaux déjà réservés ne sont pas proposés (synchronisation automatique).
+              </p>
+            </div>
+          </div>
+          {profile?.slug_profil ? (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Link
+                to={`/${profile.slug_profil}/booking`}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-white/10 text-white hover:bg-white/15 border border-white/10 transition-colors min-h-[44px] sm:min-h-0 sm:py-2"
+                aria-label="Voir ma page réservation (créneaux publics)"
+              >
+                <ExternalLink size={14} />
+                Voir ma page réservation
+              </Link>
+              <Link
+                to={`/${profile.slug_profil}`}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 border border-white/10 transition-colors min-h-[44px] sm:min-h-0 sm:py-2"
+                aria-label="Voir ma vitrine publique"
+              >
+                Ma vitrine
+              </Link>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-500 shrink-0">Configurez votre slug dans Paramètres pour activer la page réservation.</p>
+          )}
+        </div>
+      </section>
 
       {/* Modal Nouveau RDV (création manuelle) */}
       <AnimatePresence>
@@ -509,18 +586,20 @@ export const DashboardCalendar: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 safe-area-inset-bottom"
             >
               <div
-                className="bg-[#0a0a0a] border border-white/10 rounded-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto"
+                className="bg-[#0a0a0a] border border-white/10 rounded-t-2xl sm:rounded-2xl max-w-md w-full p-6 pb-[env(safe-area-inset-bottom,0)] sm:pb-6 relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain"
                 onClick={(e) => e.stopPropagation()}
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-display font-bold text-white">Nouveau RDV</h2>
                   <button
                     type="button"
+                    aria-label="Fermer"
                     onClick={() => !newRDVSaving && setIsNewRDVOpen(false)}
-                    className="text-zinc-500 hover:text-white transition-colors p-1"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 text-zinc-500 hover:text-white transition-colors touch-manipulation"
                   >
                     <X size={20} />
                   </button>
@@ -538,9 +617,11 @@ export const DashboardCalendar: React.FC = () => {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Nom du client</label>
                     <input
                       type="text"
+                      autoComplete="name"
                       value={newRDVForm.client_name}
                       onChange={(e) => setNewRDVForm({ ...newRDVForm, client_name: e.target.value })}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
                       placeholder="Jean Dupont"
                     />
                   </div>
@@ -548,10 +629,12 @@ export const DashboardCalendar: React.FC = () => {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Email <span className="text-red-500">*</span></label>
                     <input
                       type="email"
+                      autoComplete="email"
                       required
                       value={newRDVForm.client_email}
                       onChange={(e) => setNewRDVForm({ ...newRDVForm, client_email: e.target.value })}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
                       placeholder="jean@example.com"
                     />
                   </div>
@@ -559,9 +642,12 @@ export const DashboardCalendar: React.FC = () => {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Téléphone</label>
                     <input
                       type="tel"
+                      autoComplete="tel"
+                      inputMode="numeric"
                       value={newRDVForm.client_phone}
                       onChange={(e) => setNewRDVForm({ ...newRDVForm, client_phone: e.target.value })}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30"
+                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
                       placeholder="06 12 34 56 78"
                     />
                   </div>
@@ -573,7 +659,8 @@ export const DashboardCalendar: React.FC = () => {
                       value={newRDVForm.date_debut}
                       onChange={(e) => setNewRDVForm({ ...newRDVForm, date_debut: e.target.value })}
                       min={new Date().toISOString().slice(0, 16)}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
+                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30 touch-manipulation"
                     />
                   </div>
                   <div>
@@ -581,7 +668,7 @@ export const DashboardCalendar: React.FC = () => {
                     <select
                       value={newRDVForm.duree_minutes}
                       onChange={(e) => setNewRDVForm({ ...newRDVForm, duree_minutes: Number(e.target.value) })}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-white/30"
+                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30 touch-manipulation"
                     >
                       <option value={30}>30 min</option>
                       <option value={60}>1 h</option>
@@ -595,14 +682,14 @@ export const DashboardCalendar: React.FC = () => {
                       type="button"
                       onClick={() => setIsNewRDVOpen(false)}
                       disabled={newRDVSaving}
-                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50"
+                      className="flex-1 min-h-[44px] py-3 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50 touch-manipulation"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
                       disabled={newRDVSaving}
-                      className="flex-1 py-2.5 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 min-h-[44px] py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation"
                     >
                       {newRDVSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} />}
                       {newRDVSaving ? 'Création...' : 'Créer le RDV'}
@@ -615,8 +702,8 @@ export const DashboardCalendar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Calendar Grid */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 relative pb-20 md:pb-6">
+      {/* Calendar — mobile: vue Liste/Agenda; desktop: grille avec overflow contrôlé */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 relative pb-20 md:pb-6 min-w-0">
         {loading ? (
           isMobile ? (
             <div className="space-y-3">
@@ -668,7 +755,7 @@ export const DashboardCalendar: React.FC = () => {
             </div>
           )
         ) : isMobile ? (
-          /* Mobile List View */
+          /* Mobile: vue Liste/Agenda — pas de grille, touch targets ≥ 44px */
           <div className="space-y-3">
             {events.length === 0 ? (
               <div className="text-center py-12 glass rounded-2xl">
@@ -683,12 +770,13 @@ export const DashboardCalendar: React.FC = () => {
                 const start = new Date(event.start);
                 const end = new Date(event.end);
                 return (
-                  <motion.div
+                  <motion.button
+                    type="button"
                     key={event.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => handleEventClick(event)}
-                    className={`glass rounded-xl p-4 cursor-pointer hover:bg-white/10 transition-colors ${
+                    className={`w-full text-left glass rounded-xl p-4 min-h-[72px] cursor-pointer hover:bg-white/10 active:bg-white/15 transition-colors touch-manipulation ${
                       event.type === 'flash'
                         ? 'border-l-4 border-l-brand-purple'
                         : 'border-l-4 border-l-brand-cyan'
@@ -722,26 +810,27 @@ export const DashboardCalendar: React.FC = () => {
                         {Math.round(event.booking.flashs.prix / 100).toLocaleString('fr-FR')}€
                       </div>
                     )}
-                  </motion.div>
+                  </motion.button>
                 );
               })
             )}
           </div>
         ) : (
-          <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 min-w-[800px] overflow-hidden">
-            {/* Calendar Header Row */}
+          <div className="overflow-x-auto overscroll-x-contain -mx-4 md:mx-0 px-4 md:px-0">
+          <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 min-w-0 w-full md:min-w-[800px] overflow-hidden inline-block">
+            {/* Calendar Header Row — cellules date cliquables ≥ 44px sur desktop */}
             <div className="grid grid-cols-8 border-b border-white/5 sticky top-0 bg-[#0a0a0a] z-10">
-              <div className="p-4 border-r border-white/5 text-center text-xs font-medium text-zinc-600">
+              <div className="p-3 md:p-4 border-r border-white/5 text-center text-xs font-medium text-zinc-600 min-h-[44px] flex items-center justify-center">
                 GMT+1
               </div>
               {weekDays.map((day, i) => {
                 const isToday = day.toDateString() === new Date().toDateString();
                 return (
-                  <div key={i} className={`p-4 text-center border-r border-white/5 ${i === 6 ? 'border-r-0' : ''}`}>
-                    <div className="text-xs text-zinc-600 uppercase mb-1 font-medium">
+                  <div key={i} className={`p-2 md:p-4 text-center border-r border-white/5 min-h-[44px] flex flex-col items-center justify-center ${i === 6 ? 'border-r-0' : ''}`}>
+                    <div className="text-[10px] md:text-xs text-zinc-600 uppercase mb-0.5 md:mb-1 font-medium">
                       {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
                     </div>
-                    <div className={`text-lg font-bold ${isToday ? 'text-black w-8 h-8 rounded-full bg-white flex items-center justify-center mx-auto' : 'text-white'}`}>
+                    <div className={`text-base md:text-lg font-bold w-9 h-9 md:w-10 md:h-10 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center mx-auto ${isToday ? 'text-black bg-white' : 'text-white'}`}>
                       {day.getDate()}
                     </div>
                   </div>
@@ -749,17 +838,17 @@ export const DashboardCalendar: React.FC = () => {
               })}
             </div>
 
-            {/* Calendar Body */}
+            {/* Calendar Body — lignes horaires avec hauteur confortable */}
             <div className="relative">
               {hours.map((hour) => (
-                <div key={hour} className="grid grid-cols-8 border-b border-white/5 h-24">
-                  <div className="border-r border-white/5 p-2 text-right">
-                    <span className="text-xs text-zinc-600 font-mono -translate-y-1/2 block">{hour}:00</span>
+                <div key={hour} className="grid grid-cols-8 border-b border-white/5 min-h-[60px] md:h-24">
+                  <div className="border-r border-white/5 p-2 text-right min-h-[44px] flex items-center justify-end">
+                    <span className="text-xs text-zinc-600 font-mono">{hour}:00</span>
                   </div>
                   {weekDays.map((day, dayIndex) => (
                     <div
                       key={dayIndex}
-                      className={`border-r border-white/5 ${dayIndex === 6 ? 'border-r-0' : ''} relative group hover:bg-white/[0.02] transition-colors`}
+                      className={`border-r border-white/5 ${dayIndex === 6 ? 'border-r-0' : ''} relative group hover:bg-white/[0.02] transition-colors min-h-[44px]`}
                     >
                       {events
                         .filter(event => {
@@ -774,12 +863,13 @@ export const DashboardCalendar: React.FC = () => {
                           const end = new Date(event.end);
 
                           return (
-                            <motion.div
+                            <motion.button
+                              type="button"
                               key={event.id}
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               onClick={() => handleEventClick(event)}
-                              className={`absolute left-1 right-1 rounded-lg p-2 border cursor-pointer hover:scale-[1.02] transition-transform z-10 flex flex-col justify-between ${
+                              className={`absolute left-1 right-1 rounded-lg p-2 min-h-[44px] border cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform z-10 flex flex-col justify-between touch-manipulation text-left ${
                                 event.type === 'flash'
                                   ? 'bg-brand-purple text-white border-brand-purple/50'
                                   : 'bg-[#0a0a0a] border-white/10 border-l-4 border-l-brand-cyan'
@@ -806,7 +896,7 @@ export const DashboardCalendar: React.FC = () => {
                               <div className={`text-[10px] font-mono ${event.type === 'flash' ? 'text-white/70' : 'text-zinc-500'}`}>
                                 {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
-                            </motion.div>
+                            </motion.button>
                           );
                         })}
                     </div>
@@ -814,6 +904,7 @@ export const DashboardCalendar: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         )}
       </div>

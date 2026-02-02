@@ -25,8 +25,9 @@ export default async function handler(req: { method?: string; body?: string }, r
     return json(res, 400, { error: 'Invalid JSON body' });
   }
 
-  const message = typeof body.message === 'string' ? body.message.trim() : '';
-  const artistName = typeof body.artistName === 'string' ? body.artistName.trim() : 'le studio';
+  const MAX_MESSAGE_LENGTH = 2000;
+  const message = typeof body.message === 'string' ? body.message.trim().slice(0, MAX_MESSAGE_LENGTH) : '';
+  const artistName = typeof body.artistName === 'string' ? body.artistName.trim().slice(0, 100) : 'le studio';
 
   if (!message) {
     return json(res, 400, { error: 'Missing field: message' });

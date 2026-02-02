@@ -1,10 +1,11 @@
 /**
- * KPI Widgets – SWR cache, KPISkeleton, error fallback.
+ * KPI Widgets – bloc Statistiques (CA du mois, RDV à venir, En attente).
+ * Mise en page propre : 3 cartes alignées, même hauteur.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, Calendar, AlertCircle, TrendingUp } from 'lucide-react';
+import { DollarSign, Calendar, MessageSquare, TrendingUp } from 'lucide-react';
 import { useKPIsSWR } from '../../../hooks/useDashboardSWR';
 import { KPISkeleton, WidgetErrorFallback } from './WidgetSkeleton';
 
@@ -24,64 +25,73 @@ export const KPIWidgets: React.FC = () => {
     );
   }
 
-  const kpiCards = [
+  const cards = [
     {
       label: 'CA du mois',
-      value: `${kpis.monthlyRevenue.toLocaleString('fr-FR')} €`,
+      value: kpis.monthlyRevenue.toLocaleString('fr-FR'),
+      suffix: ' €',
       icon: DollarSign,
-      color: 'emerald',
+      iconBg: 'bg-emerald-500/15 text-emerald-400',
       trend: '+12%',
     },
     {
       label: 'RDV à venir',
       value: kpis.upcomingBookings.toString(),
+      suffix: '',
       icon: Calendar,
-      color: 'cyan',
+      iconBg: 'bg-cyan-500/15 text-cyan-400',
+      trend: null,
     },
     {
       label: 'En attente',
       value: kpis.pendingRequests.toString(),
-      icon: AlertCircle,
-      color: 'amber',
+      suffix: '',
+      icon: MessageSquare,
+      iconBg: 'bg-amber-500/15 text-amber-400',
+      trend: null,
     },
   ];
 
-  const colorClasses: Record<string, string> = {
-    emerald: 'bg-emerald-400/10 text-emerald-400',
-    cyan: 'bg-cyan-400/10 text-cyan-400',
-    amber: 'bg-amber-400/10 text-amber-400',
-  };
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {kpiCards.map((kpi, index) => {
-        const Icon = kpi.icon;
-        return (
-          <motion.div
-            key={kpi.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="glass rounded-2xl p-6 border border-white/10"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-zinc-400 mb-2">{kpi.label}</p>
-                <p className="text-2xl font-bold text-white">{kpi.value}</p>
-                {kpi.trend && (
-                  <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400">
-                    <TrendingUp size={12} />
-                    <span>{kpi.trend}</span>
-                  </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/5">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="bg-[#0a0a0a] p-4 sm:p-5 flex flex-col min-h-[88px] sm:min-h-[110px]"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider truncate">
+                  {card.label}
+                </span>
+                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                  <Icon size={16} />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 mt-auto">
+                <span className="text-xl sm:text-2xl font-display font-bold text-white tabular-nums">
+                  {card.value}
+                </span>
+                {card.suffix && (
+                  <span className="text-sm font-medium text-zinc-400">{card.suffix}</span>
                 )}
               </div>
-              <div className={`p-3 rounded-lg ${colorClasses[kpi.color]}`}>
-                <Icon size={20} />
-              </div>
+              {card.trend && (
+                <div className="flex items-center gap-1 mt-1.5 text-xs font-medium text-emerald-400">
+                  <TrendingUp size={12} />
+                  <span>{card.trend}</span>
+                </div>
+              )}
             </div>
-          </motion.div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 };

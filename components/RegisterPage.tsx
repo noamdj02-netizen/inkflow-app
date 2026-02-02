@@ -4,6 +4,7 @@ import { Mail, Lock, AlertCircle, CheckCircle, ArrowLeft, Sparkles, WifiOff } fr
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
+import { validatePasswordResult } from '../utils/validation';
 
 export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,12 +15,8 @@ export const RegisterPage: React.FC = () => {
   const { signUp, authError } = useAuth();
   const navigate = useNavigate();
   
-  // Vérification de la configuration Supabase
   const isConfigured = isSupabaseConfigured();
-
-  const validatePassword = (pwd: string) => {
-    return pwd.length >= 6;
-  };
+  const passwordValidation = validatePasswordResult(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +27,8 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (!validatePassword(password)) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+    if (!passwordValidation.success) {
+      setError(passwordValidation.error);
       return;
     }
 
@@ -55,7 +52,7 @@ export const RegisterPage: React.FC = () => {
         <div className="absolute bottom-1/3 -left-32 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <main id="main-content" className="w-full max-w-md relative z-10" role="main">
         {/* Bouton Retour */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -64,7 +61,8 @@ export const RegisterPage: React.FC = () => {
         >
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-8 group"
+            className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-8 group"
+            aria-label="Retour à l'accueil"
           >
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-medium">Retour à l'accueil</span>
@@ -84,7 +82,7 @@ export const RegisterPage: React.FC = () => {
             </span>
           </div>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Créer un compte</h1>
-          <p className="text-zinc-500">Rejoignez la communauté InkFlow</p>
+          <p className="text-zinc-400">Rejoignez la communauté InkFlow</p>
         </motion.div>
 
         {/* Formulaire */}
@@ -160,17 +158,19 @@ export const RegisterPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                  placeholder="Minimum 6 caractères"
+                  placeholder="Min. 8 car., majuscule, chiffre, @$!%*?&"
                 />
               </div>
               {password && (
                 <motion.p 
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`text-xs mt-2 flex items-center gap-1.5 ${validatePassword(password) ? 'text-emerald-400' : 'text-zinc-500'}`}
+                  className={`text-xs mt-2 flex items-center gap-1.5 ${passwordValidation.success ? 'text-emerald-400' : 'text-amber-400'}`}
                 >
-                  {validatePassword(password) ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                  {validatePassword(password) ? 'Mot de passe valide' : 'Minimum 6 caractères requis'}
+                  {passwordValidation.success ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                  {passwordValidation.success
+                    ? 'Mot de passe valide'
+                    : 'Votre mot de passe doit être plus complexe pour garantir la sécurité de votre compte.'}
                 </motion.p>
               )}
             </div>
@@ -246,7 +246,7 @@ export const RegisterPage: React.FC = () => {
         >
           © 2025 InkFlow. Tous droits réservés.
         </motion.p>
-      </div>
+      </main>
     </div>
   );
 };

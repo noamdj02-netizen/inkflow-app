@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Loader2, Lock } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { validatePasswordResult } from '../../utils/validation';
 
 export const UpdatePasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +13,6 @@ export const UpdatePasswordPage: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si l'utilisateur arrive directement ici sans session, on le signale.
     const check = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
@@ -26,7 +26,8 @@ export const UpdatePasswordPage: React.FC = () => {
   }, []);
 
   const validate = (): string | null => {
-    if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+    const pwdResult = validatePasswordResult(password);
+    if (!pwdResult.success) return pwdResult.error;
     if (password !== confirm) return 'Les mots de passe ne correspondent pas.';
     return null;
   };
@@ -97,7 +98,7 @@ export const UpdatePasswordPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
-              placeholder="••••••••"
+              placeholder="Min. 8 car., majuscule, chiffre, @$!%*?&"
               autoComplete="new-password"
               required
               disabled={loading}

@@ -36,6 +36,9 @@ export default async function handler(req: any, res: any) {
   if (!slug) {
     return json(res, 400, { error: 'Missing slug' });
   }
+  if (slug.length > 100 || !/^[a-z0-9_-]+$/i.test(slug)) {
+    return json(res, 400, { error: 'Invalid slug format' });
+  }
 
   try {
     const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
@@ -107,8 +110,8 @@ export default async function handler(req: any, res: any) {
     }
 
     return json(res, 200, { slots, artistName: artist?.nom_studio ?? null });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Availability API error:', err);
-    return json(res, 500, { error: err.message || 'Erreur serveur' });
+    return json(res, 500, { error: 'Erreur serveur' });
   }
 }

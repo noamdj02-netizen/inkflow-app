@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FlashDesign } from '../types';
 import { EXAMPLE_FLASHS } from '../constants/flashExamples';
+import { OptimizedImage } from './common/OptimizedImage';
 
 interface ExtendedFlashDesign extends FlashDesign {
   duration?: number;
@@ -103,11 +104,10 @@ export const FlashGallery: React.FC = () => {
             >
               {/* Image */}
               <div className="aspect-square relative overflow-hidden">
-                <img 
-                  src={flash.imageUrl} 
+                <OptimizedImage
+                  src={flash.imageUrl}
                   alt={`Tatouage ${flash.title}`}
-                  loading="lazy" 
-                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                  className="w-full h-full transition-transform duration-700 group-hover:scale-110"
                 />
                 
                 {/* Hover Overlay */}

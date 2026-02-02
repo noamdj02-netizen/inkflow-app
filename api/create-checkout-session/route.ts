@@ -56,19 +56,21 @@ export default async function handler(req: any, res: any) {
     const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
     const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     
-    // Parse request body
+    // Parse request body (Vercel can send string or pre-parsed object)
     let body: CreateCheckoutSessionBody;
     try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     } catch {
       return json(res, 400, { error: 'Invalid JSON body' });
     }
 
-    // Validate required fields
-    if (!body.priceId || !body.userId) {
-      return json(res, 400, { 
-        error: 'Missing required fields: priceId and userId are required' 
-      });
+    // Validate required fields and formats
+    if (!body.priceId || typeof body.priceId !== 'string' || body.priceId.length > 200) {
+      return json(res, 400, { error: 'Invalid or missing priceId' });
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!body.userId || typeof body.userId !== 'string' || !uuidRegex.test(body.userId)) {
+      return json(res, 400, { error: 'Invalid or missing userId' });
     }
 
     // Initialize Supabase

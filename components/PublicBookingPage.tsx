@@ -20,6 +20,33 @@ const getApiBase = () => {
   return '';
 };
 
+/** Créneaux fictifs pour le dev local quand l’API /api/availability n’est pas servie (Vite seul). */
+function buildMockSlots(): Slot[] {
+  const now = new Date();
+  const out: Slot[] = [];
+  const workDays = [1, 2, 3, 4, 5];
+  for (let d = 0; d < 14; d++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + d);
+    date.setHours(0, 0, 0, 0);
+    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+    if (!workDays.includes(dayOfWeek)) continue;
+    for (let hour = 9; hour < 18; hour++) {
+      const slotStart = new Date(date);
+      slotStart.setHours(hour, 0, 0, 0);
+      if (slotStart.getTime() <= now.getTime()) continue;
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+      out.push({
+        date: date.toISOString().slice(0, 10),
+        time: timeStr,
+        iso: slotStart.toISOString(),
+        displayDate: date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
+      });
+    }
+  }
+  return out;
+}
+
 export const PublicBookingPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -39,10 +66,20 @@ export const PublicBookingPage: React.FC = () => {
         return res.json();
       })
       .then((data: { slots?: Slot[] }) => {
-        if (!cancelled && data.slots) setSlots(data.slots);
+        if (cancelled) return;
+        if (data.slots && data.slots.length > 0) {
+          setSlots(data.slots);
+        } else if (import.meta.env.DEV) {
+          setSlots(buildMockSlots());
+        } else {
+          setSlots([]);
+        }
       })
       .catch(() => {
-        if (!cancelled) setSlots([]);
+        if (!cancelled) {
+          if (import.meta.env.DEV) setSlots(buildMockSlots());
+          else setSlots([]);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingSlots(false);
@@ -81,7 +118,7 @@ export const PublicBookingPage: React.FC = () => {
           </div>
         ) : (
           <div className="text-center max-w-md px-4">
-            <p className="text-zinc-400 mb-6">Artiste introuvable.</p>
+            <p className="text-zinc-300 mb-6">Artiste introuvable.</p>
             <Link
               to="/"
               className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
@@ -100,20 +137,26 @@ export const PublicBookingPage: React.FC = () => {
         <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <Link
             to={slug ? `/${slug}` : '/'}
-            className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 text-zinc-300 hover:text-white transition-colors text-sm font-medium"
+            aria-label="Retour à la vitrine"
           >
             <ArrowLeft size={18} /> Retour à la vitrine
           </Link>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl">
+      <main id="main-content" className="container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl" role="main">
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
           Réserver avec {artist.nom_studio}
         </h1>
-        <p className="text-zinc-400 text-sm md:text-base mb-8">
+        <p className="text-zinc-300 text-sm md:text-base mb-8">
           Choisissez un créneau disponible, puis vous pourrez sélectionner un flash sur la vitrine.
         </p>
+        {import.meta.env.DEV && slots.length > 0 && (
+          <p className="mb-4 text-amber-400/90 text-sm font-medium" role="status">
+            Données de démo (API non servie en local) — le planning est fictif.
+          </p>
+        )}
 
         {loadingSlots ? (
           <div className="flex items-center justify-center py-16">
@@ -137,7 +180,7 @@ export const PublicBookingPage: React.FC = () => {
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Calendar size={20} /> Date
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {dates.map((date) => {
                   const daySlots = slotsByDate[date];
                   const isSelected = selectedDate === date;
@@ -149,10 +192,10 @@ export const PublicBookingPage: React.FC = () => {
                         setSelectedDate(date);
                         setSelectedTime(null);
                       }}
-                      className={`p-3 rounded-xl text-left border transition-colors text-sm ${
+                      className={`min-h-[44px] sm:min-h-0 py-3 px-3 sm:py-3 sm:px-3 rounded-xl text-left border transition-colors text-sm touch-manipulation ${
                         isSelected
                           ? 'bg-white text-black border-white'
-                          : 'bg-[#0a0a0a] border-white/10 text-white hover:border-white/30'
+                          : 'bg-[#0a0a0a] border-white/10 text-white hover:border-white/30 active:bg-white/5'
                       }`}
                     >
                       <span className="font-medium">{daySlots[0]?.displayDate ?? date}</span>
@@ -168,7 +211,7 @@ export const PublicBookingPage: React.FC = () => {
                 <Clock size={20} /> Heure
               </h2>
               {selectedDate ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                   {timeSlotsForSelected.map((slot) => {
                     const isSelected = selectedTime === slot.time;
                     return (
@@ -176,10 +219,10 @@ export const PublicBookingPage: React.FC = () => {
                         key={slot.iso}
                         type="button"
                         onClick={() => setSelectedTime(slot.time)}
-                        className={`p-3 rounded-xl border transition-colors text-sm font-medium ${
+                        className={`min-h-[44px] py-3 px-3 rounded-xl border transition-colors text-sm font-medium touch-manipulation ${
                           isSelected
                             ? 'bg-white text-black border-white'
-                            : 'bg-[#0a0a0a] border-white/10 text-white hover:border-white/30'
+                            : 'bg-[#0a0a0a] border-white/10 text-white hover:border-white/30 active:bg-white/5'
                         }`}
                       >
                         {slot.time}
@@ -188,7 +231,7 @@ export const PublicBookingPage: React.FC = () => {
                   })}
                 </div>
               ) : (
-                <p className="text-zinc-500 text-sm">Choisissez une date.</p>
+                <p className="text-zinc-400 text-sm">Choisissez une date.</p>
               )}
             </div>
           </div>
@@ -206,7 +249,7 @@ export const PublicBookingPage: React.FC = () => {
             <button
               type="button"
               onClick={handleConfirmSlot}
-              className="w-full py-4 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] py-4 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200 active:bg-neutral-300 transition-colors flex items-center justify-center gap-2 touch-manipulation"
             >
               <Zap size={20} /> Choisir un flash et réserver
             </button>

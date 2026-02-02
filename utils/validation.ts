@@ -18,6 +18,35 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * Message d'erreur unique pour mot de passe faible (évite alertes Chrome)
+ */
+export const PASSWORD_ERROR_MESSAGE =
+  'Votre mot de passe doit être plus complexe pour garantir la sécurité de votre compte.';
+
+/**
+ * Schéma Zod pour mot de passe strict (min 8 car., majuscule, chiffre, caractère spécial)
+ */
+export const passwordSchema = z
+  .string()
+  .min(8, PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[A-Z]/.test(p), PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[0-9]/.test(p), PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[@$!%*?&]/.test(p), PASSWORD_ERROR_MESSAGE);
+
+/**
+ * Valide un mot de passe côté client (inscription, réinitialisation).
+ * Retourne { success: true } ou { success: false, error: string }.
+ */
+export function validatePasswordResult(
+  password: string
+): { success: true } | { success: false; error: string } {
+  const result = passwordSchema.safeParse(password);
+  if (result.success) return { success: true };
+  const msg = result.error.errors[0]?.message ?? PASSWORD_ERROR_MESSAGE;
+  return { success: false, error: msg };
+}
+
+/**
  * Project Submission Schema
  * 
  * Strict schema that rejects unknown keys

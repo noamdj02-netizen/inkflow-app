@@ -15,6 +15,41 @@ import { FlashGallery } from './vitrine/FlashGallery';
 import { BookingCTA } from './vitrine/BookingCTA';
 import { AIButton } from './vitrine/AIButton';
 
+/** Message d'erreur utilisateur à partir d'une erreur Supabase ou générique */
+function getBookingErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'code' in err) {
+    const code = (err as { code?: string }).code;
+    const message = (err as { message?: string }).message ?? '';
+    if (code === '23505') return 'Cette réservation existe déjà. Choisissez un autre créneau.';
+    if (code === '23P01' || message.includes('booking_overlap') || message.includes('chevauche')) {
+      return 'Ce créneau n\'est plus disponible. Choisissez une autre date ou heure.';
+    }
+    if (code === '42501' || message.includes('policy') || message.includes('RLS')) {
+      return 'Impossible d\'enregistrer la réservation. Contactez l\'artiste ou réessayez plus tard.';
+    }
+    if (message.includes('duplicate') || message.includes('conflict')) {
+      return 'Ce créneau n\'est plus disponible. Choisissez une autre date ou heure.';
+    }
+    if (message) return message;
+  }
+  if (err instanceof Error) return err.message;
+  return 'Une erreur est survenue lors de la réservation. Réessayez ou contactez l\'artiste.';
+}
+
+/** Message d'erreur utilisateur pour les erreurs Stripe / paiement */
+function getStripeErrorMessage(message: string): string {
+  if (message.includes('Function not found') || message.includes('404')) {
+    return 'Le paiement en ligne n\'est pas disponible. Contactez l\'artiste pour réserver.';
+  }
+  if (message.includes('Failed to send') || message.includes('network') || message.includes('fetch')) {
+    return 'Impossible de contacter le serveur de paiement. Vérifiez votre connexion et réessayez.';
+  }
+  if (message.includes('amount') || message.includes('invalid')) {
+    return 'Montant invalide. Réessayez ou contactez l\'artiste.';
+  }
+  return message || 'Erreur lors de la création du paiement. Réessayez.';
+}
+
 interface BookingDrawerProps {
   flash: Flash;
   artist: Artist;
@@ -72,54 +107,89 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
   const onSubmit = async (data: BookingFormData) => {
     setError(null);
 
-    try {
-      const dateDebut = new Date(data.date_souhaitee);
-      const dateFin = new Date(dateDebut.getTime() + flash.duree_minutes * 60000);
-      const depositPercentage = artist.deposit_percentage || 30;
-      const depositAmount = Math.round((flash.prix * depositPercentage) / 100); // En centimes (prix est déjà en centimes)
+    const dateDebut = new Date(data.date_souhaitee);
+    const dateFin = new Date(dateDebut.getTime() + flash.duree_minutes * 60000);
+    const depositPercentage = artist.deposit_percentage || 30;
+    const depositAmount = Math.round((flash.prix * depositPercentage) / 100); // En centimes
 
-      // 1. Créer la réservation dans Supabase avec statut 'pending'
+    try {
+      // --- Validation : créneau dans le futur
+      if (dateDebut.getTime() < Date.now()) {
+        setError('Veuillez choisir une date et une heure à venir.');
+        return;
+      }
+
+      // --- 1. Vérification stricte des doublons : aucun autre RDV (pending/confirmed) sur ce créneau
+      const { data: overlappingBookings, error: overlapError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('artist_id', artist.id)
+        .in('statut_booking', ['pending', 'confirmed'])
+        .lt('date_debut', dateFin.toISOString())
+        .gt('date_fin', dateDebut.toISOString())
+        .limit(1);
+
+      if (overlapError) {
+        console.error('Overlap check error:', overlapError);
+        setError('Impossible de vérifier la disponibilité du créneau. Réessayez.');
+        return;
+      }
+      if (overlappingBookings && overlappingBookings.length > 0) {
+        setError('Ce créneau n\'est plus disponible. Choisissez une autre date ou heure.');
+        return;
+      }
+
+      // --- 2. Créer la réservation avec statuts explicites (pending = demande en attente)
+      const insertPayload = {
+        artist_id: artist.id,
+        flash_id: flash.id,
+        client_email: data.client_email.trim(),
+        client_name: data.client_name?.trim() || null,
+        client_phone: data.client_phone?.trim() || null,
+        date_debut: dateDebut.toISOString(),
+        date_fin: dateFin.toISOString(),
+        duree_minutes: flash.duree_minutes,
+        prix_total: flash.prix,
+        deposit_amount: depositAmount,
+        deposit_percentage: depositPercentage,
+        statut_paiement: 'pending' as const,
+        statut_booking: 'pending' as const,
+      };
+
       const { data: bookingData, error: insertError } = await supabase
         .from('bookings')
-        .insert({
-          artist_id: artist.id,
-          flash_id: flash.id,
-          client_email: data.client_email,
-          client_name: data.client_name,
-          client_phone: data.client_phone || null,
-          date_debut: dateDebut.toISOString(),
-          date_fin: dateFin.toISOString(),
-          duree_minutes: flash.duree_minutes,
-          prix_total: flash.prix,
-          deposit_amount: depositAmount,
-          deposit_percentage: depositPercentage,
-          statut_paiement: 'pending',
-          statut_booking: 'pending',
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
-      if (insertError) throw insertError;
-
-      // 2. Vérifier la configuration Supabase
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error(
-          'Configuration Supabase manquante. ' +
-          'Vérifiez que les variables VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY sont définies dans votre fichier .env.local'
-        );
+      if (insertError) {
+        const msg = getBookingErrorMessage(insertError);
+        setError(msg);
+        return;
       }
 
-      // 3. Appeler l'Edge Function pour créer la session Stripe
-      let sessionData;
-      let sessionError;
-      
+      if (!bookingData?.id) {
+        setError('La réservation n\'a pas été enregistrée. Réessayez.');
+        return;
+      }
+
+      // --- 3. Configuration Stripe
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        await rollbackBooking(bookingData.id);
+        setError('Configuration serveur manquante. Contactez le support.');
+        return;
+      }
+
+      // --- 4. Créer la session Stripe (paiement acompte)
+      let sessionData: { url?: string } | null = null;
+      let sessionError: Error | null = null;
+
       try {
         const response = await supabase.functions.invoke('create-checkout-session', {
           body: {
-            amount: depositAmount, // En centimes
+            amount: depositAmount,
             flash_title: flash.title,
             client_email: data.client_email,
             client_name: data.client_name,
@@ -129,49 +199,38 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
             cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/cancel`,
           },
         });
-        
-        sessionData = response.data;
-        sessionError = response.error;
-      } catch (invokeError) {
-        // Erreur de connexion à l'Edge Function
-        console.error('Edge Function invoke error:', invokeError);
-        throw new Error(
-          `Impossible de contacter le serveur de paiement. ` +
-          `Vérifiez votre connexion internet et réessayez. ` +
-          `Si le problème persiste, contactez le support.`
-        );
+        sessionData = response.data as { url?: string } | null;
+        sessionError = response.error ? new Error(response.error.message || 'Stripe error') : null;
+      } catch (invokeErr) {
+        console.error('Edge Function invoke error:', invokeErr);
+        sessionError = invokeErr instanceof Error ? invokeErr : new Error('Erreur réseau');
       }
 
-      if (sessionError) {
-        console.error('Edge Function error:', sessionError);
-        // Améliorer le message d'erreur selon le type d'erreur
-        if (sessionError.message?.includes('Function not found') || sessionError.message?.includes('404')) {
-          throw new Error(
-            'La fonction de paiement n\'est pas disponible. ' +
-            'Veuillez contacter le support technique.'
-          );
-        } else if (sessionError.message?.includes('Failed to send')) {
-          throw new Error(
-            'Impossible de contacter le serveur de paiement. ' +
-            'Vérifiez votre connexion et réessayez.'
-          );
-        } else {
-          throw new Error(sessionError.message || 'Erreur lors de la création de la session de paiement');
-        }
-      }
-      
-      if (!sessionData?.url) {
-        throw new Error('URL de paiement non reçue du serveur');
+      if (sessionError || !sessionData?.url) {
+        await rollbackBooking(bookingData.id);
+        const msg = sessionError?.message
+          ? getStripeErrorMessage(sessionError.message)
+          : 'URL de paiement non reçue. Réessayez ou contactez l\'artiste.';
+        setError(msg);
+        return;
       }
 
-      // 3. Rediriger vers Stripe Checkout
+      // --- 5. Redirection vers Stripe Checkout
       if (typeof window !== 'undefined' && sessionData.url) {
         window.location.href = sessionData.url;
       }
     } catch (err) {
       console.error('Error creating booking:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la réservation';
-      setError(errorMessage);
+      setError(getBookingErrorMessage(err));
+    }
+  };
+
+  // Annule la réservation en base si le paiement n'a pas pu être initié (évite les orphelins)
+  const rollbackBooking = async (bookingId: string) => {
+    try {
+      await supabase.from('bookings').delete().eq('id', bookingId);
+    } catch (e) {
+      console.error('Rollback booking failed:', e);
     }
   };
 
@@ -204,8 +263,10 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
 
           {/* Close Button */}
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+            aria-label="Fermer le panneau de réservation"
+            className="absolute top-4 right-4 text-zinc-300 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2"
           >
             <X size={24} />
           </button>
@@ -220,7 +281,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
                 <CheckCircle className="text-green-400" size={40} />
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">Réservation confirmée !</h3>
-              <p className="text-zinc-400">
+              <p className="text-zinc-300">
                 Un email de confirmation vous sera envoyé avec les détails du paiement de l'acompte.
               </p>
             </motion.div>
@@ -489,7 +550,7 @@ export const PublicArtistPage: React.FC = () => {
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin text-violet-400 mx-auto mb-4" size={48} aria-hidden />
-          <p className="text-zinc-500 text-sm md:text-base">Chargement...</p>
+          <p className="text-zinc-400 text-sm md:text-base">Chargement...</p>
         </div>
       </div>
     );
@@ -509,7 +570,7 @@ export const PublicArtistPage: React.FC = () => {
             <PenTool className="text-red-400" size={40} />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">404</h1>
-          <p className="text-slate-400 text-sm md:text-base mb-6 min-h-[14px]">
+          <p className="text-zinc-300 text-sm md:text-base mb-6 min-h-[14px]">
             {displayError || "Cet artiste n'existe pas ou n'a pas encore configuré son profil."}
           </p>
           <Link

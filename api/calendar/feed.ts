@@ -40,6 +40,19 @@ export default async function handler(req: any, res: any) {
       res.end('Missing artist_id or token');
       return;
     }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (artistId && !uuidRegex.test(artistId)) {
+      res.status(400);
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('Invalid artist_id format');
+      return;
+    }
+    if (token && token.length > 256) {
+      res.status(400);
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('Invalid token');
+      return;
+    }
 
     const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
     const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -154,10 +167,10 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}, s-maxage=${CACHE_MAX_AGE_SECONDS}`);
     res.setHeader('Content-Disposition', 'inline; filename="inkflow-calendar.ics"');
     res.end(ics);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Calendar feed error:', err);
     res.status(500);
     res.setHeader('Content-Type', 'text/plain');
-    res.end('Calendar feed error');
+    res.end('An error occurred');
   }
 }

@@ -1,10 +1,64 @@
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit, getClientIP } from '../utils/rateLimit';
-import { validateProjectSubmission } from '../utils/validation';
+import { validateProjectSubmission } from './_lib/validation';
 import {
   sendAppointmentNotification,
   sendAppointmentConfirmationToClient,
-} from '../services/appointmentNotification';
+} from './_lib/appointmentNotification';
+
+// ——— Rate limiting (inlined for Vercel serverless: utils/ may not be in bundle) ———
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+const rateLimitStore = new Map<string, RateLimitEntry>();
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
+let lastCleanup = Date.now();
+
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL) return;
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now >= entry.resetAt) rateLimitStore.delete(key);
+  }
+  lastCleanup = now;
+}
+
+function rateLimit(
+  identifier: string,
+  maxRequests: number,
+  windowMs: number
+): { allowed: boolean; remaining: number; resetAt: number } {
+  cleanupExpiredEntries();
+  const now = Date.now();
+  const entry = rateLimitStore.get(identifier);
+  if (!entry) {
+    rateLimitStore.set(identifier, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: maxRequests - 1, resetAt: now + windowMs };
+  }
+  if (now >= entry.resetAt) {
+    rateLimitStore.set(identifier, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: maxRequests - 1, resetAt: now + windowMs };
+  }
+  if (entry.count >= maxRequests) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  }
+  entry.count += 1;
+  rateLimitStore.set(identifier, entry);
+  return { allowed: true, remaining: maxRequests - entry.count, resetAt: entry.resetAt };
+}
+
+function getClientIP(req: any): string {
+  const forwardedFor = req.headers?.['x-forwarded-for'];
+  const realIP = req.headers?.['x-real-ip'];
+  const cfConnectingIP = req.headers?.['cf-connecting-ip'];
+  const ip =
+    forwardedFor?.split(',')[0]?.trim() ||
+    realIP ||
+    cfConnectingIP ||
+    req.socket?.remoteAddress ||
+    'unknown';
+  return ip;
+}
 
 type SubmitProjectBody = {
   artist_id: string;

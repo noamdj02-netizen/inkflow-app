@@ -43,10 +43,10 @@ export default async function handler(req: any, res: any) {
     const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
     const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY') || requireEnv('SUPABASE_ANON_KEY');
     
-    // Parse request body
+    // Parse request body (Vercel can send string or pre-parsed object)
     let body: CreatePaymentIntentBody;
     try {
-      body = JSON.parse(req.body || '{}');
+      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     } catch {
       return json(res, 400, { error: 'Invalid JSON body' });
     }
@@ -169,19 +169,19 @@ export default async function handler(req: any, res: any) {
       plan: plan,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating payment intent:', error);
-    
-    // Handle Stripe-specific errors
-    if (error.type && error.type.startsWith('Stripe')) {
+
+    const err = error as { type?: string; message?: string; code?: string };
+    if (err?.type && String(err.type).startsWith('Stripe')) {
       return json(res, 400, {
-        error: error.message || 'Stripe API error',
-        code: error.code || 'STRIPE_ERROR',
+        error: err.message || 'Stripe API error',
+        code: err.code || 'STRIPE_ERROR',
       });
     }
 
     return json(res, 500, {
-      error: error.message || 'Failed to create payment intent',
+      error: 'An error occurred while creating the payment. Please try again.',
     });
   }
 }

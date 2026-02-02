@@ -28,10 +28,13 @@ export function FlashGallery({ flashs, artist, artistSlug }: FlashGalleryProps) 
     [styles]
   );
 
-  const filteredFlashs =
-    activeFilter === 'Tous'
-      ? flashs
-      : flashs.filter((f) => f.style?.trim() === activeFilter);
+  const filteredFlashs = useMemo(
+    () =>
+      activeFilter === 'Tous'
+        ? flashs
+        : flashs.filter((f) => f.style?.trim() === activeFilter),
+    [flashs, activeFilter]
+  );
 
   const depositPercentage = artist.deposit_percentage ?? 30;
 
@@ -58,6 +61,7 @@ export function FlashGallery({ flashs, artist, artistSlug }: FlashGalleryProps) 
                 key={option}
                 type="button"
                 role="tab"
+                aria-label={`Filtrer par style : ${option}`}
                 aria-selected={activeFilter === option}
                 onClick={() => setActiveFilter(option)}
                 className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
@@ -97,7 +101,7 @@ export function FlashGallery({ flashs, artist, artistSlug }: FlashGalleryProps) 
                 artistSlug={artistSlug}
                 depositEuros={depositEuros}
                 priceEuros={priceEuros}
-                priority={index < 4}
+                priority={index < 2}
                 index={index}
               />
             );

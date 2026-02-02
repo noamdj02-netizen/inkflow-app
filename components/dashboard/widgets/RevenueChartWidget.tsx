@@ -29,20 +29,20 @@ export const RevenueChartWidget: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl p-6 border border-white/10"
+      className="glass rounded-2xl p-4 border border-white/10"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-400/10 rounded-lg">
-            <TrendingUp className="text-emerald-400" size={20} />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-emerald-400/10 rounded-lg">
+            <TrendingUp className="text-emerald-400" size={16} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Revenus (6 mois)</h3>
-            <p className="text-sm text-zinc-400">Évolution mensuelle</p>
+            <h3 className="text-sm font-semibold text-white">Revenus (6 mois)</h3>
+            <p className="text-xs text-zinc-400">Évolution mensuelle</p>
           </div>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={200}>
         <BarChart data={monthlyRevenues}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
           <XAxis dataKey="month" stroke="#a1a1aa" style={{ fontSize: '12px' }} />
