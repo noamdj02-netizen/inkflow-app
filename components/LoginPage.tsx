@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, ArrowLeft, Sparkles, WifiOff } from 'lucide-react';
+import { toast } from 'sonner';
+import { PageSEO } from './seo/PageSEO';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
+import { LoginFormErrorBoundary } from './auth/LoginFormErrorBoundary';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,16 +29,22 @@ export const LoginPage: React.FC = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
-      let errorMessage = error.message;
-      
-      if (error.message.includes('Invalid login credentials') || error.message.includes('Invalid credentials')) {
+      const msg = error.message;
+      let errorMessage = msg;
+      const isNetworkError = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Impossible de se connecter');
+
+      if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials')) {
         errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, cliquez sur "S\'inscrire" ci-dessous.';
-      } else if (error.message.includes('Email not confirmed')) {
+      } else if (msg.includes('Email not confirmed')) {
         errorMessage = 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.';
-      } else if (error.message.includes('User not found')) {
+      } else if (msg.includes('User not found')) {
         errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte en cliquant sur "S\'inscrire".';
+      } else if (isNetworkError) {
+        toast.error('Erreur réseau', {
+          description: 'Vérifiez votre connexion internet et réessayez.',
+        });
       }
-      
+
       setError(errorMessage);
       setLoading(false);
     } else {
@@ -50,7 +59,12 @@ export const LoginPage: React.FC = () => {
     const { error } = await signInWithOAuth(provider);
 
     if (error) {
-      setError(error.message || `Erreur lors de la connexion avec ${provider === 'google' ? 'Google' : 'Apple'}`);
+      const raw = error.message || `Erreur lors de la connexion avec ${provider === 'google' ? 'Google' : 'Apple'}`;
+      const isNetworkError = raw.includes('Failed to fetch') || raw.includes('NetworkError') || raw.includes('Impossible de se connecter');
+      if (isNetworkError) {
+        toast.error('Erreur réseau', { description: 'Vérifiez votre connexion et réessayez.' });
+      }
+      setError(raw);
       setOauthLoading(null);
     }
     // Note: On ne fait pas de navigate() ici car Supabase redirige automatiquement
@@ -59,6 +73,11 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      <PageSEO
+        title="Connexion | InkFlow"
+        description="Connectez-vous à votre espace InkFlow pour gérer vos réservations, flashs et clients."
+        canonical="/login"
+      />
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -97,7 +116,8 @@ export const LoginPage: React.FC = () => {
           <p className="text-zinc-400">Accédez à votre espace tatoueur</p>
         </motion.div>
 
-        {/* Formulaire */}
+        {/* Formulaire — Error Boundary pour résilience vérification de sécurité */}
+        <LoginFormErrorBoundary onReset={() => setError(null)}>
         <motion.form 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -131,10 +151,21 @@ export const LoginPage: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="text-red-400 shrink-0" size={20} />
-              <p className="text-red-300 text-sm">{error || authError}</p>
+              <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-red-300 text-sm">{error || authError}</p>
+                {(error || authError) && (
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="mt-3 text-sm font-medium text-red-300 hover:text-red-200 underline focus:outline-none focus:ring-2 focus:ring-red-500/50 rounded"
+                  >
+                    Réessayer
+                  </button>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -260,6 +291,7 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
         </motion.form>
+        </LoginFormErrorBoundary>
 
         {/* Footer */}
         <motion.p 

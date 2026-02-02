@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+import { PageSEO } from './seo/PageSEO';
+import { Breadcrumbs } from './seo/Breadcrumbs';
+import { SITE_URL } from '../constants/seo';
+import { getOrganizationSchema, getAboutPageSchema } from '../lib/schema-markup';
 import { motion } from 'framer-motion';
 import { Palette, Zap, Shield, Mail, ArrowLeft } from 'lucide-react';
 
@@ -14,7 +17,6 @@ const stagger = {
 };
 
 export const AproposPage: React.FC = () => {
-  const navigate = useNavigate();
   const [contact, setContact] = useState({ name: '', email: '', message: '' });
 
   const handleContactSubmit = (e: React.FormEvent) => {
@@ -46,10 +48,17 @@ export const AproposPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
-      <Helmet>
-        <title>À propos | InkFlow</title>
-        <meta name="description" content="L'histoire d'InkFlow : créé par des passionnés, pour des artistes. Nos valeurs et notre vision." />
-      </Helmet>
+      <PageSEO
+        title="À propos | InkFlow — Histoire, valeurs et contact"
+        description="L'histoire d'InkFlow : créé par des passionnés pour les artistes tatoueurs. Nos valeurs — simplicité, transparence — et comment nous contacter."
+        canonical="/apropos"
+        image={`${SITE_URL.replace(/\/$/, '')}/pwa-512x512.png`}
+        ogType="website"
+        jsonLd={[
+          getOrganizationSchema({ description: 'Plateforme pour tatoueurs : gestion, réservation, paiements.' }),
+          getAboutPageSchema(),
+        ]}
+      />
 
       {/* Background immersif (identique Landing) */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden>
@@ -79,19 +88,19 @@ export const AproposPage: React.FC = () => {
           >
             INK<span className="text-zinc-500">FLOW</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
+          <Link
+            to="/"
             className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />
             Accueil
-          </button>
+          </Link>
         </div>
       </motion.header>
 
-      <main className="relative z-10 pt-24 pb-20 md:pt-28 md:pb-24">
+      <main className="relative z-10 pt-24 pb-20 md:pt-28 md:pb-24" id="main-content" role="main">
         <div className="max-w-3xl mx-auto px-4 md:px-6">
+          <Breadcrumbs items={[{ label: 'Accueil', path: '/' }, { label: 'À propos' }]} className="mb-8" />
 
           {/* Section 1 : Hero Simple */}
           <motion.section
@@ -226,6 +235,9 @@ export const AproposPage: React.FC = () => {
                   placeholder="Votre message..."
                 />
               </div>
+              <p className="text-sm text-zinc-500 mt-2">
+                Découvrez aussi nos <Link to="/#pricing" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">tarifs</Link> et la <Link to="/" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">page d&apos;accueil</Link>.
+              </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="submit"

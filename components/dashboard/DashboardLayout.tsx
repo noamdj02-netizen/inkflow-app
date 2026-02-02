@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,6 +18,7 @@ import { DashboardAppearanceProvider, useDashboardAppearance } from '../../conte
 import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
 import { Skeleton } from '../common/Skeleton';
 import { WidgetStation } from './station/WidgetStation';
+import { DashboardContentFallback } from './DashboardContentFallback';
 
 const DashboardLayoutInner: React.FC = () => {
   const { signOut, user } = useAuth();
@@ -363,7 +364,9 @@ const DashboardLayoutInner: React.FC = () => {
       <main id="main-content" className="relative z-10 flex-1 flex min-w-0 overflow-hidden pb-16 md:pb-0 pt-16 md:pt-0" role="main">
         {/* Zone 2 : Contenu principal (prend tout l'espace restant) */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-transparent overflow-hidden">
-          <Outlet />
+          <Suspense fallback={<DashboardContentFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
 
         {/* Zone 3 : Widget Station (largeur fixe w-80) */}

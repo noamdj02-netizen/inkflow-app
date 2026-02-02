@@ -54,7 +54,7 @@ export const DashboardCareSheets: React.FC = () => {
 
       if (error) throw error;
       setTemplates(data || []);
-      if (!selectedId && data && data.length > 0) setSelectedId(data[0].id);
+      if (!selectedId && data && data.length > 0) setSelectedId(data[0]?.id);
     } catch (e) {
       toast.error('Impossible de charger les templates', {
         description: e instanceof Error ? e.message : 'Erreur inconnue',

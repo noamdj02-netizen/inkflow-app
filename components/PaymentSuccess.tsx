@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../services/supabase';
+import { PageSEO } from './seo/PageSEO';
 
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -41,6 +42,7 @@ export const PaymentSuccess: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
+        <PageSEO title="Paiement en cours | InkFlow" description="Vérification du paiement." canonical="/payment/success" noindex />
         {/* Animated Background */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -57,6 +59,7 @@ export const PaymentSuccess: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+        <PageSEO title="Erreur paiement | InkFlow" description="Une erreur est survenue lors du paiement." canonical="/payment/success" noindex />
         {/* Animated Background */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -81,6 +84,7 @@ export const PaymentSuccess: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      <PageSEO title="Paiement réussi | InkFlow" description="Votre réservation a été confirmée." canonical="/payment/success" noindex />
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />

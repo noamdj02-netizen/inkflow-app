@@ -1,9 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { SWRConfig } from 'swr';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -37,16 +38,28 @@ const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSet
 const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
 const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
 const AproposPage = lazy(() => import('./components/AproposPage').then(m => ({ default: m.AproposPage })));
+const OffresPage = lazy(() => import('./components/OffresPage').then(m => ({ default: m.OffresPage })));
 
 // Fallback retardé : spinner seulement si chargement > 300ms (évite flash sur navigations rapides)
 
 const App: React.FC = () => {
+  const { wasOffline, clearWasOffline } = useOnlineStatus();
+
+  useEffect(() => {
+    if (wasOffline) {
+      toast.success('Connexion rétablie', {
+        description: 'Vous êtes de nouveau en ligne.',
+      });
+      clearWasOffline();
+    }
+  }, [wasOffline, clearWasOffline]);
+
   return (
     <ErrorBoundary>
       <HelmetProvider>
         <BrowserRouter>
           <ArtistProfileProvider>
-            <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-amber-400 selection:text-black overflow-x-hidden w-full">
+            <div className="min-h-screen bg-[#0a0a0a] text-slate-50 font-sans selection:bg-amber-400 selection:text-black overflow-x-hidden w-full">
               <SWRConfig
                 value={{
                   dedupingInterval: 2000,
@@ -92,6 +105,7 @@ const App: React.FC = () => {
                   <Route path="/flashs" element={<FlashGallery />} />
                   <Route path="/project" element={<CustomProjectForm />} />
                   <Route path="/apropos" element={<AproposPage />} />
+                  <Route path="/offres" element={<OffresPage />} />
                   <Route path="/mentions-legales" element={<PlaceholderPage title="Mentions légales" description="Cette page sera bientôt disponible." icon="file" />} />
                   <Route path="/contact" element={<PlaceholderPage title="Contact" description="Cette page sera bientôt disponible." icon="mail" />} />
                   

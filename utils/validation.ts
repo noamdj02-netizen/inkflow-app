@@ -42,7 +42,7 @@ export function validatePasswordResult(
 ): { success: true } | { success: false; error: string } {
   const result = passwordSchema.safeParse(password);
   if (result.success) return { success: true };
-  const msg = result.error.errors[0]?.message ?? PASSWORD_ERROR_MESSAGE;
+  const msg = result.error?.issues?.[0]?.message ?? PASSWORD_ERROR_MESSAGE;
   return { success: false, error: msg };
 }
 
@@ -252,11 +252,11 @@ export function validateProjectSubmission(data: unknown) {
     return { success: true, data: validated, error: null };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.issues[0];
+      const firstError = error.issues?.[0];
       return {
         success: false,
         data: null,
-        error: firstError.message || 'Validation failed',
+        error: firstError?.message || 'Validation failed',
         details: error.issues,
       };
     }

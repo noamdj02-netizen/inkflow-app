@@ -4,8 +4,11 @@
  */
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, FileText, Mail } from 'lucide-react';
+import { PageSEO } from './seo/PageSEO';
+import { Breadcrumbs } from './seo/Breadcrumbs';
+import { useBreadcrumbsFromPath } from './seo/Breadcrumbs';
 
 type Props = {
   title: string;
@@ -15,9 +18,15 @@ type Props = {
 
 export const PlaceholderPage: React.FC<Props> = ({ title, description, icon = 'file' }) => {
   const Icon = icon === 'mail' ? Mail : FileText;
+  const { pathname } = useLocation();
+  const breadcrumbItems = useBreadcrumbsFromPath();
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans flex items-center justify-center p-4">
+      <PageSEO title={`${title} | InkFlow`} description={description} canonical={pathname} />
       <div className="max-w-md w-full text-center">
+        {breadcrumbItems.length > 0 && (
+          <Breadcrumbs items={breadcrumbItems} className="justify-center mb-6" />
+        )}
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 mb-6">
           <Icon size={32} className="text-zinc-400" />
         </div>

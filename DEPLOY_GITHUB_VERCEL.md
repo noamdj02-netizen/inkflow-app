@@ -1,5 +1,21 @@
 # 🚀 Déploiement sur GitHub et Vercel - Guide Complet
 
+## ⚡ En bref
+
+**Projet Vercel actuel** : [inkflow-app-swart.vercel.app](https://inkflow-app-swart.vercel.app) — ID `prj_5iSweuWslu0QlP8wFsI7MhBXHaHF`.
+
+1. **GitHub** : le code est poussé sur `origin` (ex. `git push origin login-blue`). Repo : `https://github.com/noamdj02-netizen/inkflow-app.git`.
+2. **Vercel** : [vercel.com](https://vercel.com) → projet **inkflow-app-swart** → configurer les **variables d’environnement** (voir ci‑dessous) → **Deploy**.
+3. **Variables obligatoires** (Settings → Environment Variables) :
+   - **Frontend (build)** : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (requis pour le build client)
+   - **Backend / API** : `SUPABASE_URL` ou `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   - **Recommandé** : `VITE_SITE_URL` = `https://ink-flow.me` (ou l’URL Vercel) pour canonical / SEO
+   - **Optionnel** : `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_GEMINI_API_KEY`
+
+Après le premier déploiement : chaque push sur la branche connectée déclenche un nouveau déploiement automatique.
+
+---
+
 ## 📋 Prérequis
 
 1. ✅ **Compte GitHub** : Votre repo est déjà configuré (`https://github.com/noamdj02-netizen/inkflow-app.git`)
@@ -124,15 +140,15 @@ vercel --prod
 
 ## 🔐 Étape 3 : Configurer le Webhook Stripe
 
-### 3.1 Récupérer l'URL de production
+### 3.1 URL de production
 
-Une fois déployé, votre URL sera : `https://votre-projet.vercel.app`
+**inkflow-app-swart** : `https://inkflow-app-swart.vercel.app`
 
 ### 3.2 Configurer dans Stripe Dashboard
 
 1. **Stripe Dashboard** → **Developers** → **Webhooks**
 2. Cliquez sur **"Add endpoint"**
-3. **URL** : `https://votre-projet.vercel.app/api/webhooks/stripe`
+3. **URL** : `https://inkflow-app-swart.vercel.app/api/webhooks/stripe`
 4. **Événements** :
    - ✅ `checkout.session.completed`
    - ✅ `customer.subscription.created`

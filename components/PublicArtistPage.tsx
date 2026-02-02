@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Breadcrumbs } from './seo/Breadcrumbs';
+import { getLocalBusinessSchema } from '../lib/schema-markup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -532,14 +534,15 @@ export const PublicArtistPage: React.FC = () => {
   const glowA = accentHex || (themeColor === 'amber' ? '#fbbf24' : '#8b5cf6');
   const glowB = secondaryHex || (themeColor === 'amber' ? '#00BBF9' : '#a78bfa');
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ink-flow.me';
   const seoTitle = artist 
     ? `${artist.nom_studio} - Tatoueur${artistVitrine?.ville ? ` à ${artistVitrine.ville}` : ''} | InkFlow`
     : 'Artiste InkFlow';
   const seoDescription = artist?.bio_instagram || 'Découvrez mes flashs et projets sur InkFlow. Réservez votre créneau de tatouage en ligne.';
   const seoImage = artist?.avatar_url 
-    ? (artist.avatar_url.startsWith('http') ? artist.avatar_url : `${typeof window !== 'undefined' ? window.location.origin : ''}${artist.avatar_url}`)
-    : `${typeof window !== 'undefined' ? window.location.origin : ''}/inkflow-logo-v2.png`;
-  const seoUrl = typeof window !== 'undefined' ? window.location.href : '';
+    ? (artist.avatar_url.startsWith('http') ? artist.avatar_url : `${baseUrl}${artist.avatar_url.startsWith('/') ? '' : '/'}${artist.avatar_url}`)
+    : `${baseUrl}/pwa-512x512.png`;
+  const seoUrl = typeof window !== 'undefined' ? window.location.href : (slug ? `${baseUrl}/${slug}` : baseUrl);
 
   const handleBookingSuccess = () => {
     refresh();
@@ -589,15 +592,30 @@ export const PublicArtistPage: React.FC = () => {
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={seoUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDescription} />
         <meta property="og:image" content={seoImage} />
         <meta property="og:url" content={seoUrl} />
         <meta property="og:type" content="profile" />
+        <meta property="og:locale" content="fr_FR" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDescription} />
         <meta name="twitter:image" content={seoImage} />
+        {artist && (
+          <script type="application/ld+json">
+            {JSON.stringify(
+              getLocalBusinessSchema({
+                name: artist.nom_studio,
+                description: seoDescription,
+                url: seoUrl,
+                image: seoImage,
+                ...(artistVitrine?.ville && { address: { addressLocality: artistVitrine.ville } }),
+              })
+            )}
+          </script>
+        )}
       </Helmet>
 
       {/* Effets de lumière (ambiance) — personnalisables depuis le dashboard */}
@@ -614,7 +632,15 @@ export const PublicArtistPage: React.FC = () => {
         </div>
       )}
 
-      <main className="relative max-w-6xl mx-auto px-4 pt-24 pb-20">
+      <main className="relative max-w-6xl mx-auto px-4 pt-24 pb-20" id="main-content" role="main">
+        <Breadcrumbs
+          items={[
+            { label: 'Accueil', path: '/' },
+            { label: artistVitrine?.nom_studio ?? 'Vitrine' },
+          ]}
+          className="mb-6 text-sm"
+          currentUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+        />
         <ArtistHero artist={artistVitrine!} slug={slug ?? ''} />
 
         {/* Tabs: Créations / Projet sur mesure */}

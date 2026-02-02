@@ -14,15 +14,22 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx  # Depuis Stripe Dashboard → Webhooks → Sign
 ### 2. Supabase
 
 ```env
+VITE_SUPABASE_URL=https://votre-projet.supabase.co
+VITE_SUPABASE_ANON_KEY=votre_anon_key
 SUPABASE_URL=https://votre-projet.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=votre_service_role_key
 ```
 
-### 3. Optionnel
+**Important** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` sont utilisés par le build frontend (Vite) ; sans eux, l’app ne peut pas se connecter à Supabase en production.
+
+### 3. Recommandé / Optionnel
 
 ```env
-SITE_URL=https://votre-projet.vercel.app
+VITE_SITE_URL=https://ink-flow.me
 ```
+(ou l’URL de votre projet Vercel pour canonical / SEO)
+
+Projet Vercel : **inkflow-app-swart** — [inkflow-app-swart.vercel.app](https://inkflow-app-swart.vercel.app). Webhook Stripe : `https://inkflow-app-swart.vercel.app/api/webhooks/stripe`.
 
 ## 📝 Instructions
 

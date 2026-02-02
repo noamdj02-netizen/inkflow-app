@@ -60,7 +60,7 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
           {artist.avatar_url ? (
             <img
               src={artist.avatar_url}
-              alt={artist.nom_studio}
+              alt={`Photo de profil de ${artist.nom_studio}, tatoueur${artist.ville ? ` à ${artist.ville}` : ''}`}
               className="w-full h-full object-cover"
               width={192}
               height={192}
@@ -69,7 +69,7 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
             />
           ) : (
             <span className="flex items-center justify-center w-full h-full text-4xl sm:text-5xl font-bold text-white">
-              {artist.nom_studio[0]?.toUpperCase() ?? '?'}
+              {artist.nom_studio?.[0]?.toUpperCase() ?? '?'}
             </span>
           )}
         </div>

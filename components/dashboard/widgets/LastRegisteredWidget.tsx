@@ -48,7 +48,7 @@ export const LastRegisteredWidget: React.FC = () => {
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-medium text-zinc-400 shrink-0">
-                {(b.client_name ?? 'C')[0].toUpperCase()}
+                {((b?.client_name ?? 'C').charAt(0) || 'C').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">

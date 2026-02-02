@@ -10,6 +10,8 @@ import { motion } from 'framer-motion';
 import { Calendar, Loader2, ArrowLeft, Clock, Zap } from 'lucide-react';
 import { usePublicArtist } from '../hooks/usePublicArtist';
 import { toast } from 'sonner';
+import { PageSEO } from './seo/PageSEO';
+import { Breadcrumbs } from './seo/Breadcrumbs';
 
 type Slot = { date: string; time: string; iso: string; displayDate: string };
 
@@ -131,8 +133,20 @@ export const PublicBookingPage: React.FC = () => {
     );
   }
 
+  const pageTitle = artist ? `Réserver avec ${artist.nom_studio} | InkFlow` : 'Réserver | InkFlow';
+  const pageDescription = artist
+    ? `Choisissez un créneau pour vous faire tatouer par ${artist.nom_studio}. Réservation en ligne simple et sécurisée.`
+    : 'Choisissez un créneau de réservation avec votre tatoueur.';
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans antialiased">
+      <PageSEO
+        title={pageTitle}
+        description={pageDescription}
+        canonical={slug ? `/${slug}/booking` : '/booking'}
+        image={artist?.avatar_url ? (artist.avatar_url.startsWith('http') ? artist.avatar_url : undefined) : undefined}
+        ogType="website"
+      />
       <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-neutral-800">
         <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <Link
@@ -146,6 +160,15 @@ export const PublicBookingPage: React.FC = () => {
       </header>
 
       <main id="main-content" className="container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-4xl" role="main">
+        <Breadcrumbs
+          items={[
+            { label: 'Accueil', path: '/' },
+            { label: artist.nom_studio, path: slug ? `/${slug}` : undefined },
+            { label: 'Réservation' },
+          ]}
+          className="mb-6"
+          currentUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+        />
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
           Réserver avec {artist.nom_studio}
         </h1>
@@ -198,8 +221,8 @@ export const PublicBookingPage: React.FC = () => {
                           : 'bg-[#0a0a0a] border-white/10 text-white hover:border-white/30 active:bg-white/5'
                       }`}
                     >
-                      <span className="font-medium">{daySlots[0]?.displayDate ?? date}</span>
-                      <span className="block text-xs opacity-80 mt-0.5">{daySlots.length} créneau(x)</span>
+                      <span className="font-medium">{daySlots?.[0]?.displayDate ?? date}</span>
+                      <span className="block text-xs opacity-80 mt-0.5">{daySlots?.length ?? 0} créneau(x)</span>
                     </button>
                   );
                 })}

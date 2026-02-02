@@ -490,7 +490,7 @@ export const DashboardCalendar: React.FC = () => {
                 <ChevronLeft size={20} />
               </button>
               <span className="px-2 sm:px-4 py-2 text-zinc-300 text-xs sm:text-sm font-medium min-w-[100px] sm:min-w-[150px] text-center">
-                {weekDays[0].toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                {weekDays[0]?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) ?? ''}
               </span>
               <button
                 type="button"

@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SEOHead } from './seo/SEOHead';
+import { SITE_URL } from '../constants/seo';
+import {
+  getOrganizationSchema,
+  getWebSiteSchema,
+  getWebApplicationSchema,
+  getFAQPageSchema,
+  getTestimonialsAggregateSchema,
+} from '../lib/schema-markup';
 import { ArrowRight, Star, ChevronLeft, ChevronRight, ChevronDown, Check, Shield, Users, Calendar, CreditCard, LayoutGrid, Filter, BarChart3, Clock, MapPin, Instagram, Sparkles, Zap, TrendingUp, Eye, Heart, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -125,18 +133,22 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
 
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
-      <Helmet>
-        <title>InkFlow | La Plateforme Premium pour Tatoueurs</title>
-        <meta 
-          name="description" 
-          content="InkFlow - La solution élégante de gestion et réservation pour tatoueurs professionnels. Gérez vos flashs, projets personnalisés et paiements avec style." 
-        />
-        <meta name="keywords" content="logiciel tatoueur, réservation tatouage, gestion studio tatouage, flash tattoo, booking tattoo" />
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content="InkFlow | La Plateforme Premium pour Tatoueurs" />
-        <meta property="og:description" content="La solution élégante de gestion et réservation pour tatoueurs professionnels." />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Helmet>
+      <SEOHead
+        title="InkFlow | La Plateforme Premium pour Tatoueurs"
+        description="Gestion et réservation pour tatoueurs professionnels. Gérez vos flashs, projets et paiements en ligne. Agenda, acomptes Stripe, vitrine personnalisable."
+        canonical="/"
+        image={`${SITE_URL.replace(/\/$/, '')}/pwa-512x512.png`}
+        ogType="website"
+        addSoftwareApplicationSchema
+        jsonLd={[
+          getOrganizationSchema(),
+          getWebSiteSchema(),
+          getWebApplicationSchema(),
+          getFAQPageSchema(faqItems),
+          ...(getTestimonialsAggregateSchema(testimonials.length) ? [getTestimonialsAggregateSchema(testimonials.length)!] : []),
+        ]}
+      />
+
 
       {/* Hero Background - fond immersif luxe (z-0) : encre noire + glows subtils */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden>
@@ -354,7 +366,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                 <motion.button 
                   whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.1)" }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/register')}
+                  onClick={() => startTransition(() => navigate('/offres'))}
                   className="group bg-white text-black px-6 md:px-8 py-3.5 md:py-4 font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 min-h-[48px] w-full sm:w-auto"
                 >
                   Essai gratuit
@@ -641,7 +653,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                         <div className="aspect-[4/5] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center mb-3 border border-white/5 group-hover:border-white/20 transition-all relative overflow-hidden">
                           <img
                             src={flash.image}
-                            alt={flash.title}
+                            alt={`Flash tatouage ${flash.title} — design réservable sur InkFlow`}
                             loading="lazy"
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />

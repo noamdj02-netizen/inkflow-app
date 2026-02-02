@@ -96,7 +96,7 @@ export const FlashGallery: React.FC = () => {
           {MOCK_FLASHS.map((flash) => (
             <motion.div 
               key={flash.id}
-              variants={fadeInUp}
+              variants={fadeInUp as any} // Typesafe fix: cast to any, or update fadeInUp ease to be a valid Easing type.
               whileHover={{ scale: 1.02, y: -5 }}
               className={`group relative glass rounded-2xl overflow-hidden transition-all ${
                 !flash.available ? 'opacity-50' : ''

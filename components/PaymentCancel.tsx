@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { XCircle, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PageSEO } from './seo/PageSEO';
 
 export const PaymentCancel: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
+      <PageSEO title="Paiement annulé | InkFlow" description="Vous avez annulé le paiement. Votre réservation n'a pas été confirmée." canonical="/payment/cancel" noindex />
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />

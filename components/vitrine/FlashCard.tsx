@@ -37,7 +37,7 @@ export function FlashCard({
       <div className="aspect-[4/5] overflow-hidden relative">
         <OptimizedImage
           src={flash.image_url}
-          alt={flash.title}
+          alt={`Flash tatouage ${flash.title} — design réservable en ligne`}
           className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-110"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           priority={priority}
