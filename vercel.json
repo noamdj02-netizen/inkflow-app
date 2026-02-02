@@ -6,6 +6,18 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/artist-booking-info",
+      "destination": "/api/booking"
+    },
+    {
+      "source": "/api/create-booking",
+      "destination": "/api/booking"
+    },
+    {
+      "source": "/api/cancel-pending-booking",
+      "destination": "/api/booking"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
