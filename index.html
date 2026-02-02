@@ -29,7 +29,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <title>InkFlow | La Plateforme Premium pour Tatoueurs</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"></noscript>
   <script type="importmap">
 {
   "imports": {
@@ -43,13 +44,18 @@
 }
 </script>
     <style>
-      /* Évite l'écran blanc avant hydratation React — même fond que l'app */
-      html, body { margin: 0; padding: 0; background: #0a0a0a; min-height: 100vh; }
-      #root { min-height: 100vh; background: #0a0a0a; }
+      /* Shell immediat : fond sombre + fallback font (mobile) */
+      html, body { margin: 0; padding: 0; background: #0a0a0a; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+      #root { min-height: 100vh; background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+      #root .app-loading { text-align: center; color: rgba(255,255,255,0.9); }
+      #root .app-loading .logo { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.05em; }
+      #root .app-loading .logo span { color: #71717a; }
+      #root .app-loading .spinner { width: 28px; height: 28px; margin: 1rem auto 0; border: 2px solid rgba(251,191,36,0.3); border-top-color: #fbbf24; border-radius: 50%; animation: app-spin 0.8s linear infinite; }
+      @keyframes app-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="app-loading" aria-live="polite"><div class="logo">INK<span>FLOW</span></div><div class="spinner" aria-hidden="true"></div></div></div>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

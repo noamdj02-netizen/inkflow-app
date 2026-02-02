@@ -194,11 +194,27 @@ fetch('https://votre-projet.vercel.app/api/create-checkout-session', {
 
 **Vercel Dashboard** → **Functions** → `api/webhooks/stripe` → **Logs**
 
+## 🌐 Domaine personnalisé : https://ink-flow.me
+
+Pour que le site soit servi sur **https://ink-flow.me/** :
+
+1. **Vercel Dashboard** → votre projet → **Settings** → **Domains**
+2. Cliquez sur **Add** et saisissez `ink-flow.me` (et éventuellement `www.ink-flow.me`)
+3. Suivez les instructions Vercel pour configurer les **DNS** chez votre registrar :
+   - **A** : `76.76.21.21` (ou la cible indiquée par Vercel)
+   - **CNAME** pour `www` : `cname.vercel-dns.com` (si proposé)
+4. Une fois les DNS propagés, Vercel provisionne le certificat SSL ; le site sera accessible sur **https://ink-flow.me**
+
+**Variable d'environnement** (Settings → Environment Variables) :
+- `VITE_SITE_URL` = `https://ink-flow.me` (Production + Preview) pour canonical, SEO et auth redirects.
+
+---
+
 ## 🔄 Déploiements Automatiques
 
 Une fois connecté à GitHub, Vercel déploie automatiquement :
 
-- ✅ **Chaque push sur `main`** → Déploiement en production
+- ✅ **Chaque push sur `main`** (ou la branche de production) → Déploiement en production
 - ✅ **Chaque pull request** → Déploiement de preview
 - ✅ **Chaque push sur une branche** → Déploiement de preview
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageSEO } from './seo/PageSEO';
 import { SITE_URL } from '../constants/seo';
@@ -7,12 +7,12 @@ import { ArrowLeft, Play, Check, Zap, Building2, Sparkles } from 'lucide-react';
 import { Skeleton } from './common/Skeleton';
 
 const fadeInUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 const stagger = {
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.04 } },
 };
 
 /** Skeleton pour la section vidéo (évite flash blanc/noir). */
@@ -44,9 +44,9 @@ const OFFERS = [
     name: 'Starter',
     price: '29',
     period: '/mois',
-    description: 'Parfait pour démarrer',
-    features: ['1 artiste', 'Calendrier illimité', 'Réservations en ligne', 'Paiements Stripe'],
-    cta: 'Commencer l\'essai',
+    description: 'Pour démarrer',
+    features: ['1 artiste', 'Flashs illimités', 'Acomptes Stripe (2%)', 'Support email'],
+    cta: 'Commencer',
     href: '/register',
     icon: Zap,
     highlighted: false,
@@ -54,24 +54,24 @@ const OFFERS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '79',
+    price: '49',
     period: '/mois',
-    description: 'Pour les studios en croissance',
-    features: ['Jusqu\'à 5 artistes', 'Tout Starter', 'Flashs & catalogue', 'Rapports avancés'],
-    cta: 'Essayer Pro',
+    description: 'Pour les établis',
+    features: ['Tout du Starter', 'Formulaire projet IA', 'Acomptes Stripe (0%)', 'Agenda synchronisé', 'Support prioritaire'],
+    cta: 'Choisir Pro',
     href: '/register',
     icon: Sparkles,
     highlighted: true,
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 'Sur devis',
-    period: '',
-    description: 'Structures et franchises',
-    features: ['Artistes illimités', 'API & intégrations', 'Support dédié', 'SLA garanti'],
-    cta: 'Nous contacter',
-    href: '/apropos',
+    id: 'studio',
+    name: 'Studio',
+    price: '99',
+    period: '/mois',
+    description: 'Pour les équipes',
+    features: ['Jusqu\'à 3 artistes', 'Multi-calendriers', 'Dashboard studio', 'Marque blanche'],
+    cta: 'Choisir Studio',
+    href: '/register',
     icon: Building2,
     highlighted: false,
   },
@@ -79,17 +79,9 @@ const OFFERS = [
 
 export const OffresPage: React.FC = () => {
   const navigate = useNavigate();
-  const [videoReady, setVideoReady] = useState(false);
-  const [pricingReady, setPricingReady] = useState(false);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setVideoReady(true), 150);
-    const t2 = setTimeout(() => setPricingReady(true), 250);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
+  // Contenu affiché immédiatement (pas de délai) pour fluidité mobile
+  const [videoReady, setVideoReady] = useState(true);
+  const [pricingReady, setPricingReady] = useState(true);
 
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
@@ -228,9 +220,8 @@ export const OffresPage: React.FC = () => {
                         <Icon size={22} className="text-amber-400 shrink-0" />
                         <h3 className="text-xl font-semibold text-white">{offer.name}</h3>
                       </div>
-                      <div className="mb-2">
-                        <span className="text-3xl md:text-4xl font-bold text-white">{offer.price}</span>
-                        {offer.period && <span className="text-zinc-400 text-lg">{offer.period}</span>}
+                      <div className="mb-2" data-offer-id={offer.id} data-offer-price={offer.price}>
+                        <span className="text-3xl md:text-4xl font-bold text-white">{offer.price}€{offer.period || ''}</span>
                       </div>
                       <p className="text-zinc-400 text-sm mb-6">{offer.description}</p>
                       <ul className="space-y-3 mb-8 flex-1">

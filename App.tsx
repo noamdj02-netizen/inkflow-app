@@ -5,7 +5,6 @@ import { SWRConfig } from 'swr';
 import { Toaster, toast } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -14,7 +13,8 @@ import { RedirectToHome } from './components/common/RedirectToHome';
 import { DelayedFallback } from './components/common/DelayedFallback';
 import { PlaceholderPage } from './components/PlaceholderPage';
 
-// Lazy load components pour code splitting (réduction du bundle initial ~60%)
+// Lazy load pour affichage immédiat sur mobile (bundle initial réduit)
+const LandingPage = lazy(() => import('./components/LandingPage').then(m => ({ default: m.LandingPage })));
 const OnboardingPage = lazy(() => import('./components/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 const PublicArtistPage = lazy(() => import('./components/PublicArtistPage').then(m => ({ default: m.PublicArtistPage })));
 const ClientHome = lazy(() => import('./components/ClientHome').then(m => ({ default: m.ClientHome })));
