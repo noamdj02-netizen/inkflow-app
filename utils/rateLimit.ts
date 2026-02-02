@@ -1,12 +1,12 @@
 /**
  * Rate Limiting Utility
- * 
- * Simple in-memory rate limiter for Vercel Serverless Functions
- * 
- * Note: For production at scale, consider using:
+ *
+ * Simple in-memory rate limiter (custom middleware). Used by submit-project-request
+ * with two windows: 5 req/min (burst) and 3 req/hour per IP.
+ *
+ * For production at scale (multi-instance, no cold-start reset), use Redis:
+ * - Upstash: @upstash/ratelimit + @upstash/redis (serverless-friendly)
  * - Vercel KV (Redis)
- * - Upstash Redis
- * - Or a dedicated rate limiting service
  */
 
 interface RateLimitEntry {
