@@ -107,8 +107,8 @@ const DashboardLayoutInner: React.FC = () => {
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
       
-      {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5">
+      {/* Mobile Header — safe area top pour barre de statut / encoche (PWA standalone) */}
+      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(true)}
@@ -151,7 +151,7 @@ const DashboardLayoutInner: React.FC = () => {
                 stiffness: 300,
                 mass: 0.8
               }}
-              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
+              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl safe-area-top"
             >
               {/* Drawer Header */}
               <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
@@ -362,7 +362,12 @@ const DashboardLayoutInner: React.FC = () => {
       </aside>
 
       {/* Zone 2 (Centre) + Zone 3 (Droite) : flex pour partager l'espace */}
-      <main id="main-content" className="relative z-10 flex-1 flex min-w-0 overflow-hidden pb-16 md:pb-0 pt-16 md:pt-0" role="main">
+      {/* Main — padding top/bottom = hauteur header/nav + safe areas (PWA standalone) */}
+      <main
+        id="main-content"
+        className="relative z-10 flex-1 flex min-w-0 overflow-hidden pt-[calc(4rem+max(1rem,env(safe-area-inset-top,0px)))] md:pt-0 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom,0px)))] md:pb-0"
+        role="main"
+      >
         {/* Zone 2 : Contenu principal (prend tout l'espace restant) */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-transparent overflow-hidden">
           <Suspense fallback={<DashboardContentFallback />}>
@@ -374,8 +379,8 @@ const DashboardLayoutInner: React.FC = () => {
         <WidgetStation />
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 glass z-50 md:hidden">
+      {/* Mobile Bottom Navigation Bar — safe area bottom pour Home Indicator iOS */}
+      <nav className="fixed bottom-0 left-0 right-0 glass z-50 md:hidden footer-safe">
         <div className="grid grid-cols-5 h-16">
           {[
             { to: '/dashboard/overview', icon: LayoutGrid, label: 'Accueil' },

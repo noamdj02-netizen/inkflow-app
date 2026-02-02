@@ -35,6 +35,7 @@ const DashboardFinance = lazy(() => import('./components/dashboard/DashboardFina
 const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSettings').then(m => ({ default: m.DashboardSettings })));
 const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
 const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
+const PublicBookingCheckoutPage = lazy(() => import('./components/PublicBookingCheckoutPage').then(m => ({ default: m.PublicBookingCheckoutPage })));
 const AproposPage = lazy(() => import('./components/AproposPage').then(m => ({ default: m.AproposPage })));
 const OffresPage = lazy(() => import('./components/OffresPage').then(m => ({ default: m.OffresPage })));
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -91,7 +92,8 @@ const App: React.FC = () => {
                   
                   {/* Public Artist Page (Vitrine) - Lazy loaded */}
                   <Route path="/p/:slug" element={<PublicArtistPage />} />
-                  {/* Réservation : calendrier créneaux (avant /:slug) */}
+                  {/* Réservation : calendrier puis checkout (ordre spécifique → général) */}
+                  <Route path="/:slug/booking/checkout" element={<PublicBookingCheckoutPage />} />
                   <Route path="/:slug/booking" element={<PublicBookingPage />} />
                   {/* Public Artist Page (Vitrine) - URL courte (doit être en dernier) */}
                   <Route path="/:slug" element={<PublicArtistPage />} />

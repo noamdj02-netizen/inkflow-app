@@ -191,6 +191,37 @@ export const bookingFormSchema = z.object({
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 /**
+ * Checkout Form Schema (Nom, Prénom, Email, Téléphone)
+ */
+export const checkoutFormSchema = z.object({
+  client_first_name: z
+    .string()
+    .min(1, 'Le prénom est requis')
+    .max(100, 'Prénom trop long')
+    .trim(),
+  client_last_name: z
+    .string()
+    .min(1, 'Le nom est requis')
+    .max(100, 'Nom trop long')
+    .trim(),
+  client_email: z
+    .string()
+    .min(1, 'L\'email est requis')
+    .email('Format d\'email invalide')
+    .toLowerCase()
+    .trim()
+    .max(255, 'Email trop long'),
+  client_phone: z
+    .string()
+    .max(20, 'Numéro trop long')
+    .trim()
+    .optional()
+    .nullable(),
+}).strict();
+
+export type CheckoutFormData = z.infer<typeof checkoutFormSchema>;
+
+/**
  * Care Instructions Schema
  */
 export const careInstructionsSchema = z.object({

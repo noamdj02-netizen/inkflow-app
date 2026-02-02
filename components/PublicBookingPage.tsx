@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Loader2, ArrowLeft, Clock, Zap } from 'lucide-react';
 import { usePublicArtist } from '../hooks/usePublicArtist';
@@ -103,11 +103,15 @@ export const PublicBookingPage: React.FC = () => {
     if (!selectedDate || !selectedTime || !slug) return;
     const slot = timeSlotsForSelected.find((s) => s.time === selectedTime);
     if (!slot) return;
-    toast.success('Créneau sélectionné', {
-      description: 'Choisissez un flash ci-dessous pour réserver ce créneau.',
-      duration: 5000,
-    });
-    navigate(`/${slug}`, { state: { preferredSlot: slot }, replace: false });
+    if (flashId) {
+      navigate(`/${slug}/booking/checkout?flash_id=${encodeURIComponent(flashId)}&slot=${encodeURIComponent(slot.iso)}`, { replace: false });
+    } else {
+      toast.success('Créneau sélectionné', {
+        description: 'Choisissez un flash sur la vitrine pour réserver ce créneau.',
+        duration: 5000,
+      });
+      navigate(`/${slug}`, { state: { preferredSlot: slot }, replace: false });
+    }
   };
 
   if (artistLoading || notFound || !artist) {
@@ -274,7 +278,7 @@ export const PublicBookingPage: React.FC = () => {
               onClick={handleConfirmSlot}
               className="w-full min-h-[44px] py-4 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200 active:bg-neutral-300 transition-colors flex items-center justify-center gap-2 touch-manipulation"
             >
-              <Zap size={20} /> Choisir un flash et réserver
+              <Zap size={20} /> {flashId ? 'Continuer vers le récapitulatif' : 'Choisir un flash et réserver'}
             </button>
           </motion.div>
         )}

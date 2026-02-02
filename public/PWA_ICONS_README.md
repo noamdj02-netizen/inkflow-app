@@ -1,12 +1,41 @@
 # Icônes PWA - InkFlow
 
-## Fichiers requis
+## Où se trouve l’icône actuelle (iOS / écran d’accueil)
 
-Pour que la PWA fonctionne correctement, vous devez avoir ces fichiers dans le dossier `public/` :
+L’icône affichée quand l’app est installée sur iPhone (ou Android) est servie depuis **`public/`** :
 
-- `pwa-192x192.png` - Icône 192x192 pixels (requis)
-- `pwa-512x512.png` - Icône 512x512 pixels (requis)
-- `pwa-icon.svg` - Icône SVG source (optionnel, pour référence)
+| Fichier | Rôle |
+|--------|------|
+| **`public/pwa-512x512.png`** | Icône principale (512×512) : manifest PWA, `apple-touch-icon`, partage social |
+| **`public/pwa-192x192.png`** | Icône 192×192 : manifest PWA, petits écrans |
+
+Références dans le projet :
+- **`index.html`** : `<link rel="apple-touch-icon" href="/pwa-512x512.png" />` (et `sizes="192x192"`, `512x512`)
+- **`vite.config.ts`** : section PWA `manifest.icons` pointe vers `/pwa-192x192.png` et `/pwa-512x512.png`
+
+Tout fichier dans `public/` est copié à la racine du site au build, donc l’URL réelle est **`/pwa-512x512.png`** et **`/pwa-192x192.png`**.
+
+---
+
+## Remplacer l’icône (nouveau logo)
+
+1. **Déposer la nouvelle image**  
+   - Soit remplacer directement **`public/pwa-512x512.png`** (et **`public/pwa-192x192.png`**) par vos nouveaux PNG.  
+   - Soit mettre votre fichier à la racine du projet sous le nom **`icon.png`**, puis le copier dans `public/` :
+     ```powershell
+     Copy-Item icon.png public\pwa-512x512.png -Force
+     Copy-Item icon.png public\pwa-192x192.png -Force
+     ```
+2. **Tailles recommandées** : 512×512 px pour `pwa-512x512.png`, 192×192 px pour `pwa-192x192.png` (carré, PNG).
+3. Relancer un **build** et redéployer ; sur iPhone, désinstaller l’app puis réinstaller (ou vider le cache Safari) pour voir la nouvelle icône.
+
+---
+
+## Fichiers requis (résumé)
+
+- `public/pwa-192x192.png` - 192×192 pixels (requis)
+- `public/pwa-512x512.png` - 512×512 pixels (requis)
+- `pwa-icon.svg` - Icône SVG source (optionnel)
 
 ## Comment créer les vraies icônes
 
