@@ -5,8 +5,6 @@ import { SWRConfig } from 'swr';
 import { Toaster, toast } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { LoginPage } from './components/LoginPage';
-import { RegisterPage } from './components/RegisterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RedirectToHome } from './components/common/RedirectToHome';
@@ -39,6 +37,8 @@ const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardC
 const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
 const AproposPage = lazy(() => import('./components/AproposPage').then(m => ({ default: m.AproposPage })));
 const OffresPage = lazy(() => import('./components/OffresPage').then(m => ({ default: m.OffresPage })));
+const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./components/RegisterPage').then(m => ({ default: m.RegisterPage })));
 
 // Fallback retardé : spinner seulement si chargement > 300ms (évite flash sur navigations rapides)
 

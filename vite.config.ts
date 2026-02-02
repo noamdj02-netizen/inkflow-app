@@ -3,49 +3,76 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Inject fetchpriority="high" on main entry script for faster mobile loading (runs after Vite injects assets) */
+function priorityScript() {
+  return {
+    name: 'priority-script',
+    transformIndexHtml: {
+      order: 'post' as const,
+      handler(html: string) {
+        return html.replace(
+          /<script type="module"(\s+crossorigin)?\s+src="(\/assets\/index-[^"]+\.js)"/,
+          '<script type="module"$1 src="$2" fetchpriority="high"'
+        );
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
+  const env = loadEnv(mode, process.cwd());
+  return {
+    server: {
+      port: 3000,
         host: '0.0.0.0',
       },
       plugins: [
         react(),
+        priorityScript(),
         VitePWA({
           registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'inkflow-logo-v2.png'],
           manifest: {
             name: 'InkFlow - Tattoo Manager',
             short_name: 'InkFlow',
-            description: 'Gestion simplifiée pour tatoueurs pro.',
+            description: 'Gestion simplifiée pour tatoueurs pro. Réservations, flashs, paiements.',
             theme_color: '#0f172a',
             background_color: '#0f172a',
             display: 'standalone',
             orientation: 'portrait',
             scope: '/',
             start_url: '/',
+            lang: 'fr',
+            categories: ['business', 'productivity'],
+            prefer_related_applications: false,
             icons: [
-              {
-                src: '/pwa-192x192.png',
-                sizes: '192x192',
-                type: 'image/png'
-              },
-              {
-                src: '/pwa-512x512.png',
-                sizes: '512x512',
-                type: 'image/png'
-              },
-              {
-                src: '/pwa-512x512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                purpose: 'any maskable'
-              }
+              { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+              { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ]
           },
           workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff}'],
+            runtimeCaching: [
+              {
+                urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)\/.*/i,
+                handler: 'StaleWhileRevalidate',
+                options: {
+                  cacheName: 'google-fonts',
+                  expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  cacheableResponse: { statuses: [0, 200] }
+                }
+              },
+              {
+                urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'static-images',
+                  expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                  cacheableResponse: { statuses: [0, 200] }
+                }
+              }
+            ]
           }
         })
       ],

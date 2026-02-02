@@ -203,13 +203,9 @@ export default async function handler(req: any, res: any) {
     // Step 2: Parse request body (Vercel: body can be string, Buffer, or pre-parsed object)
     const parseResult = parseRequestBody(req);
     if (!parseResult.ok) {
-      console.error('[submit-project-request] Body parse failed:', parseResult.error);
-      return json(
-        res,
-        400,
-        { success: false, error: parseResult.error },
-        rateLimitHeaders
-      );
+      const { error } = parseResult;
+      console.error('[submit-project-request] Body parse failed:', error);
+      return json(res, 400, { success: false, error }, rateLimitHeaders);
     }
     const requestBody = parseResult.data;
 
@@ -217,14 +213,12 @@ export default async function handler(req: any, res: any) {
     const validationResult = validateProjectSubmission(requestBody);
 
     if (!validationResult.success) {
-      console.error('[submit-project-request] Validation failed:', {
-        error: validationResult.error,
-        details: validationResult.details,
-      });
+      const { error, details } = validationResult;
+      console.error('[submit-project-request] Validation failed:', { error, details });
       return json(res, 400, {
         success: false,
-        error: validationResult.error || 'Données invalides.',
-        ...(process.env.NODE_ENV === 'development' && { details: validationResult.details }),
+        error: error || 'Données invalides.',
+        ...(process.env.NODE_ENV === 'development' && details != null && { details }),
       }, rateLimitHeaders);
     }
 

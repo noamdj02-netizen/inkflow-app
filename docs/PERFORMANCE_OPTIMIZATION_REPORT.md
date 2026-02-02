@@ -22,9 +22,18 @@
 
 ## 2. Bottlenecks identifiés et recommandations
 
+### 2.0 Optimisations mobile (chargement landing)
+
+Appliquées pour réduire le délai 3–10 s avant affichage de la landing sur mobile :
+
+- **Polices** : chargement critique limité à **Syne + Space Grotesk** (premier paint) ; Cinzel, Inter, Playfair en secondaire (après premier paint). `display=swap` sur tous les liens Google Fonts.
+- **Import map / esm.sh** : supprimés de `index.html` (le build Vite utilise `node_modules`, pas d’ESM externe en runtime).
+- **LoginPage & RegisterPage** : passés en **lazy** dans `App.tsx` pour ne plus figurer dans le bundle initial (chunks séparés).
+- **Script principal** : plugin Vite `priority-script` qui injecte `fetchpriority="high"` sur le script d’entrée pour prioriser le téléchargement sur mobile.
+
 ### 2.1 Bundle JavaScript / CSS
 
-- **Vite** : code splitting automatique par route via `React.lazy()` — déjà en place (Landing non lazy, reste des routes lazy).
+- **Vite** : code splitting par route via `React.lazy()` — Landing, Login, Register et toutes les autres routes en lazy ; bundle initial allégé.
 - **Analyse du bundle** : `npm run build` puis analyser `dist/assets/*.js` ou utiliser **rollup-plugin-visualizer** :
   ```bash
   npm i -D rollup-plugin-visualizer

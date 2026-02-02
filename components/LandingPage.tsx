@@ -48,10 +48,10 @@ const testimonials: Testimonial[] = [
   }
 ];
 
-// Animation variants
+// Animation variants (ease as const for Framer Motion Variants typing)
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as const } }
 };
 
 const staggerContainer = {
@@ -61,7 +61,7 @@ const staggerContainer = {
 
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: "easeOut" } }
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: 'easeOut' as const } }
 };
 
 const faqItems: { question: string; answer: string }[] = [

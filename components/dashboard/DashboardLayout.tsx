@@ -279,7 +279,7 @@ const DashboardLayoutInner: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.55 }}
                   >
-                    <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
+                    <PWAInstallButton variant="prominent" onClose={() => setIsMobileMenuOpen(false)} />
                   </motion.div>
                   <motion.button
                     initial={{ opacity: 0, x: -20 }}
@@ -340,6 +340,7 @@ const DashboardLayoutInner: React.FC = () => {
         <div className="p-4 border-t border-white/5">
           <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
           <div className="mt-4 space-y-3">
+            <PWAInstallButton variant="prominent" />
             <div className="flex items-center gap-3 px-4 glass p-3 rounded-xl">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
                 {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
