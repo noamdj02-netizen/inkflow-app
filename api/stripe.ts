@@ -75,6 +75,62 @@ const STRIPE_PRICE_IDS: Record<string, string> = {
 };
 
 export default async function handler(req: any, res: any) {
+  // Le callback Stripe Connect peut être appelé en GET avec query params
+  if (req.method === 'GET' && req.query?.account_id) {
+    try {
+      const stripeSecretKey = requireEnv('STRIPE_SECRET_KEY');
+      const supabaseUrl = requireEnv('VITE_SUPABASE_URL') || requireEnv('SUPABASE_URL');
+      const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+
+      const stripe = new Stripe(stripeSecretKey, {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const accountId = req.query.account_id as string;
+      const account = await stripe.accounts.retrieve(accountId);
+      const detailsSubmitted = account.details_submitted;
+      const chargesEnabled = account.charges_enabled;
+
+      const { data: artist } = await supabase
+        .from('artists')
+        .select('id')
+        .eq('stripe_account_id', accountId)
+        .single();
+
+      if (artist) {
+        await supabase
+          .from('artists')
+          .update({
+            stripe_onboarding_complete: detailsSubmitted && chargesEnabled,
+          })
+          .eq('id', artist.id);
+      }
+
+      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';
+      const baseUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || origin;
+      
+      // Rediriger vers le dashboard avec le statut
+      const redirectUrl = `${baseUrl}/dashboard/settings?stripe_success=${detailsSubmitted && chargesEnabled}`;
+      res.writeHead(302, { Location: redirectUrl });
+      res.end();
+      return;
+    } catch (error: any) {
+      console.error('Stripe Connect callback error:', error);
+      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';
+      const baseUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || origin;
+      res.writeHead(302, { Location: `${baseUrl}/dashboard/settings?stripe_incomplete=true` });
+      res.end();
+      return;
+    }
+  }
+
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
   }
