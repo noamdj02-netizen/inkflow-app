@@ -4,7 +4,7 @@
  * Ce module définit les limites et permissions pour chaque plan SaaS.
  */
 
-import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionPlan, SubscriptionStatus } from '../types/prisma-enums';
 
 // ============================================
 // Types & Interfaces

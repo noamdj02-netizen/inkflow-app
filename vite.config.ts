@@ -99,8 +99,23 @@ export default defineConfig(({ mode }) => {
         minify: 'esbuild',
         cssMinify: true,
         rollupOptions: {
+          external: (id) => {
+            // Exclure Prisma du bundle client (server-side only)
+            if (id.includes('@prisma/client') || id.includes('.prisma/client')) {
+              return true;
+            }
+            // Exclure les fichiers serveur Prisma
+            if (id.includes('/lib/prisma') || id.includes('/lib/booking-utils')) {
+              return true;
+            }
+            return false;
+          },
           output: {
             manualChunks: (id) => {
+              // Exclure Prisma du chunking
+              if (id.includes('@prisma/client') || id.includes('.prisma/client')) {
+                return;
+              }
               // Réduit le bundle initial : vendor séparé pour cache et chargement parallèle
               if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) return 'react';
               if (id.includes('node_modules/react-router')) return 'router';

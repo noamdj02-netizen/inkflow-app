@@ -2,7 +2,7 @@
  * Utilitaires pour la gestion des abonnements Stripe
  */
 
-import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionPlan, SubscriptionStatus } from '../types/prisma-enums';
 
 // ============================================
 // Configuration des Plans Stripe

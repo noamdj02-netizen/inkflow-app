@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from './useAuth';
-import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionPlan, SubscriptionStatus } from '../types/prisma-enums';
 
 export interface UserSubscription {
   plan: SubscriptionPlan | null;

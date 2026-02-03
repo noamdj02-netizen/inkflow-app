@@ -1,6 +1,10 @@
 /**
  * Utilitaires pour la gestion des réservations
  * Fonctions de vérification de disponibilité, calcul de créneaux, etc.
+ * 
+ * ⚠️ SERVER-SIDE ONLY - Ne pas importer dans des composants React ou hooks côté client
+ * Ce fichier utilise PrismaClient qui ne peut pas être bundlé par Vite.
+ * Utiliser uniquement dans les API routes Vercel Serverless Functions.
  */
 
 import { PrismaClient, BookingStatus } from '@prisma/client';
