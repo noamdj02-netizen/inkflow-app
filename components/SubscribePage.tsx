@@ -73,14 +73,24 @@ export const SubscribePage: React.FC = () => {
         }),
       });
 
-      const data = await safeParseJson<{ url?: string; error?: string }>(response);
+      const data = await safeParseJson<{
+        url?: string;
+        error?: string;
+        bypassPayment?: boolean;
+        redirectUrl?: string;
+      }>(response);
 
       if (!response.ok) {
         throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
       }
 
+      if (data.bypassPayment && data.redirectUrl) {
+        toast.success('Accès actif (admin). Redirection vers le dashboard.');
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
       if (data.url) {
-        // Rediriger vers Stripe Checkout
         window.location.href = data.url;
       } else {
         throw new Error('URL de checkout non reçue');

@@ -74,6 +74,67 @@ const STRIPE_PRICE_IDS: Record<string, string> = {
   STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || '',
 };
 
+/** Emails that bypass Stripe and get subscription_status = active (admin/dev). */
+function getAdminEmails(): string[] {
+  const raw = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || '';
+  return raw
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Récupère l'utilisateur dans public.users. S'il n'existe pas, le crée à partir de Supabase Auth
+ * (session active) pour éviter l'erreur "User not found" quand Auth est à jour mais pas la table users.
+ */
+async function getOrCreateUserFromAuth(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<{ id: string; email: string | null } | null> {
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id, email')
+    .eq('id', userId)
+    .single();
+
+  if (existing) {
+    return existing as { id: string; email: string | null };
+  }
+
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+  if (authError || !authUser?.user) {
+    console.error('[stripe] Auth user not found for userId:', userId, authError?.message);
+    return null;
+  }
+
+  const email = authUser.user.email?.trim() || null;
+  const name =
+    (authUser.user.user_metadata?.full_name as string) ||
+    (authUser.user.user_metadata?.name as string) ||
+    (email ? email.split('@')[0] : '') ||
+    'Utilisateur';
+  const { data: inserted, error: insertError } = await supabase
+    .from('users')
+    .insert({
+      id: authUser.user.id,
+      email: email ?? '',
+      name: name.slice(0, 255) || 'Utilisateur',
+    } as never)
+    .select('id, email')
+    .single();
+
+  if (insertError) {
+    if (insertError.code === '23505') {
+      const { data: retry } = await supabase.from('users').select('id, email').eq('id', userId).single();
+      return retry as { id: string; email: string | null } | null;
+    }
+    console.error('[stripe] Failed to create user in public.users:', insertError);
+    return null;
+  }
+
+  return inserted as { id: string; email: string | null };
+}
+
 export default async function handler(req: any, res: any) {
   // CORS preflight : permettre POST depuis n'importe quelle origine (proxy dev, PWA, etc.)
   if (req.method === 'OPTIONS') {
@@ -190,14 +251,31 @@ export default async function handler(req: any, res: any) {
           return json(res, 500, { error: `Price ID not configured for plan ${body.plan}` });
         }
 
-        const { data: user } = await supabase
-          .from('users')
-          .select('id, email')
-          .eq('id', body.userId)
-          .single();
-
+        const user = await getOrCreateUserFromAuth(supabase, body.userId);
         if (!user) {
-          return json(res, 404, { error: 'User not found' });
+          return json(res, 404, { error: 'User not found. Please log in again.' });
+        }
+
+        const adminEmails = getAdminEmails();
+        const userEmailLower = (user.email || '').toLowerCase();
+        if (adminEmails.length > 0 && userEmailLower && adminEmails.includes(userEmailLower)) {
+          const { error: updateErr } = await supabase
+            .from('users')
+            .update({
+              subscription_status: 'active',
+              subscription_plan: body.plan,
+              subscription_current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            } as Record<string, unknown>)
+            .eq('id', body.userId);
+          if (updateErr) {
+            console.error('[stripe] Admin bypass update failed:', updateErr);
+            return json(res, 500, { error: 'Failed to activate admin subscription' });
+          }
+          return json(res, 200, {
+            success: true,
+            bypassPayment: true,
+            redirectUrl: `${baseUrl}/dashboard`,
+          });
         }
 
         let customerId: string;
@@ -211,13 +289,13 @@ export default async function handler(req: any, res: any) {
           customerId = userData.stripe_customer_id;
         } else {
           const customer = await stripe.customers.create({
-            email: user.email,
+            email: user.email || undefined,
             metadata: { userId: body.userId },
           });
           customerId = customer.id;
           await supabase
             .from('users')
-            .update({ stripe_customer_id: customerId })
+            .update({ stripe_customer_id: customerId } as Record<string, unknown>)
             .eq('id', body.userId);
         }
 
@@ -240,18 +318,23 @@ export default async function handler(req: any, res: any) {
           return json(res, 400, { error: 'Missing userId' });
         }
 
-        const { data: user } = await supabase
+        const user = await getOrCreateUserFromAuth(supabase, body.userId);
+        if (!user) {
+          return json(res, 404, { error: 'User not found. Please log in again.' });
+        }
+
+        const { data: userRow } = await supabase
           .from('users')
           .select('stripe_customer_id')
           .eq('id', body.userId)
           .single();
 
-        if (!user || !user.stripe_customer_id) {
+        if (!userRow?.stripe_customer_id) {
           return json(res, 400, { error: 'No Stripe customer ID found. Please subscribe first.' });
         }
 
         const portalSession = await stripe.billingPortal.sessions.create({
-          customer: user.stripe_customer_id,
+          customer: userRow.stripe_customer_id,
           return_url: `${baseUrl}/dashboard/settings`,
         });
 

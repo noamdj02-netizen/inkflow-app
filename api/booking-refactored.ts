@@ -29,6 +29,30 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 type Req = { method?: string; query?: Record<string, string>; body?: unknown; url?: string };
+
+// Types pour les lignes Supabase (client sans générique Database infère never)
+interface ArtistBookingRow {
+  id: string;
+  nom_studio: string | null;
+  slug_profil: string | null;
+  deposit_percentage: number | null;
+  stripe_account_id: string | null;
+  stripe_onboarding_complete: boolean | null;
+}
+interface FlashBookingRow {
+  id: string;
+  artist_id?: string;
+  title: string;
+  prix: number;
+  duree_minutes: number;
+  statut: string;
+  stock_limit: number;
+  stock_current: number;
+}
+interface BookingRow {
+  id: string;
+  statut_booking?: string;
+}
 type Res = { status: (n: number) => void; setHeader: (k: string, v: string) => void; end: (s: string) => void };
 
 // ============================================
@@ -62,25 +86,27 @@ async function handleArtistBookingInfo(req: Req, res: Res): Promise<void> {
     return;
   }
   try {
-    const { data: artist, error: artistError } = await supabase
+    const { data: artistData, error: artistError } = await supabase
       .from('artists')
       .select('id, nom_studio, slug_profil, deposit_percentage, stripe_account_id, stripe_onboarding_complete')
       .eq('slug_profil', slug)
       .single();
-    if (artistError || !artist) {
+    if (artistError || !artistData) {
       json(res, 404, { error: 'Artiste introuvable' });
       return;
     }
-    const { data: flash, error: flashError } = await supabase
+    const artist = artistData as ArtistBookingRow;
+    const { data: flashData, error: flashError } = await supabase
       .from('flashs')
       .select('id, title, prix, duree_minutes, statut, stock_limit, stock_current')
       .eq('id', flashId)
       .eq('artist_id', artist.id)
       .single();
-    if (flashError || !flash) {
+    if (flashError || !flashData) {
       json(res, 404, { error: 'Flash introuvable' });
       return;
     }
+    const flash = flashData as FlashBookingRow;
     if (flash.statut !== 'available') {
       json(res, 400, { error: 'Ce flash n\'est plus disponible' });
       return;
@@ -146,15 +172,16 @@ async function handleCancelPendingBooking(req: Req, res: Res): Promise<void> {
     return;
   }
   try {
-    const { data: booking, error: fetchError } = await supabase
+    const { data: bookingData, error: fetchError } = await supabase
       .from('bookings')
       .select('id, statut_booking')
       .eq('id', bookingId)
       .single();
-    if (fetchError || !booking) {
+    if (fetchError || !bookingData) {
       json(res, 404, { error: 'Réservation introuvable' });
       return;
     }
+    const booking = bookingData as BookingRow;
     if (booking.statut_booking !== 'pending') {
       json(res, 200, { success: true, message: 'Réservation déjà traitée' });
       return;
@@ -164,7 +191,7 @@ async function handleCancelPendingBooking(req: Req, res: Res): Promise<void> {
       .update({
         statut_booking: 'cancelled',
         updated_at: new Date().toISOString(),
-      })
+      } as never)
       .eq('id', bookingId)
       .eq('statut_booking', 'pending');
     if (updateError) {
@@ -260,26 +287,28 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     // ÉTAPE 1: Résoudre l'artiste
     let resolvedArtistId: string;
     if (artistId && uuidRegex.test(artistId)) {
-      const { data: artist, error: artistError } = await supabase
+      const { data: artistData, error: artistError } = await supabase
         .from('artists')
         .select('id, deposit_percentage, stripe_account_id, stripe_onboarding_complete')
         .eq('id', artistId)
         .single();
-      if (artistError || !artist) {
+      if (artistError || !artistData) {
         json(res, 404, { error: 'Artiste introuvable' });
         return;
       }
+      const artist = artistData as ArtistBookingRow;
       resolvedArtistId = artist.id;
     } else if (slug && slug.length <= 100 && /^[a-z0-9_-]+$/i.test(slug)) {
-      const { data: artist, error: artistError } = await supabase
+      const { data: artistData, error: artistError } = await supabase
         .from('artists')
         .select('id, deposit_percentage, stripe_account_id, stripe_onboarding_complete')
         .eq('slug_profil', slug)
         .single();
-      if (artistError || !artist) {
+      if (artistError || !artistData) {
         json(res, 404, { error: 'Artiste introuvable' });
         return;
       }
+      const artist = artistData as ArtistBookingRow;
       resolvedArtistId = artist.id;
     } else {
       json(res, 400, { error: 'Slug ou artist_id invalide' });
@@ -287,15 +316,16 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     }
 
     // ÉTAPE 2: Vérifier le flash
-    const { data: flash, error: flashError } = await supabase
+    const { data: flashData, error: flashError } = await supabase
       .from('flashs')
       .select('id, artist_id, prix, duree_minutes, statut, stock_limit, stock_current')
       .eq('id', flashId)
       .single();
-    if (flashError || !flash) {
+    if (flashError || !flashData) {
       json(res, 404, { error: 'Flash introuvable' });
       return;
     }
+    const flash = flashData as FlashBookingRow;
     if (flash.artist_id !== resolvedArtistId) {
       json(res, 403, { error: 'Ce flash n\'appartient pas à cet artiste' });
       return;
@@ -320,7 +350,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
         p_date_debut: dateDebut.toISOString(),
         p_date_fin: dateFin.toISOString(),
         p_exclude_booking_id: null,
-      });
+      } as never);
 
     if (availabilityError) {
       console.error('[create-booking] Availability check error:', availabilityError);
@@ -338,11 +368,12 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     }
 
     // ÉTAPE 4: Calculer l'acompte
-    const { data: artistRow } = await supabase
+    const { data: artistRowData } = await supabase
       .from('artists')
       .select('deposit_percentage')
       .eq('id', resolvedArtistId)
       .single();
+    const artistRow = artistRowData as { deposit_percentage: number | null } | null;
     const depositPercentage = artistRow?.deposit_percentage ?? 30;
     const prixTotal = flash.prix;
     const depositAmount = Math.round((prixTotal * depositPercentage) / 100);
@@ -352,7 +383,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     }
 
     // ÉTAPE 5: Créer la réservation (le trigger check_booking_no_overlap vérifiera atomiquement)
-    const { data: booking, error: insertError } = await supabase
+    const { data: bookingData, error: insertError } = await supabase
       .from('bookings')
       .insert({
         artist_id: resolvedArtistId,
@@ -369,7 +400,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
         deposit_percentage: depositPercentage,
         statut_paiement: 'pending',
         statut_booking: 'pending',
-      })
+      } as never)
       .select('id')
       .single();
 
@@ -396,6 +427,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
       return;
     }
 
+    const booking = bookingData as (BookingRow | null);
     if (!booking?.id) {
       json(res, 500, { 
         error: 'La réservation n\'a pas pu être enregistrée',

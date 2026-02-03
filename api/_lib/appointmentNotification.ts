@@ -125,11 +125,11 @@ export async function sendAppointmentNotification(options: SendAppointmentNotifi
     if (result.ok) return result;
 
     if (!result.ok) {
-      const { error } = result;
+      const errorMsg = (result as { ok: false; error: string }).error;
       console.error('[appointmentNotification] Artist email failed (attempt 1):', {
         projectId,
         artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
-        error,
+        error: errorMsg,
       });
     }
 
@@ -140,11 +140,11 @@ export async function sendAppointmentNotification(options: SendAppointmentNotifi
       if (result.ok) return result;
 
       if (!result.ok) {
-        const { error } = result;
+        const errorMsg = (result as { ok: false; error: string }).error;
         console.error('[appointmentNotification] Artist email failed after retry (attempt 2):', {
           projectId,
           artistEmail: artistEmail.replace(/(.{2}).*(@.*)/, '$1***$2'),
-          error,
+          error: errorMsg,
         });
       }
     }

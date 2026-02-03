@@ -203,7 +203,7 @@ export default async function handler(req: any, res: any) {
     // Step 2: Parse request body (Vercel: body can be string, Buffer, or pre-parsed object)
     const parseResult = parseRequestBody(req);
     if (!parseResult.ok) {
-      const { error } = parseResult;
+      const error = (parseResult as { ok: false; error: string }).error;
       console.error('[submit-project-request] Body parse failed:', error);
       return json(res, 400, { success: false, error }, rateLimitHeaders);
     }
@@ -213,7 +213,8 @@ export default async function handler(req: any, res: any) {
     const validationResult = validateProjectSubmission(requestBody);
 
     if (!validationResult.success) {
-      const { error, details } = validationResult;
+      const fail = validationResult as { success: false; error: string; details?: unknown };
+      const { error, details } = fail;
       console.error('[submit-project-request] Validation failed:', { error, details });
       return json(res, 400, {
         success: false,

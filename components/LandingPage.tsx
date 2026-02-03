@@ -339,7 +339,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               
               <motion.h1 
                 variants={fadeInUp}
-                className="text-5xl md:text-5xl lg:text-7xl font-display font-bold leading-[1.08] md:leading-[1.05] mb-6 md:mb-8 tracking-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-display font-bold leading-[1.12] sm:leading-[1.1] md:leading-[1.08] lg:leading-[1.05] mb-5 md:mb-8 tracking-tight"
               >
                 <span className="gradient-text">Logiciel de gestion tatoueur</span>
                 <br />
