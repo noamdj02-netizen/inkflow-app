@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PageSEO } from './seo/PageSEO';
 import { SITE_URL } from '../constants/seo';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Check, Zap, Building2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Zap, Building2, Sparkles } from 'lucide-react';
 import { Skeleton } from './common/Skeleton';
 
 const fadeInUp = {
@@ -165,19 +165,15 @@ export const OffresPage: React.FC = () => {
                 variants={fadeInUp}
                 className="w-full aspect-video max-w-4xl mx-auto rounded-2xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center"
               >
-                {/* Placeholder optimisé : lien vers une future vidéo ou embed */}
-                <a
-                  href="https://www.youtube.com/watch?v=placeholder"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center gap-4 text-zinc-400 hover:text-white transition-colors group"
-                  aria-label="Voir la vidéo de démonstration InkFlow"
-                >
-                  <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                    <Play size={36} className="text-amber-400 ml-1" fill="currentColor" />
-                  </div>
-                  <span className="text-sm font-medium">Voir la démo (bientôt disponible)</span>
-                </a>
+                <video
+                  src="/demo-video.mp4"
+                  className="w-full h-full object-cover"
+                  loop
+                  muted
+                  playsInline
+                  autoPlay
+                  aria-label="Vidéo de démonstration InkFlow"
+                />
               </motion.div>
             )}
           </motion.section>
