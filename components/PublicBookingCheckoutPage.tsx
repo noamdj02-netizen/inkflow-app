@@ -8,11 +8,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, ArrowLeft, Calendar, CreditCard, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Calendar, CreditCard, CheckCircle, Zap } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { checkoutFormSchema, type CheckoutFormData } from '../utils/validation';
 import { PageSEO } from './seo/PageSEO';
 import { Breadcrumbs } from './seo/Breadcrumbs';
+import { usePublicArtist } from '../hooks/usePublicArtist';
+import type { Flash } from '../types/supabase';
 
 type ArtistBookingInfo = {
   artist: {
@@ -71,11 +73,13 @@ export const PublicBookingCheckoutPage: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof CheckoutFormData, string>>>({});
 
-  // Redirection si paramètres manquants
+  const { artist: publicArtist, flashs, loading: loadingArtist } = usePublicArtist(slug);
+
+  // Redirection si pas de créneau ; sinon si pas de flash → étape "choisir un flash" ; si flash → charger récap
   useEffect(() => {
     if (!slug) return;
-    if (!flashId || !slotIso) {
-      navigate(`/${slug}/booking${flashId ? `?flashId=${encodeURIComponent(flashId)}` : ''}`, { replace: true });
+    if (!slotIso) {
+      navigate(`/${slug}/booking`, { replace: true });
       return;
     }
     const slotDate = new Date(slotIso);
@@ -84,22 +88,47 @@ export const PublicBookingCheckoutPage: React.FC = () => {
       setLoadingInfo(false);
       return;
     }
+    if (!flashId) {
+      setLoadingInfo(false);
+      return;
+    }
 
     let cancelled = false;
     setLoadingInfo(true);
     setInfoError(null);
     fetch(`${getApiBase()}/api/artist-booking-info?slug=${encodeURIComponent(slug)}&flash_id=${encodeURIComponent(flashId)}`)
-      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(async (res) => {
+        const text = await res.text();
+        let data: { error?: string } = {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          if (!res.ok) data = { error: res.status === 404 ? 'Flash ou artiste introuvable.' : 'Service temporairement indisponible.' };
+        }
+        return { ok: res.ok, data };
+      })
       .then(({ ok, data }) => {
         if (cancelled) return;
         if (!ok) {
-          setInfoError(data?.error || 'Flash ou artiste introuvable.');
+          setInfoError((data as { error?: string })?.error || 'Flash ou artiste introuvable.');
           return;
         }
-        setInfo(data as ArtistBookingInfo);
+        const parsed = data as ArtistBookingInfo;
+        if (!parsed?.artist || !parsed?.flash) {
+          setInfoError('Données incomplètes. Réessayez.');
+          return;
+        }
+        setInfo(parsed);
       })
       .catch(() => {
-        if (!cancelled) setInfoError('Chargement impossible. Réessayez.');
+        if (!cancelled) {
+          const inDev = import.meta.env.DEV;
+          setInfoError(
+            inDev
+              ? 'Service indisponible. En local, lancez "vercel dev" pour activer les API.'
+              : 'Chargement impossible. Réessayez.'
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingInfo(false);
@@ -211,6 +240,90 @@ export const PublicBookingCheckoutPage: React.FC = () => {
     );
   }
 
+  const slotDateForDisplay = slotIso ? new Date(slotIso) : null;
+  const slotFormattedShort = slotDateForDisplay && !Number.isNaN(slotDateForDisplay.getTime())
+    ? slotDateForDisplay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  // Étape « Choisissez un flash » : créneau choisi, pas encore de flash
+  if (slotIso && !flashId) {
+    if (loadingArtist) {
+      return (
+        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">
+          <Loader2 className="animate-spin text-amber-400" size={40} />
+          <p className="text-zinc-400">Chargement...</p>
+        </div>
+      );
+    }
+    const availableFlashs = (flashs || []).filter((f: Flash) => f.statut === 'available' && (f.stock_current ?? 0) < (f.stock_limit ?? 1));
+    return (
+      <div className="min-h-screen bg-[#050505] text-white font-sans antialiased">
+        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-neutral-800">
+          <div className="container mx-auto px-4 md:px-6 py-4">
+            <Link
+              to={`/${slug}/booking`}
+              className="inline-flex items-center gap-2 text-zinc-300 hover:text-white transition-colors text-sm font-medium"
+            >
+              <ArrowLeft size={18} /> Retour au calendrier
+            </Link>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-2xl" role="main">
+          <Breadcrumbs
+            items={[
+              { label: 'Accueil', path: '/' },
+              { label: publicArtist?.nom_studio ?? 'Artiste', path: `/${slug}` },
+              { label: 'Réservation', path: `/${slug}/booking` },
+              { label: 'Choisir un flash' },
+            ]}
+            className="mb-6"
+            currentUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+          />
+          <h1 className="text-2xl font-bold text-white mb-2">Choisissez un flash</h1>
+          <p className="text-zinc-400 text-sm mb-6">
+            Créneau sélectionné : <span className="text-white font-medium">{slotFormattedShort}</span>. Sélectionnez un flash pour continuer vers vos informations et le paiement.
+          </p>
+          {availableFlashs.length === 0 ? (
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 text-center">
+              <p className="text-zinc-400 mb-4">Aucun flash disponible pour le moment.</p>
+              <Link
+                to={`/${slug}/booking`}
+                className="inline-flex items-center gap-2 bg-amber-500 text-black px-6 py-3 rounded-xl font-semibold hover:bg-amber-400"
+              >
+                <ArrowLeft size={18} /> Choisir un autre créneau
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {availableFlashs.map((flash: Flash) => (
+                <li key={flash.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/${slug}/booking/checkout?slot=${encodeURIComponent(slotIso)}&flash_id=${encodeURIComponent(flash.id)}`, { replace: false })}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#0a0a0a] border border-white/10 text-left hover:border-amber-500/50 hover:bg-white/5 transition-colors"
+                  >
+                    {flash.image_url && (
+                      <img
+                        src={flash.image_url}
+                        alt=""
+                        className="w-16 h-16 rounded-lg object-cover shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white truncate">{flash.title}</p>
+                      <p className="text-sm text-zinc-400">{flash.prix / 100} € · {flash.duree_minutes} min</p>
+                    </div>
+                    <Zap size={20} className="text-amber-400 shrink-0" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   if (loadingInfo || (!info && !infoError)) {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">
@@ -220,7 +333,7 @@ export const PublicBookingCheckoutPage: React.FC = () => {
     );
   }
 
-  if (infoError || !info) {
+  if (infoError || !info || !info.artist || !info.flash) {
     return (
       <div className="min-h-screen bg-[#050505] text-white font-sans">
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-neutral-800">
@@ -278,7 +391,7 @@ export const PublicBookingCheckoutPage: React.FC = () => {
             <CheckCircle className="text-emerald-400 mx-auto mb-4" size={56} />
             <h1 className="text-xl font-bold text-white mb-2">Réservation enregistrée</h1>
             <p className="text-zinc-300 mb-6">
-              Votre demande a bien été prise en compte. {info.artist.nom_studio} vous recontactera pour confirmer le rendez-vous.
+              Votre demande a bien été prise en compte. {info.artist?.nom_studio ?? 'L\'artiste'} vous recontactera pour confirmer le rendez-vous.
             </p>
             <Link
               to={`/${slug}`}
@@ -292,8 +405,8 @@ export const PublicBookingCheckoutPage: React.FC = () => {
     );
   }
 
-  const pageTitle = `Finaliser la réservation | ${info.artist.nom_studio} | InkFlow`;
-  const pageDescription = `Finalisez votre réservation : ${info.flash.title} — ${slotFormatted}.`;
+  const pageTitle = `Finaliser la réservation | ${info.artist?.nom_studio ?? 'Artiste'} | InkFlow`;
+  const pageDescription = `Finalisez votre réservation : ${info.flash?.title ?? ''} — ${slotFormatted}.`;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans antialiased">
@@ -319,7 +432,7 @@ export const PublicBookingCheckoutPage: React.FC = () => {
         <Breadcrumbs
           items={[
             { label: 'Accueil', path: '/' },
-            { label: info.artist.nom_studio, path: `/${slug}` },
+            { label: info.artist?.nom_studio ?? 'Artiste', path: `/${slug}` },
             { label: 'Réservation', path: `/${slug}/booking` },
             { label: 'Finaliser' },
           ]}
