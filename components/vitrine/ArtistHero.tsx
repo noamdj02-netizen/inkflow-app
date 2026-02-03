@@ -38,6 +38,20 @@ function getSocialLinks(artist: ArtistVitrine): { instagram?: string; tiktok?: s
   return { instagram: instagram ?? undefined, tiktok: tiktok ?? undefined, facebook: facebook ?? undefined };
 }
 
+/** Couleur d'accent pour le hero (personnalisable ou défaut violet) */
+function getAccentColor(artist: ArtistVitrine): string {
+  const hex = artist.theme_accent_hex?.trim();
+  if (hex) return hex;
+  return 'var(--color-ink-accent)';
+}
+
+/** Couleur secondaire pour le dégradé du glow (personnalisable ou défaut) */
+function getSecondaryAccentColor(artist: ArtistVitrine): string {
+  const hex = artist.theme_secondary_hex?.trim();
+  if (hex) return hex;
+  return '#a78bfa';
+}
+
 export function ArtistHero({ artist, slug }: ArtistHeroProps) {
   const socialLinks = getSocialLinks(artist);
   const hasSocialLinks = Boolean(socialLinks.instagram || socialLinks.tiktok || socialLinks.facebook);
@@ -46,14 +60,37 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
       ? `${artist.years_experience}+ ans`
       : null;
 
+  const accentColor = getAccentColor(artist);
+  const secondaryColor = getSecondaryAccentColor(artist);
+  const heroBackgroundUrl = artist.vitrine_hero_background_url?.trim() || null;
+
   return (
-    <div className="flex flex-col items-center text-center vitrine-fonts">
+    <div
+      className="relative flex flex-col items-center text-center vitrine-fonts rounded-2xl overflow-hidden py-4"
+      style={
+        heroBackgroundUrl
+          ? {
+              backgroundImage: `url(${heroBackgroundUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }
+          : undefined
+      }
+    >
+      {/* Overlay sombre pour lisibilité du texte sur l'image de fond */}
+      {heroBackgroundUrl && (
+        <div className="absolute inset-0 bg-[#0a0a0a]/70 rounded-2xl" aria-hidden />
+      )}
+
+      <div className="relative z-10 flex flex-col items-center text-center w-full">
       {/* Avatar with glow */}
       <div className="relative group">
         <div
           className="absolute -inset-1 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-pulse"
           style={{
-            background: 'linear-gradient(to right, var(--color-ink-accent), #a78bfa)',
+            background: accentColor.startsWith('var(')
+              ? `linear-gradient(to right, ${accentColor}, ${secondaryColor})`
+              : `linear-gradient(to right, ${accentColor}, ${secondaryColor})`,
           }}
         />
         <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-full border-4 border-[#0a0a0a] overflow-hidden shadow-2xl bg-[var(--color-ink-card)]">
@@ -85,7 +122,7 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
           </h1>
           <p
             className="text-sm sm:text-base font-medium tracking-[0.3em] uppercase"
-            style={{ color: 'var(--color-ink-accent)' }}
+            style={{ color: accentColor }}
           >
             Tatoueur{artist.ville ? ` • ${artist.ville}` : ''}
           </p>
@@ -181,6 +218,7 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

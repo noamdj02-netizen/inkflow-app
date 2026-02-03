@@ -21,6 +21,19 @@ function priorityScript() {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  // Base URL canonique (ex. https://ink-flow.me) pour icônes PWA en absolu → logo correct sur mobile
+  const baseUrl = (env.VITE_SITE_URL || '').replace(/\/$/, '');
+  const iconBase = baseUrl || '';
+  const icons = [
+    { src: `${iconBase}/pwa-192x192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' as const },
+    { src: `${iconBase}/pwa-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' as const },
+    { src: `${iconBase}/pwa-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' as const }
+  ];
+  if (!baseUrl) {
+    icons[0].src = '/pwa-192x192.png';
+    icons[1].src = '/pwa-512x512.png';
+    icons[2].src = '/pwa-512x512.png';
+  }
   return {
     server: {
       port: 3000,
@@ -41,15 +54,11 @@ export default defineConfig(({ mode }) => {
             display: 'standalone',
             orientation: 'portrait',
             scope: '/',
-            start_url: '/',
+            start_url: baseUrl ? `${baseUrl}/` : '/',
             lang: 'fr',
             categories: ['business', 'productivity'],
             prefer_related_applications: false,
-            icons: [
-              { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-              { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-              { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-            ]
+            icons
           },
           workbox: {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,woff}'],

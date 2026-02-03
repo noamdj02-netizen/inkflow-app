@@ -9,7 +9,6 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion';
 import { Calendar, Loader2, ArrowLeft, Clock, Zap } from 'lucide-react';
 import { usePublicArtist } from '../hooks/usePublicArtist';
-import { toast } from 'sonner';
 import { PageSEO } from './seo/PageSEO';
 import { Breadcrumbs } from './seo/Breadcrumbs';
 
@@ -51,6 +50,8 @@ function buildMockSlots(): Slot[] {
 
 export const PublicBookingPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const flashId = searchParams.get('flashId')?.trim() || '';
   const navigate = useNavigate();
   const { artist, loading: artistLoading, notFound } = usePublicArtist(slug);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -103,15 +104,9 @@ export const PublicBookingPage: React.FC = () => {
     if (!selectedDate || !selectedTime || !slug) return;
     const slot = timeSlotsForSelected.find((s) => s.time === selectedTime);
     if (!slot) return;
-    if (flashId) {
-      navigate(`/${slug}/booking/checkout?flash_id=${encodeURIComponent(flashId)}&slot=${encodeURIComponent(slot.iso)}`, { replace: false });
-    } else {
-      toast.success('Créneau sélectionné', {
-        description: 'Choisissez un flash sur la vitrine pour réserver ce créneau.',
-        duration: 5000,
-      });
-      navigate(`/${slug}`, { state: { preferredSlot: slot }, replace: false });
-    }
+    const params = new URLSearchParams({ slot: slot.iso });
+    if (flashId) params.set('flash_id', flashId);
+    navigate(`/${slug}/booking/checkout?${params.toString()}`, { replace: false });
   };
 
   if (artistLoading || notFound || !artist) {

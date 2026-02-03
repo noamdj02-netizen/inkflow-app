@@ -26,6 +26,7 @@ export interface Database {
           theme_color: 'amber' | 'red' | 'blue' | 'emerald' | 'violet' | null
           theme_accent_hex: string | null
           theme_secondary_hex: string | null
+          vitrine_hero_background_url: string | null
           avatar_url: string | null
           bio_instagram: string | null
           pre_tattoo_instructions: string | null
@@ -46,6 +47,7 @@ export interface Database {
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
           theme_accent_hex?: string | null
           theme_secondary_hex?: string | null
+          vitrine_hero_background_url?: string | null
           avatar_url?: string | null
           bio_instagram?: string | null
           pre_tattoo_instructions?: string | null
@@ -65,6 +67,7 @@ export interface Database {
           theme_color?: 'amber' | 'red' | 'blue' | 'emerald' | 'violet'
           theme_accent_hex?: string | null
           theme_secondary_hex?: string | null
+          vitrine_hero_background_url?: string | null
           avatar_url?: string | null
           bio_instagram?: string | null
           pre_tattoo_instructions?: string | null

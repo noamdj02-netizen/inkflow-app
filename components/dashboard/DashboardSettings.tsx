@@ -8,6 +8,7 @@ import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
+import { SITE_URL } from '../../constants/seo';
 
 export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
@@ -17,6 +18,7 @@ export const DashboardSettings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingHeroBackground, setUploadingHeroBackground] = useState(false);
   const [generatingCalendarToken, setGeneratingCalendarToken] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -35,6 +37,8 @@ export const DashboardSettings: React.FC = () => {
     nb_avis: '' as string | number,
     years_experience: '' as string | number,
     vitrine_show_glow: true,
+    vitrine_hero_background_url: '',
+    heroBackgroundFile: null as File | null,
     instagram_url: '',
     tiktok_url: '',
     facebook_url: '',
@@ -221,6 +225,8 @@ export const DashboardSettings: React.FC = () => {
         nb_avis: (p.nb_avis as number) ?? '',
         years_experience: (p.years_experience as number) ?? '',
         vitrine_show_glow: p.vitrine_show_glow !== undefined ? (p.vitrine_show_glow as boolean) !== false : true,
+        vitrine_hero_background_url: (p.vitrine_hero_background_url as string) || '',
+        heroBackgroundFile: null,
         instagram_url: (p.instagram_url as string) || '',
         tiktok_url: (p.tiktok_url as string) || '',
         facebook_url: (p.facebook_url as string) || '',
@@ -364,6 +370,41 @@ export const DashboardSettings: React.FC = () => {
     }
   };
 
+  const uploadHeroBackground = async (file: File): Promise<string> => {
+    if (!user) throw new Error('User not authenticated');
+    const fileExt = file.name.split('.').pop();
+    const fileName = `hero-${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+    setUploadingHeroBackground(true);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
+      return `${urlData.publicUrl}?t=${Date.now()}`;
+    } finally {
+      setUploadingHeroBackground(false);
+    }
+  };
+
+  const handleHeroBackgroundChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        setError('L\'image de fond ne doit pas dépasser 3MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('Veuillez sélectionner une image');
+        return;
+      }
+      setFormData({ ...formData, heroBackgroundFile: file });
+    }
+    e.target.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -386,12 +427,13 @@ export const DashboardSettings: React.FC = () => {
 
       if (formData.avatarFile) {
         avatarUrl = await uploadAvatar(formData.avatarFile);
-        
-        setFormData(prev => ({
-          ...prev,
-          avatarUrl: avatarUrl,
-          avatarFile: null,
-        }));
+        setFormData(prev => ({ ...prev, avatarUrl, avatarFile: null }));
+      }
+
+      let heroBackgroundUrl = formData.vitrine_hero_background_url?.trim() || null;
+      if (formData.heroBackgroundFile) {
+        heroBackgroundUrl = await uploadHeroBackground(formData.heroBackgroundFile);
+        setFormData(prev => ({ ...prev, vitrine_hero_background_url: heroBackgroundUrl || '', heroBackgroundFile: null }));
       }
 
       const updates: Record<string, unknown> = {
@@ -402,6 +444,7 @@ export const DashboardSettings: React.FC = () => {
         theme_color: formData.theme_color,
         theme_accent_hex: formData.theme_accent_hex?.trim() ? formData.theme_accent_hex.trim() : null,
         theme_secondary_hex: formData.theme_secondary_hex?.trim() ? formData.theme_secondary_hex.trim() : null,
+        vitrine_hero_background_url: heroBackgroundUrl,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
       };
@@ -899,6 +942,70 @@ export const DashboardSettings: React.FC = () => {
               </div>
 
               <div className="mb-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Image de fond du hero (vitrine)
+                </label>
+                <p className="text-xs text-zinc-600 mb-3">
+                  Image affichée derrière votre nom et sous-titre sur la page publique. Choisissez un fichier ou collez une URL. Laissez vide pour un fond uni.
+                </p>
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  {(formData.heroBackgroundFile || formData.vitrine_hero_background_url) ? (
+                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-[#050505] w-full sm:w-48 aspect-video shrink-0">
+                      {formData.heroBackgroundFile ? (
+                        <img
+                          src={URL.createObjectURL(formData.heroBackgroundFile)}
+                          alt="Aperçu fond hero"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={formData.vitrine_hero_background_url}
+                          alt="Fond hero actuel"
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, heroBackgroundFile: null, vitrine_hero_background_url: '' })}
+                        className="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 hover:bg-red-500 shadow-sm"
+                        aria-label="Supprimer l'image"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full sm:w-48 aspect-video rounded-xl glass border-2 border-dashed border-white/20 flex items-center justify-center shrink-0">
+                      <ImageIcon className="text-zinc-600" size={32} />
+                    </div>
+                  )}
+                  <label className="flex-1 min-w-0 w-full">
+                    <div className="flex items-center gap-2 glass rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/10 transition-colors w-full sm:w-auto">
+                      <Upload size={18} className="text-zinc-400 shrink-0" />
+                      <span className="text-sm text-zinc-300">
+                        {uploadingHeroBackground ? 'Upload...' : formData.heroBackgroundFile ? 'Changer' : 'Choisir une image'}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleHeroBackgroundChange}
+                      disabled={uploadingHeroBackground}
+                    />
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  value={formData.vitrine_hero_background_url}
+                  onChange={(e) => setFormData({ ...formData, vitrine_hero_background_url: e.target.value, heroBackgroundFile: null })}
+                  className="mt-3 w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                  placeholder="Ou coller une URL d'image"
+                />
+                <p className="text-xs text-zinc-600 mt-1">PNG, JPG jusqu'à 3MB. Format paysage recommandé.</p>
+              </div>
+
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-zinc-400 mb-3">
                   Vitrine — infos et apparence
                 </label>
@@ -1033,11 +1140,19 @@ export const DashboardSettings: React.FC = () => {
                   const profileRecord = profile as Record<string, unknown> | undefined;
                   const hasIcalColumn = profileRecord && 'ical_feed_token' in profileRecord;
                   const token = (hasIcalColumn && profileRecord?.ical_feed_token) ? String(profileRecord.ical_feed_token) : null;
-                  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://inkflow.app';
-                  const feedUrl = token ? `${origin}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
-                  const host = typeof window !== 'undefined' ? window.location.host : 'inkflow.app';
-                  const webcalUrl = token ? `webcal://${host}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  // Utiliser l'URL canonique du site pour que le lien fonctionne sur iOS (Apple Calendar
+                  // doit atteindre une URL publique, pas localhost).
+                  const baseUrl = SITE_URL.replace(/\/$/, '');
+                  const feedUrl = token ? `${baseUrl}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  let webcalHost: string;
+                  try {
+                    webcalHost = new URL(baseUrl).host;
+                  } catch {
+                    webcalHost = 'ink-flow.me';
+                  }
+                  const webcalUrl = token ? `webcal://${webcalHost}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
                   const googleCalUrl = feedUrl ? `https://www.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}` : null;
+                  const isLocalhost = typeof window !== 'undefined' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baseUrl);
 
                   const handleGenerateToken = async () => {
                     if (!hasIcalColumn) {
@@ -1108,6 +1223,11 @@ export const DashboardSettings: React.FC = () => {
                               Google Calendar
                             </a>
                           </div>
+                          {isLocalhost && (
+                            <p className="text-xs text-amber-400/90 mt-2">
+                              Sur iOS, Apple Calendar ne peut pas atteindre localhost. Déployez l&apos;app et ouvrez cette page depuis votre domaine (ex. https://ink-flow.me) pour que le lien fonctionne sur mobile.
+                            </p>
+                          )}
                         </>
                       ) : (
                         <button
