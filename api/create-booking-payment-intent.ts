@@ -126,7 +126,7 @@ export default async function handler(req: any, res: any) {
 
     // Initialiser Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-12-15.clover',
+      apiVersion: '2026-01-28.clover',
     });
 
     // Récupérer les infos du flash pour la description

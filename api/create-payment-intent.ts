@@ -131,7 +131,7 @@ export default async function handler(req: any, res: any) {
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-12-15.clover',
+      apiVersion: '2026-01-28.clover',
     });
 
     // Create Payment Intent with Connect
