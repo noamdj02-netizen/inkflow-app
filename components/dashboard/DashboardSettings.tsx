@@ -99,8 +99,8 @@ export const DashboardSettings: React.FC = () => {
       
       // Call the API route to create Stripe Connect account and get onboarding link
       const apiUrl = isDevelopment 
-        ? `${window.location.origin}/api/stripe-connect-onboard`
-        : '/api/stripe-connect-onboard';
+        ? `${window.location.origin}/api/stripe`
+        : '/api/stripe';
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -108,6 +108,10 @@ export const DashboardSettings: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
+        body: JSON.stringify({
+          action: 'connect-onboard',
+          userId: user.id,
+        }),
       });
 
       // Check if response is ok and has content
@@ -220,8 +224,8 @@ export const DashboardSettings: React.FC = () => {
     try {
       const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
       const apiUrl = isDevelopment 
-        ? `${window.location.origin}/api/create-customer-portal`
-        : '/api/create-customer-portal';
+        ? `${window.location.origin}/api/stripe`
+        : '/api/stripe';
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -229,6 +233,7 @@ export const DashboardSettings: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: 'customer-portal',
           userId: user.id,
         }),
       });

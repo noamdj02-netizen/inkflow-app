@@ -60,12 +60,13 @@ export const SubscribePage: React.FC = () => {
       setLoading(plan);
       setError(null);
 
-      const response = await fetch('/api/create-subscription-checkout', {
+      const response = await fetch('/api/stripe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: 'subscription-checkout',
           plan,
           userId: user.id,
         }),

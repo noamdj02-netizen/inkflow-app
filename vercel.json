@@ -18,6 +18,38 @@
       "destination": "/api/booking"
     },
     {
+      "source": "/api/create-subscription-checkout",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/create-customer-portal",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/create-checkout-session",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/create-flash-checkout",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/create-payment-intent",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/create-booking-payment-intent",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/stripe-connect-onboard",
+      "destination": "/api/stripe"
+    },
+    {
+      "source": "/api/stripe-connect-callback",
+      "destination": "/api/stripe"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
