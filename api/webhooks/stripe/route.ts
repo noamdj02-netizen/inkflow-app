@@ -201,8 +201,8 @@ export default async function handler(req: any, res: any) {
               stripe_subscription_id: subscription.id,
               subscription_plan: subscriptionPlan || null,
               subscription_status: subscriptionStatus,
-              subscription_current_period_end: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000).toISOString()
+              subscription_current_period_end: (subscription as any).current_period_end
+                ? new Date((subscription as any).current_period_end * 1000).toISOString()
                 : null,
             })
             .eq('id', userId);
@@ -266,8 +266,8 @@ export default async function handler(req: any, res: any) {
               stripe_subscription_id: subscription.id,
               subscription_plan: subscriptionPlan || null,
               subscription_status: subscriptionStatus,
-              subscription_current_period_end: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000).toISOString()
+              subscription_current_period_end: (subscription as any).current_period_end
+                ? new Date((subscription as any).current_period_end * 1000).toISOString()
                 : null,
             })
             .eq('id', user.id);
@@ -307,8 +307,8 @@ export default async function handler(req: any, res: any) {
               stripe_subscription_id: subscription.id,
               subscription_plan: subscriptionPlan || null,
               subscription_status: subscriptionStatus,
-              subscription_current_period_end: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000).toISOString()
+              subscription_current_period_end: (subscription as any).current_period_end
+                ? new Date((subscription as any).current_period_end * 1000).toISOString()
                 : null,
             })
             .eq('id', userId);

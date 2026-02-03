@@ -92,7 +92,7 @@ export default async function handler(req: any, res: any) {
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2026-01-28.clover',
     });
 
     // Récupérer ou créer le Stripe Customer
