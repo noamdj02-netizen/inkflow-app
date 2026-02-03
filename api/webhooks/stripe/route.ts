@@ -34,6 +34,20 @@ function requireEnv(name: string): string {
   return v.trim();
 }
 
+const STRIPE_PRICE_IDS = {
+  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_1SwmmH5JVD1yZUQvapWip4ds',
+  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_1Swmmj5JVD1yZUQvJXiZN5F2',
+  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_1Swmn35JVD1yZUQvg8ZIGyJk',
+};
+
+function getPriceIdToPlanMap(): Record<string, string> {
+  return {
+    [STRIPE_PRICE_IDS.STARTER]: 'STARTER',
+    [STRIPE_PRICE_IDS.PRO]: 'PRO',
+    [STRIPE_PRICE_IDS.STUDIO]: 'STUDIO',
+  };
+}
+
 export default async function handler(req: any, res: any) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -185,12 +199,7 @@ export default async function handler(req: any, res: any) {
           let subscriptionPlan = plan;
           if (!subscriptionPlan) {
             const priceId = subscription.items.data[0]?.price.id;
-            const priceIdMap: Record<string, string> = {
-              [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
-              [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
-              [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
-            };
-            subscriptionPlan = priceIdMap[priceId || ''] as 'STARTER' | 'PRO' | 'STUDIO' | undefined;
+            subscriptionPlan = getPriceIdToPlanMap()[priceId || ''] as 'STARTER' | 'PRO' | 'STUDIO' | undefined;
           }
 
           // Mettre à jour la table users
@@ -249,16 +258,9 @@ export default async function handler(req: any, res: any) {
           
           const subscriptionStatus = statusMap[subscription.status] || 'canceled';
           
-          // Déterminer le plan depuis le price ID
           const priceId = subscription.items.data[0]?.price.id;
-          const priceIdMap: Record<string, string> = {
-            [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
-            [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
-            [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
-          };
-          const subscriptionPlan = priceIdMap[priceId || ''] || subscription.metadata?.plan;
+          const subscriptionPlan = getPriceIdToPlanMap()[priceId || ''] || subscription.metadata?.plan;
 
-          // Mettre à jour la table users
           const { error: updateError } = await supabase
             .from('users')
             .update({
@@ -291,14 +293,8 @@ export default async function handler(req: any, res: any) {
           };
           
           const subscriptionStatus = statusMap[subscription.status] || 'canceled';
-          
           const priceId = subscription.items.data[0]?.price.id;
-          const priceIdMap: Record<string, string> = {
-            [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
-            [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
-            [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
-          };
-          const subscriptionPlan = priceIdMap[priceId || ''] || subscription.metadata?.plan;
+          const subscriptionPlan = getPriceIdToPlanMap()[priceId || ''] || subscription.metadata?.plan;
 
           const { error: updateError } = await supabase
             .from('users')

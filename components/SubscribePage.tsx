@@ -76,9 +76,16 @@ export const SubscribePage: React.FC = () => {
       const data = await safeParseJson<{
         url?: string;
         error?: string;
+        code?: string;
         bypassPayment?: boolean;
         redirectUrl?: string;
       }>(response);
+
+      if (response.status === 401 || data.code === 'AUTH_REQUIRED') {
+        toast.error('Session expirée. Reconnectez-vous.');
+        navigate('/login');
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
