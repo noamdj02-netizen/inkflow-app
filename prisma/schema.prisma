@@ -1,0 +1,203 @@
+// Schema Prisma pour InkFlow - Système de réservation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  ARTIST
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT // Créneau bloqué temporairement en attente de l'acompte
+  CONFIRMED       // Acompte payé, RDV validé
+  CANCELLED
+  COMPLETED
+}
+
+enum SubscriptionPlan {
+  STARTER // 29€/mois - 1 artiste, 2% frais Stripe
+  PRO     // 49€/mois - Illimité, 0% frais, Formulaire IA
+  STUDIO  // 99€/mois - Jusqu'à 3 artistes, Multi-calendriers
+}
+
+enum SubscriptionStatus {
+  active     // Abonnement actif et payé
+  trialing   // Période d'essai
+  past_due   // Paiement en retard
+  canceled   // Abonnement annulé
+  incomplete // Paiement incomplet
+  incomplete_expired // Paiement incomplet expiré
+  unpaid     // Non payé
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  role      UserRole @default(CLIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Stripe Subscription (SaaS)
+  stripeCustomerId    String?              @unique
+  stripeSubscriptionId String?             @unique
+  subscriptionPlan    SubscriptionPlan?
+  subscriptionStatus  SubscriptionStatus?
+  subscriptionCurrentPeriodEnd DateTime?   // Date de fin de période actuelle
+  
+  // Relations
+  artistProfile ArtistProfile? // Si c'est un tatoueur
+  bookings      Booking[]      @relation("ClientBookings") // Ses RDV en tant que client
+  
+  @@index([stripeCustomerId])
+  @@index([subscriptionStatus])
+  @@index([subscriptionPlan])
+}
+
+model ArtistProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  slug        String @unique // pour l'url: inkflow.com/artist/nom
+  description String?
+  
+  // Paramètres du planning
+  slotIntervalMin Int @default(30) // Découpage du planning (ex: toutes les 30min)
+  minNoticeHours  Int @default(24) // Pas de rdv moins de 24h avant
+
+  // Champs existants (compatibilité)
+  nomStudio                String?
+  stripeAccountId          String?
+  stripeOnboardingComplete Boolean @default(false)
+  depositPercentage        Int     @default(30)
+  themeColor               String? @default("amber")
+  themeAccentHex           String?
+  themeSecondaryHex         String?
+  avatarUrl                String?
+  bioInstagram             String?
+  preTattooInstructions    String?
+
+  services     Service[]
+  workingHours WorkingHour[]
+  bookings     Booking[]     @relation("ArtistBookings")
+  leaves       Leave[]       // Vacances / Absences
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkingHour {
+  id        String   @id @default(cuid())
+  artistId  String
+  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek Int    // 0 = Dimanche, 1 = Lundi, etc.
+  startTime String // Format "09:00"
+  endTime   String // Format "19:00"
+  isActive  Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([artistId, dayOfWeek])
+  @@index([artistId, dayOfWeek, isActive])
+}
+
+model Leave {
+  id        String   @id @default(cuid())
+  artistId  String
+  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  
+  date      DateTime @db.Date // Jour spécifique bloqué
+  reason    String?
+  
+  createdAt DateTime @default(now())
+
+  @@index([artistId, date])
+}
+
+model Service {
+  id            String   @id @default(cuid())
+  artistId      String
+  artist        ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  
+  name          String // ex: "Flash M", "Consultation", "Journée Complète"
+  durationMin   Int    // Durée en minutes (ex: 180 pour 3h)
+  price         Decimal @db.Decimal(10, 2) // Prix total en euros
+  depositAmount Decimal @db.Decimal(10, 2) // Montant de l'acompte obligatoire
+  
+  // Champs optionnels (compatibilité avec flashs)
+  imageUrl      String?
+  tailleCm      String?
+  style         String?
+  statut        String? @default("available")
+  stockLimit    Int?    @default(1)
+  stockCurrent  Int?    @default(0)
+
+  bookings      Booking[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([artistId])
+  @@index([artistId, statut])
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  
+  // Qui, Quoi, Avec Qui
+  clientId  String
+  client    User          @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  artistId  String
+  artist    ArtistProfile @relation("ArtistBookings", fields: [artistId], references: [id], onDelete: Cascade)
+  
+  serviceId String
+  service   Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  // Quand
+  startTime DateTime
+  endTime   DateTime // Calculé automatiquement : startTime + service.durationMin
+
+  // État
+  status        BookingStatus @default(PENDING_PAYMENT)
+  paymentIntent String?       // ID Stripe pour retrouver le paiement
+  
+  // Relations
+  stripeTransactions StripeTransaction[]
+  
+  @@index([artistId, startTime])
+  @@index([clientId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([artistId, status, startTime])
+}
+
+model StripeTransaction {
+  id                  String   @id @default(cuid())
+  bookingId           String?
+  booking             Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  artistId            String
+  stripePaymentIntentId String @unique
+  amount              Int      // En centimes
+  currency            String   @default("eur")
+  status              String   // succeeded, pending, failed, refunded
+  paymentType         String   // deposit, full_payment
+  createdAt           DateTime @default(now())
+
+  @@index([artistId])
+  @@index([bookingId])
+}

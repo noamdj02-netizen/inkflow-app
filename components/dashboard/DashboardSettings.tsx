@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink, Calendar } from 'lucide-react';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink, Calendar, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
@@ -13,6 +13,7 @@ import { SITE_URL } from '../../constants/seo';
 export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
   const { user, loading: authLoading } = useAuth();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export const DashboardSettings: React.FC = () => {
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
   // Check URL params for Stripe callback status
   useEffect(() => {
@@ -203,6 +205,52 @@ export const DashboardSettings: React.FC = () => {
         } : undefined,
       });
       setStripeConnecting(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user) {
+      toast.error('Vous devez être connecté');
+      return;
+    }
+
+    setLoadingPortal(true);
+    setError(null);
+
+    try {
+      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      const apiUrl = isDevelopment 
+        ? `${window.location.origin}/api/create-customer-portal`
+        : '/api/create-customer-portal';
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la création de la session');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL du portail non reçue');
+      }
+    } catch (err: any) {
+      console.error('Error creating customer portal session:', err);
+      const errorMessage = err.message || 'Une erreur est survenue';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoadingPortal(false);
     }
   };
 
@@ -1275,6 +1323,85 @@ export const DashboardSettings: React.FC = () => {
                   <span className="shrink-0">50%</span>
                   <span className="shrink-0">100%</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Section: Abonnement */}
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
+              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Crown className="text-purple-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Abonnement</h3>
+                  <p className="text-sm text-zinc-500">Gérez votre abonnement et votre facturation</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {subscriptionLoading ? (
+                  <div className="p-4 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-zinc-400" size={20} />
+                  </div>
+                ) : subscription?.status === 'active' || subscription?.status === 'trialing' ? (
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <CheckCircle className="text-purple-400 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-purple-400 font-semibold text-sm mb-1">
+                          Abonnement actif - {getPlanDisplayName(subscription.plan)}
+                        </p>
+                        <p className="text-zinc-400 text-xs">
+                          {subscription.subscriptionCurrentPeriodEnd
+                            ? `Renouvellement le ${new Date(subscription.subscriptionCurrentPeriodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                            : 'Abonnement actif'}
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={handleManageSubscription}
+                      disabled={loadingPortal}
+                      className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loadingPortal ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Chargement...
+                        </>
+                      ) : (
+                        <>
+                          <Settings size={18} />
+                          Gérer mon abonnement
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-amber-400 font-semibold text-sm mb-1">Aucun abonnement actif</p>
+                        <p className="text-zinc-400 text-xs">
+                          Abonnez-vous pour accéder à toutes les fonctionnalités d'InkFlow.
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => navigate('/subscribe')}
+                      className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-semibold py-3 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Crown size={18} />
+                      Choisir un plan
+                    </motion.button>
+                  </div>
+                )}
               </div>
             </div>
 

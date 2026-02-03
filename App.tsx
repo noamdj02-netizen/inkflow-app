@@ -38,6 +38,7 @@ const PublicBookingPage = lazy(() => import('./components/PublicBookingPage').th
 const PublicBookingCheckoutPage = lazy(() => import('./components/PublicBookingCheckoutPage').then(m => ({ default: m.PublicBookingCheckoutPage })));
 const AproposPage = lazy(() => import('./components/AproposPage').then(m => ({ default: m.AproposPage })));
 const OffresPage = lazy(() => import('./components/OffresPage').then(m => ({ default: m.OffresPage })));
+const SubscribePage = lazy(() => import('./components/SubscribePage').then(m => ({ default: m.SubscribePage })));
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./components/RegisterPage').then(m => ({ default: m.RegisterPage })));
 
@@ -84,6 +85,8 @@ const App: React.FC = () => {
                   <Route path="/" element={<LandingPage onNavigate={() => {}} />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/subscribe" element={<SubscribePage />} />
+                  <Route path="/subscribe/success" element={<PaymentSuccess />} />
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
                   <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
                   
@@ -125,9 +128,9 @@ const App: React.FC = () => {
                   <Route
                     path="/dashboard"
                     element={
-                      <ProtectedRoute>
+                      <SubscriptionProtectedRoute>
                         <DashboardLayout />
-                      </ProtectedRoute>
+                      </SubscriptionProtectedRoute>
                     }
                   >
                     {/* Default route - redirect to overview */}

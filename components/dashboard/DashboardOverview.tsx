@@ -148,6 +148,11 @@ export const DashboardOverview: React.FC = () => {
   const navigate = useNavigate();
   const [toast, setToast] = useState<string | null>(null);
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const headerRef = React.useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = React.useState<number | 'auto'>('auto');
   const {
     activeWidgets,
     activeDefinitions,
@@ -176,6 +181,54 @@ export const DashboardOverview: React.FC = () => {
     if (fromIndex === -1 || toIndex === -1) return;
     reorderWidgets(fromIndex, toIndex);
   };
+
+  // Mesurer la hauteur du header au montage
+  React.useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const measureHeader = () => {
+      if (isHeaderVisible && header.offsetHeight > 0) {
+        setHeaderHeight(header.offsetHeight);
+      }
+    };
+
+    measureHeader();
+    const resizeObserver = new ResizeObserver(measureHeader);
+    resizeObserver.observe(header);
+
+    return () => resizeObserver.disconnect();
+  }, [isHeaderVisible]);
+
+  // Scroll listener : masquer/afficher le header selon la direction du scroll
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const currentScrollY = container.scrollTop;
+      const scrollThreshold = 30; // Seuil pour éviter les changements trop sensibles
+
+      // Si on est tout en haut, toujours afficher
+      if (currentScrollY < scrollThreshold) {
+        setIsHeaderVisible(true);
+        setLastScrollY(currentScrollY);
+        return;
+      }
+
+      // Masquer si on scroll vers le bas, afficher si on remonte
+      if (currentScrollY > lastScrollY && currentScrollY > scrollThreshold) {
+        setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsHeaderVisible(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const handleShare = async () => {
     if (!profile?.slug_profil || typeof window === 'undefined') return;
@@ -208,7 +261,20 @@ export const DashboardOverview: React.FC = () => {
 
   return (
     <>
-      <header className="flex flex-col gap-3 py-3 px-4 md:flex-row md:gap-0 md:h-16 md:items-center md:justify-between md:py-0 md:px-6 border-b border-white/5 bg-[#0a0a0a] z-10 flex-shrink-0">
+      <motion.header
+        ref={headerRef}
+        initial={{ opacity: 1 }}
+        animate={{
+          opacity: isHeaderVisible ? 1 : 0,
+          height: isHeaderVisible ? (typeof headerHeight === 'number' ? `${headerHeight}px` : 'auto') : '0px',
+        }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        className="sticky top-0 flex flex-col gap-3 py-3 px-4 md:flex-row md:gap-0 md:h-16 md:items-center md:justify-between md:py-0 md:px-6 border-b border-white/5 bg-[#0a0a0a] z-10 flex-shrink-0"
+        style={{ 
+          pointerEvents: isHeaderVisible ? 'auto' : 'none',
+          overflow: 'hidden',
+        }}
+      >
         <div className="shrink-0">
           <motion.h2
             initial={{ opacity: 0, y: -10 }}
@@ -248,7 +314,7 @@ export const DashboardOverview: React.FC = () => {
             <Plus size={16} /> Nouveau Flash
           </motion.button>
         </div>
-      </header>
+      </motion.header>
 
       <WidgetLibraryModal
         open={widgetModalOpen}
@@ -259,7 +325,10 @@ export const DashboardOverview: React.FC = () => {
         resetToDefault={resetToDefault}
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 md:pb-6">
+      <div 
+        ref={scrollContainerRef} 
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 md:pb-6"
+      >
         <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
           <SortableContext items={widgetIds} strategy={verticalListSortingStrategy}>
             <div className="grid grid-cols-12 gap-4 items-start [grid-auto-flow:dense]">

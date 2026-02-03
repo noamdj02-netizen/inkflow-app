@@ -150,98 +150,209 @@ export default async function handler(req: any, res: any) {
         break;
       }
 
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number; current_period_start?: number };
-        const customerId = subscription.customer as string;
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
         
-        // Get user by Stripe customer ID (if you store it)
-        // Or use metadata
-        const userId = subscription.metadata?.userId;
-        
-        if (userId) {
-          // Update artists table
-          const { error: artistError } = await supabase
-            .from('artists')
+        // Si c'est un abonnement (mode: subscription)
+        if (session.mode === 'subscription' && session.subscription) {
+          const userId = session.metadata?.userId;
+          const plan = session.metadata?.plan as 'STARTER' | 'PRO' | 'STUDIO' | undefined;
+          
+          if (!userId) {
+            console.error('No userId found in checkout session metadata');
+            break;
+          }
+
+          // Récupérer la subscription complète depuis Stripe
+          const stripe = getStripeServer();
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          
+          // Mapper le statut Stripe vers notre enum
+          const statusMap: Record<string, string> = {
+            'active': 'active',
+            'trialing': 'trialing',
+            'past_due': 'past_due',
+            'canceled': 'canceled',
+            'cancelled': 'canceled',
+            'incomplete': 'incomplete',
+            'incomplete_expired': 'incomplete_expired',
+            'unpaid': 'unpaid',
+          };
+          
+          const subscriptionStatus = statusMap[subscription.status] || 'canceled';
+          
+          // Mapper le plan depuis le price ID ou metadata
+          let subscriptionPlan = plan;
+          if (!subscriptionPlan) {
+            const priceId = subscription.items.data[0]?.price.id;
+            const priceIdMap: Record<string, string> = {
+              [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
+              [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
+              [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
+            };
+            subscriptionPlan = priceIdMap[priceId || ''] as 'STARTER' | 'PRO' | 'STUDIO' | undefined;
+          }
+
+          // Mettre à jour la table users
+          const { error: updateError } = await supabase
+            .from('users')
             .update({
-              stripe_customer_id: customerId,
+              stripe_customer_id: subscription.customer as string,
               stripe_subscription_id: subscription.id,
-              stripe_subscription_status: subscription.status,
-              is_premium: subscription.status === 'active',
-              premium_until: subscription.current_period_end 
+              subscription_plan: subscriptionPlan || null,
+              subscription_status: subscriptionStatus,
+              subscription_current_period_end: subscription.current_period_end
                 ? new Date(subscription.current_period_end * 1000).toISOString()
                 : null,
-              updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
 
-          if (artistError) {
-            console.error('Error updating artist subscription:', artistError);
+          if (updateError) {
+            console.error('Error updating user subscription:', updateError);
+          } else {
+            console.log(`✅ Subscription created/updated for user ${userId}: ${subscriptionPlan} (${subscriptionStatus})`);
           }
+        }
+        break;
+      }
 
-          // Create/update subscription record
-          const { error: subscriptionError } = await supabase
-            .from('subscriptions')
-            .upsert({
-              user_id: userId,
-              stripe_subscription_id: subscription.id,
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+        const userId = subscription.metadata?.userId;
+        
+        if (!userId) {
+          // Essayer de trouver l'utilisateur par customer_id
+          const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          
+          if (!user) {
+            console.error('No userId found for subscription:', subscription.id);
+            break;
+          }
+          
+          // Mapper le statut et le plan
+          const statusMap: Record<string, string> = {
+            'active': 'active',
+            'trialing': 'trialing',
+            'past_due': 'past_due',
+            'canceled': 'canceled',
+            'cancelled': 'canceled',
+            'incomplete': 'incomplete',
+            'incomplete_expired': 'incomplete_expired',
+            'unpaid': 'unpaid',
+          };
+          
+          const subscriptionStatus = statusMap[subscription.status] || 'canceled';
+          
+          // Déterminer le plan depuis le price ID
+          const priceId = subscription.items.data[0]?.price.id;
+          const priceIdMap: Record<string, string> = {
+            [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
+            [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
+            [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
+          };
+          const subscriptionPlan = priceIdMap[priceId || ''] || subscription.metadata?.plan;
+
+          // Mettre à jour la table users
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
               stripe_customer_id: customerId,
-              stripe_price_id: subscription.items.data[0]?.price.id || null,
-              status: subscription.status,
-              current_period_start: subscription.current_period_start
-                ? new Date(subscription.current_period_start * 1000).toISOString()
-                : null,
-              current_period_end: subscription.current_period_end
+              stripe_subscription_id: subscription.id,
+              subscription_plan: subscriptionPlan || null,
+              subscription_status: subscriptionStatus,
+              subscription_current_period_end: subscription.current_period_end
                 ? new Date(subscription.current_period_end * 1000).toISOString()
                 : null,
-              cancel_at_period_end: subscription.cancel_at_period_end || false,
-              canceled_at: subscription.canceled_at
-                ? new Date(subscription.canceled_at * 1000).toISOString()
-                : null,
-              metadata: subscription.metadata || {},
-              updated_at: new Date().toISOString(),
-            }, {
-              onConflict: 'stripe_subscription_id',
-            });
+            })
+            .eq('id', user.id);
 
-          if (subscriptionError) {
-            console.error('Error upserting subscription:', subscriptionError);
+          if (updateError) {
+            console.error('Error updating user subscription:', updateError);
+          } else {
+            console.log(`✅ Subscription ${event.type} for user ${user.id}: ${subscriptionPlan} (${subscriptionStatus})`);
+          }
+        } else {
+          // Même logique si userId est dans metadata
+          const statusMap: Record<string, string> = {
+            'active': 'active',
+            'trialing': 'trialing',
+            'past_due': 'past_due',
+            'canceled': 'canceled',
+            'cancelled': 'canceled',
+            'incomplete': 'incomplete',
+            'incomplete_expired': 'incomplete_expired',
+            'unpaid': 'unpaid',
+          };
+          
+          const subscriptionStatus = statusMap[subscription.status] || 'canceled';
+          
+          const priceId = subscription.items.data[0]?.price.id;
+          const priceIdMap: Record<string, string> = {
+            [process.env.STRIPE_PRICE_ID_STARTER || '']: 'STARTER',
+            [process.env.STRIPE_PRICE_ID_PRO || '']: 'PRO',
+            [process.env.STRIPE_PRICE_ID_STUDIO || '']: 'STUDIO',
+          };
+          const subscriptionPlan = priceIdMap[priceId || ''] || subscription.metadata?.plan;
+
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscription.id,
+              subscription_plan: subscriptionPlan || null,
+              subscription_status: subscriptionStatus,
+              subscription_current_period_end: subscription.current_period_end
+                ? new Date(subscription.current_period_end * 1000).toISOString()
+                : null,
+            })
+            .eq('id', userId);
+
+          if (updateError) {
+            console.error('Error updating user subscription:', updateError);
           }
         }
         break;
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription & { current_period_end?: number; current_period_start?: number };
+        const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.userId;
+        const customerId = subscription.customer as string;
         
-        if (userId) {
-          // Update artists table
-          const { error: artistError } = await supabase
-            .from('artists')
-            .update({
-              is_premium: false,
-              stripe_subscription_status: 'canceled',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-
-          if (artistError) {
-            console.error('Error canceling artist subscription:', artistError);
+        // Trouver l'utilisateur par userId ou customerId
+        let targetUserId = userId;
+        if (!targetUserId) {
+          const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          
+          if (user) {
+            targetUserId = user.id;
           }
-
-          // Update subscription record
-          const { error: subscriptionError } = await supabase
-            .from('subscriptions')
+        }
+        
+        if (targetUserId) {
+          // Mettre à jour la table users
+          const { error: updateError } = await supabase
+            .from('users')
             .update({
-              status: 'canceled',
-              canceled_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
+              subscription_status: 'canceled',
+              subscription_current_period_end: null,
             })
-            .eq('stripe_subscription_id', subscription.id);
+            .eq('id', targetUserId);
 
-          if (subscriptionError) {
-            console.error('Error updating subscription record:', subscriptionError);
+          if (updateError) {
+            console.error('Error canceling user subscription:', updateError);
+          } else {
+            console.log(`✅ Subscription canceled for user ${targetUserId}`);
           }
         }
         break;

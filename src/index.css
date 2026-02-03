@@ -31,7 +31,7 @@
 
 /* Custom styles */
 html, body {
-  background-color: #0a0a0a;
+  background-color: #000000;
   color: #fafafa;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   overflow-x: hidden;
@@ -80,7 +80,10 @@ html, body {
 
 /* Pour les headers fixes (barre de statut / encoche iPhone) */
 .header-safe {
-  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  /* Le fond du header doit s'étendre jusqu'en haut (derrière la barre de statut) */
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  /* S'assurer que le fond s'étend jusqu'en haut de l'écran */
+  background-color: #0a0a0a;
 }
 
 /* Pour les footers / barre de navigation (Home Indicator iOS) */

@@ -35,8 +35,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <style>
       /* Shell immédiat : fond sombre + fallback font (mobile) ; safe areas pour PWA standalone */
-      html, body { margin: 0; padding: 0; background: #0a0a0a; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; overscroll-behavior: none; }
-      #root { min-height: 100vh; background: #0a0a0a; display: flex; align-items: center; justify-content: center; padding-top: env(safe-area-inset-top, 0); padding-bottom: env(safe-area-inset-bottom, 0); padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0); box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: #000000; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; overscroll-behavior: none; }
+      /* #root : pas de padding-top ici, laissé aux composants (header gère safe-area-inset-top) pour éviter double padding */
+      #root { min-height: 100vh; background: #000000; display: flex; align-items: center; justify-content: center; padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0); padding-bottom: env(safe-area-inset-bottom, 0); box-sizing: border-box; }
       #root .app-loading { text-align: center; color: rgba(255,255,255,0.9); }
       #root .app-loading .logo { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.05em; }
       #root .app-loading .logo span { color: #71717a; }

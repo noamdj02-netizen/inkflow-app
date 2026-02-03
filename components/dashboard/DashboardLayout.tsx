@@ -108,7 +108,7 @@ const DashboardLayoutInner: React.FC = () => {
       <PWAInstallPrompt />
       
       {/* Mobile Header — safe area top pour barre de statut / encoche (PWA standalone) */}
-      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe">
+      <header className="fixed top-0 left-0 right-0 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe" style={{ minHeight: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(true)}

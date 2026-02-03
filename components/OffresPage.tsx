@@ -15,11 +15,6 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.04 } },
 };
 
-/** Skeleton pour la section vidéo (évite flash blanc/noir). */
-const VideoSkeleton: React.FC = () => (
-  <div className="w-full aspect-video max-w-4xl mx-auto rounded-2xl overflow-hidden bg-white/5 animate-pulse border border-white/10" />
-);
-
 /** Skeleton pour la grille de prix. */
 const PricingSkeleton: React.FC = () => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -80,14 +75,13 @@ const OFFERS = [
 export const OffresPage: React.FC = () => {
   const navigate = useNavigate();
   // Contenu affiché immédiatement (pas de délai) pour fluidité mobile
-  const [videoReady, setVideoReady] = useState(true);
   const [pricingReady, setPricingReady] = useState(true);
 
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
       <PageSEO
-        title="Nos Offres & Démo | InkFlow"
-        description="Découvrez les offres InkFlow : Starter, Pro et Enterprise. Vidéo démo et tarifs pour tatoueurs et studios. Essai gratuit."
+        title="Nos Offres | InkFlow"
+        description="Découvrez les offres InkFlow : Starter, Pro et Enterprise. Tarifs pour tatoueurs et studios. Essai gratuit."
         canonical="/offres"
         image={`${SITE_URL.replace(/\/$/, '')}/pwa-512x512.png`}
         ogType="website"
@@ -141,41 +135,11 @@ export const OffresPage: React.FC = () => {
             className="text-center mb-16 md:mb-20"
           >
             <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-serif font-bold text-white mb-4">
-              Nos offres & démo
+              Nos offres
             </motion.h1>
             <motion.p variants={fadeInUp} className="text-zinc-400 text-lg max-w-2xl mx-auto">
-              Choisissez la formule adaptée à votre activité. Vidéo de présentation et tarifs détaillés.
+              Choisissez la formule adaptée à votre activité. Tarifs détaillés ci-dessous.
             </motion.p>
-          </motion.section>
-
-          {/* Section Vidéo Démo */}
-          <motion.section
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-            className="mb-20 md:mb-28"
-          >
-            <motion.h2 variants={fadeInUp} className="text-2xl font-semibold text-white mb-6 text-center">
-              Vidéo démo
-            </motion.h2>
-            {!videoReady ? (
-              <VideoSkeleton />
-            ) : (
-              <motion.div
-                variants={fadeInUp}
-                className="w-full aspect-video max-w-4xl mx-auto rounded-2xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center"
-              >
-                <video
-                  src="/demo-video.mp4"
-                  className="w-full h-full object-cover"
-                  loop
-                  muted
-                  playsInline
-                  autoPlay
-                  aria-label="Vidéo de démonstration InkFlow"
-                />
-              </motion.div>
-            )}
           </motion.section>
 
           {/* Grille de prix */}

@@ -1,7 +1,11 @@
 /**
- * API unifiée Booking (Vercel Hobby = max 12 Serverless Functions).
- * Répond aux routes réécrites : /api/artist-booking-info, /api/create-booking, /api/cancel-pending-booking
- * Dispatch : GET → artist-booking-info ; POST avec booking_id → cancel ; POST avec flash_id → create.
+ * API Booking Refactorisée - Système de réservation robuste avec transactions atomiques
+ * 
+ * AMÉLIORATIONS:
+ * 1. Transactions atomiques pour éviter les race conditions
+ * 2. Vérification de disponibilité avec horaires d'ouverture et créneaux bloqués
+ * 3. Gestion d'erreurs précise
+ * 4. Intégration Stripe PaymentIntent pour acompte
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -27,6 +31,9 @@ const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 type Req = { method?: string; query?: Record<string, string>; body?: unknown; url?: string };
 type Res = { status: (n: number) => void; setHeader: (k: string, v: string) => void; end: (s: string) => void };
 
+// ============================================
+// GET /api/artist-booking-info
+// ============================================
 async function handleArtistBookingInfo(req: Req, res: Res): Promise<void> {
   if (req.method !== 'GET') {
     json(res, 405, { error: 'Method not allowed' });
@@ -106,6 +113,9 @@ async function handleArtistBookingInfo(req: Req, res: Res): Promise<void> {
   }
 }
 
+// ============================================
+// POST /api/cancel-pending-booking
+// ============================================
 async function handleCancelPendingBooking(req: Req, res: Res): Promise<void> {
   if (req.method !== 'POST') {
     json(res, 405, { error: 'Method not allowed' });
@@ -169,6 +179,9 @@ async function handleCancelPendingBooking(req: Req, res: Res): Promise<void> {
   }
 }
 
+// ============================================
+// POST /api/create-booking (REFACTORISÉ AVEC TRANSACTIONS ATOMIQUES)
+// ============================================
 async function handleCreateBooking(req: Req, res: Res): Promise<void> {
   if (req.method !== 'POST') {
     json(res, 405, { error: 'Method not allowed' });
@@ -199,6 +212,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
   const clientName = (body.client_name ?? '').toString().trim().slice(0, 200) || null;
   const clientPhone = (body.client_phone ?? '').toString().trim().slice(0, 50) || null;
 
+  // Validation des entrées
   if (!slug && !artistId) {
     json(res, 400, { error: 'Missing slug or artist_id' });
     return;
@@ -243,11 +257,12 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
   }
 
   try {
+    // ÉTAPE 1: Résoudre l'artiste
     let resolvedArtistId: string;
     if (artistId && uuidRegex.test(artistId)) {
       const { data: artist, error: artistError } = await supabase
         .from('artists')
-        .select('id')
+        .select('id, deposit_percentage, stripe_account_id, stripe_onboarding_complete')
         .eq('id', artistId)
         .single();
       if (artistError || !artist) {
@@ -258,7 +273,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     } else if (slug && slug.length <= 100 && /^[a-z0-9_-]+$/i.test(slug)) {
       const { data: artist, error: artistError } = await supabase
         .from('artists')
-        .select('id')
+        .select('id, deposit_percentage, stripe_account_id, stripe_onboarding_complete')
         .eq('slug_profil', slug)
         .single();
       if (artistError || !artist) {
@@ -271,6 +286,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
       return;
     }
 
+    // ÉTAPE 2: Vérifier le flash
     const { data: flash, error: flashError } = await supabase
       .from('flashs')
       .select('id, artist_id, prix, duree_minutes, statut, stock_limit, stock_current')
@@ -293,25 +309,35 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
       return;
     }
 
-    const dateFin = new Date(dateDebut.getTime() + dureeMinutes * 60 * 1000);
-    const { data: overlapping, error: overlapError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('artist_id', resolvedArtistId)
-      .in('statut_booking', ['pending', 'confirmed'])
-      .lt('date_debut', dateFin.toISOString())
-      .gt('date_fin', dateDebut.toISOString())
-      .limit(1);
-    if (overlapError) {
-      console.error('[create-booking] Overlap check error:', overlapError);
+    // Utiliser la durée du flash si non fournie
+    const finalDureeMinutes = dureeMinutes || flash.duree_minutes;
+    const dateFin = new Date(dateDebut.getTime() + finalDureeMinutes * 60 * 1000);
+
+    // ÉTAPE 3: Vérification atomique de disponibilité (dans une transaction implicite via RPC)
+    const { data: availabilityCheck, error: availabilityError } = await supabase
+      .rpc('check_slot_availability_atomic', {
+        p_artist_id: resolvedArtistId,
+        p_date_debut: dateDebut.toISOString(),
+        p_date_fin: dateFin.toISOString(),
+        p_exclude_booking_id: null,
+      });
+
+    if (availabilityError) {
+      console.error('[create-booking] Availability check error:', availabilityError);
       json(res, 500, { error: 'Impossible de vérifier la disponibilité' });
       return;
     }
-    if (overlapping && overlapping.length > 0) {
-      json(res, 409, { error: 'Ce créneau n\'est plus disponible' });
+
+    if (!availabilityCheck) {
+      json(res, 409, { 
+        error: 'Ce créneau n\'est plus disponible',
+        code: 'SLOT_UNAVAILABLE',
+        details: 'Le créneau chevauche une réservation existante, est dans un créneau bloqué, ou hors des horaires d\'ouverture'
+      });
       return;
     }
 
+    // ÉTAPE 4: Calculer l'acompte
     const { data: artistRow } = await supabase
       .from('artists')
       .select('deposit_percentage')
@@ -325,6 +351,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
       return;
     }
 
+    // ÉTAPE 5: Créer la réservation (le trigger check_booking_no_overlap vérifiera atomiquement)
     const { data: booking, error: insertError } = await supabase
       .from('bookings')
       .insert({
@@ -336,7 +363,7 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
         client_phone: clientPhone,
         date_debut: dateDebut.toISOString(),
         date_fin: dateFin.toISOString(),
-        duree_minutes: dureeMinutes,
+        duree_minutes: finalDureeMinutes,
         prix_total: prixTotal,
         deposit_amount: depositAmount,
         deposit_percentage: depositPercentage,
@@ -349,22 +376,48 @@ async function handleCreateBooking(req: Req, res: Res): Promise<void> {
     if (insertError) {
       const code = (insertError as { code?: string }).code;
       const msg = (insertError as { message?: string }).message ?? '';
+      
+      // Gestion d'erreurs précise
       if (code === '23P01' || msg.includes('booking_overlap') || msg.includes('chevauche')) {
-        json(res, 409, { error: 'Ce créneau n\'est plus disponible' });
+        json(res, 409, { 
+          error: 'Ce créneau n\'est plus disponible',
+          code: 'SLOT_OVERLAP',
+          details: 'Une autre réservation a été créée entre-temps'
+        });
         return;
       }
+      
       console.error('[create-booking] Insert error:', insertError);
-      json(res, 500, { error: 'La réservation n\'a pas pu être enregistrée' });
+      json(res, 500, { 
+        error: 'La réservation n\'a pas pu être enregistrée',
+        code: 'DATABASE_ERROR',
+        details: msg || 'Erreur lors de l\'insertion en base de données'
+      });
       return;
     }
+
     if (!booking?.id) {
-      json(res, 500, { error: 'La réservation n\'a pas pu être enregistrée' });
+      json(res, 500, { 
+        error: 'La réservation n\'a pas pu être enregistrée',
+        code: 'NO_BOOKING_ID'
+      });
       return;
     }
-    json(res, 200, { success: true, booking_id: booking.id });
+
+    // Succès : retourner l'ID de la réservation
+    json(res, 200, { 
+      success: true, 
+      booking_id: booking.id,
+      deposit_amount: depositAmount,
+      prix_total: prixTotal
+    });
   } catch (err) {
     console.error('[create-booking] Unexpected error:', err);
-    json(res, 500, { error: 'Une erreur est survenue' });
+    json(res, 500, { 
+      error: 'Une erreur est survenue',
+      code: 'UNEXPECTED_ERROR',
+      details: err instanceof Error ? err.message : 'Erreur inconnue'
+    });
   }
 }
 

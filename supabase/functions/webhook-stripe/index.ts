@@ -52,20 +52,21 @@ serve(async (req) => {
       stripeWebhookSecret
     );
 
+    // Initialiser Supabase (une seule fois pour tous les événements)
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Gérer les événements Stripe
     if (event.type === 'checkout.session.completed') {
+      // Checkout Session (ancien flow)
       const session = event.data.object as any;
       const bookingId = session.metadata?.booking_id;
 
       if (bookingId) {
-        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
         // Mettre à jour le booking : acompte payé + réservation confirmée
-        await supabase
+        const { error: updateError } = await supabase
           .from('bookings')
           .update({
             statut_paiement: 'deposit_paid',
@@ -73,19 +74,101 @@ serve(async (req) => {
             stripe_deposit_intent_id: session.payment_intent ?? session.id,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', bookingId);
+          .eq('id', bookingId)
+          .eq('statut_booking', 'pending'); // Seulement si toujours pending (évite les doubles confirmations)
 
-        // Déclencher l'envoi des emails (tatoueur + client) de façon asynchrone :
-        // on n'attend pas la réponse pour ne pas ralentir le webhook ni la page client
-        const functionsUrl = `${supabaseUrl}/functions/v1/send-booking-notifications`;
-        fetch(functionsUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({ booking_id: bookingId }),
-        }).catch((err) => console.error('send-booking-notifications trigger failed:', err));
+        if (updateError) {
+          console.error('Error updating booking from checkout session:', updateError);
+        } else {
+          // Déclencher l'envoi des emails de façon asynchrone
+          const functionsUrl = `${supabaseUrl}/functions/v1/send-booking-notifications`;
+          fetch(functionsUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({ booking_id: bookingId }),
+          }).catch((err) => console.error('send-booking-notifications trigger failed:', err));
+        }
+      }
+    } else if (event.type === 'payment_intent.succeeded') {
+      // PaymentIntent direct (nouveau flow pour bookings)
+      const paymentIntent = event.data.object as any;
+      const bookingId = paymentIntent.metadata?.booking_id;
+      const paymentType = paymentIntent.metadata?.type; // 'booking_deposit' ou autre
+
+      if (bookingId && paymentType === 'booking_deposit') {
+        // Vérifier que la réservation existe et est toujours en attente
+        const { data: booking, error: fetchError } = await supabase
+          .from('bookings')
+          .select('id, statut_booking, statut_paiement')
+          .eq('id', bookingId)
+          .single();
+
+        if (fetchError || !booking) {
+          console.error('Booking not found for payment_intent.succeeded:', bookingId, fetchError);
+        } else if (booking.statut_booking === 'pending' && booking.statut_paiement === 'pending') {
+          // Mettre à jour le booking : acompte payé + réservation confirmée (transaction atomique)
+          const { error: updateError } = await supabase
+            .from('bookings')
+            .update({
+              statut_paiement: 'deposit_paid',
+              statut_booking: 'confirmed',
+              stripe_deposit_intent_id: paymentIntent.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', bookingId)
+            .eq('statut_booking', 'pending') // Condition atomique : seulement si toujours pending
+            .eq('statut_paiement', 'pending');
+
+          if (updateError) {
+            console.error('Error updating booking from payment_intent:', updateError);
+          } else {
+            // Enregistrer la transaction Stripe pour traçabilité
+            await supabase
+              .from('stripe_transactions')
+              .insert({
+                booking_id: bookingId,
+                artist_id: paymentIntent.metadata?.artist_id || '',
+                stripe_payment_intent_id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency || 'eur',
+                status: 'succeeded',
+                payment_type: 'deposit',
+              })
+              .catch((err) => console.error('Error inserting stripe_transaction:', err));
+
+            // Déclencher l'envoi des emails de façon asynchrone
+            const functionsUrl = `${supabaseUrl}/functions/v1/send-booking-notifications`;
+            fetch(functionsUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({ booking_id: bookingId }),
+            }).catch((err) => console.error('send-booking-notifications trigger failed:', err));
+          }
+        } else {
+          console.log(`Booking ${bookingId} already processed (status: ${booking.statut_booking}, payment: ${booking.statut_paiement})`);
+        }
+      }
+    } else if (event.type === 'payment_intent.payment_failed') {
+      // Gérer les échecs de paiement
+      const paymentIntent = event.data.object as any;
+      const bookingId = paymentIntent.metadata?.booking_id;
+
+      if (bookingId) {
+        // Marquer le paiement comme échoué (mais garder la réservation en pending pour réessayer)
+        await supabase
+          .from('bookings')
+          .update({
+            statut_paiement: 'failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', bookingId)
+          .eq('statut_booking', 'pending');
       }
     }
 
