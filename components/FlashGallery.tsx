@@ -47,7 +47,7 @@ export const FlashGallery: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass header-safe">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <motion.button
             whileHover={{ x: -3 }}

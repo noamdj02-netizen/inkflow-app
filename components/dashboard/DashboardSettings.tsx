@@ -9,6 +9,7 @@ import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
 import { SITE_URL } from '../../constants/seo';
+import { safeParseJson } from '../../lib/fetchJson';
 
 export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
@@ -238,10 +239,10 @@ export const DashboardSettings: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await safeParseJson<{ url?: string; error?: string }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la création de la session');
+        throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
       }
 
       if (data.url) {
@@ -1193,8 +1194,7 @@ export const DashboardSettings: React.FC = () => {
                   const profileRecord = profile as Record<string, unknown> | undefined;
                   const hasIcalColumn = profileRecord && 'ical_feed_token' in profileRecord;
                   const token = (hasIcalColumn && profileRecord?.ical_feed_token) ? String(profileRecord.ical_feed_token) : null;
-                  // Utiliser l'URL canonique du site pour que le lien fonctionne sur iOS (Apple Calendar
-                  // doit atteindre une URL publique, pas localhost).
+                  // Domaine de production (VITE_SITE_URL en prod) pour lien sécurisé iOS et parsing Apple Calendar.
                   const baseUrl = SITE_URL.replace(/\/$/, '');
                   const feedUrl = token ? `${baseUrl}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
                   let webcalHost: string;
@@ -1203,6 +1203,7 @@ export const DashboardSettings: React.FC = () => {
                   } catch {
                     webcalHost = 'ink-flow.me';
                   }
+                  // webcal:// force iOS à ouvrir directement l'app Calendrier (évite "Connexion non sécurisée").
                   const webcalUrl = token ? `webcal://${webcalHost}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
                   const googleCalUrl = feedUrl ? `https://www.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}` : null;
                   const isLocalhost = typeof window !== 'undefined' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baseUrl);
@@ -1228,8 +1229,8 @@ export const DashboardSettings: React.FC = () => {
                   };
 
                   const handleCopy = () => {
-                    if (!feedUrl) return;
-                    navigator.clipboard.writeText(feedUrl).then(
+                    if (!webcalUrl) return;
+                    navigator.clipboard.writeText(webcalUrl).then(
                       () => toast.success('Lien copié dans le presse-papier'),
                       () => toast.error('Copie impossible')
                     );
@@ -1237,15 +1238,15 @@ export const DashboardSettings: React.FC = () => {
 
                   return (
                     <div className="space-y-4">
-                      {feedUrl ? (
+                      {webcalUrl ? (
                         <>
                           <div className="flex gap-2">
                             <input
                               type="text"
                               readOnly
-                              value={feedUrl}
+                              value={webcalUrl}
                               className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-mono truncate"
-                              aria-label="URL du flux calendrier"
+                              aria-label="Lien d'abonnement calendrier (webcal)"
                             />
                             <button
                               type="button"

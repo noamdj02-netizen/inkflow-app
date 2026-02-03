@@ -34,11 +34,26 @@ export default defineConfig(({ mode }) => {
     icons[1].src = '/pwa-512x512.png';
     icons[2].src = '/pwa-512x512.png';
   }
+  // En dev, les routes /api ne sont pas servies par Vite (elles sont Vercel). Proxy vers la prod
+  // pour que l'abonnement et le portail Stripe fonctionnent en local. Définir VITE_API_PROXY_TARGET
+  // pour cibler une autre URL (ex: https://ink-flow.me) ou laisser vide pour désactiver le proxy.
+  const apiProxyTarget =
+    env.VITE_API_PROXY_TARGET ?? (mode === 'development' ? 'https://ink-flow.me' : '');
   return {
     server: {
       port: 3000,
-        host: '0.0.0.0',
-      },
+      host: '0.0.0.0',
+      proxy:
+        apiProxyTarget && !apiProxyTarget.includes('localhost')
+          ? {
+              '/api': {
+                target: apiProxyTarget.replace(/\/$/, ''),
+                changeOrigin: true,
+                secure: true,
+              },
+            }
+          : undefined,
+    },
       plugins: [
         react(),
         priorityScript(),

@@ -58,6 +58,14 @@
       "destination": "/api/auth/callback"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

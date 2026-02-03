@@ -5,7 +5,8 @@
  * ou GET /api/calendar/feed?token=ICAL_FEED_TOKEN (si ical_feed_token configuré)
  *
  * Permet aux tatoueurs de s'abonner au calendrier depuis Apple Calendar, Google Calendar, Android.
- * Cache court (5 min) pour limiter la charge DB tout en prenant en compte les mises à jour.
+ * Route publique : Apple Calendar appelle cette URL avec ?token= uniquement (pas de cookie de session).
+ * Ne pas protéger par un middleware d'authentification.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -19,8 +20,6 @@ function requireEnv(name: string): string {
   return v.trim();
 }
 
-/** Cache court : 5 minutes (300 s) pour équilibrer fraîcheur et charge DB */
-const CACHE_MAX_AGE_SECONDS = 300;
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
@@ -164,8 +163,8 @@ export default async function handler(req: any, res: any) {
 
     res.status(200);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-    res.setHeader('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}, s-maxage=${CACHE_MAX_AGE_SECONDS}`);
-    res.setHeader('Content-Disposition', 'inline; filename="inkflow-calendar.ics"');
+    res.setHeader('Content-Disposition', 'attachment; filename="inkflow-calendar.ics"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.end(ics);
   } catch (err) {
     console.error('Calendar feed error:', err);

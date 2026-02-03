@@ -8,12 +8,32 @@
  * - payment_intent.payment_failed: Marquer le paiement comme échoué
  */
 
+import type Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
+import { sendBookingNotificationToArtist } from '@/lib/emails/sendArtistNotification';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+function formatDateFr(date: Date): string {
+  const d = new Date(date);
+  const dayName = DAYS_FR[d.getDay()];
+  const day = d.getDate();
+  const month = MONTHS_FR[d.getMonth()];
+  return `${dayName} ${day} ${month}`;
+}
+
+function formatTimeFr(date: Date): string {
+  const d = new Date(date);
+  const h = d.getHours().toString().padStart(2, '0');
+  const m = d.getMinutes().toString().padStart(2, '0');
+  return `${h}h${m}`;
+}
 
 /**
  * Handler POST: Recevoir les webhooks Stripe
@@ -140,11 +160,29 @@ export async function POST(request: NextRequest) {
           return updatedBooking;
         });
 
-        // Envoyer les notifications (asynchrone, ne pas bloquer le webhook)
+        // Envoyer la notification email au tatoueur (ne doit pas faire échouer le webhook)
         if (booking.status === BookingStatus.CONFIRMED) {
-          // TODO: Envoyer email au client et à l'artiste
-          // await sendBookingConfirmationEmail(booking);
-          console.log(`Booking ${bookingId} confirmed successfully`);
+          try {
+            const artistEmail = booking.artist.user.email;
+            const clientName = booking.client.name ?? booking.client.email ?? 'Client';
+            const projectName = booking.service.name;
+            const date = formatDateFr(booking.startTime);
+            const time = formatTimeFr(booking.startTime);
+            const baseUrl = (process.env.SITE_URL ?? process.env.VITE_SITE_URL ?? 'https://ink-flow.me').replace(/\/$/, '');
+            const bookingUrl = `${baseUrl}/dashboard`;
+
+            await sendBookingNotificationToArtist({
+              artistEmail,
+              clientName,
+              projectName,
+              date,
+              time,
+              bookingUrl,
+            });
+            console.log(`Booking ${bookingId} confirmed; notification email sent to artist`);
+          } catch (emailErr) {
+            console.error('Failed to send booking notification to artist (webhook continues):', emailErr);
+          }
         }
 
         return NextResponse.json({ received: true, bookingId });

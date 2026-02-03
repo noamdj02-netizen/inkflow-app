@@ -75,6 +75,15 @@ const STRIPE_PRICE_IDS: Record<string, string> = {
 };
 
 export default async function handler(req: any, res: any) {
+  // CORS preflight : permettre POST depuis n'importe quelle origine (proxy dev, PWA, etc.)
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.status(200).end();
+    return;
+  }
+
   // Le callback Stripe Connect peut être appelé en GET avec query params
   if (req.method === 'GET' && req.query?.account_id) {
     try {
@@ -132,7 +141,8 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method !== 'POST') {
-    return json(res, 405, { error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST, OPTIONS');
+    return json(res, 405, { error: 'Method not allowed. Use POST for this endpoint.' });
   }
 
   try {

@@ -14,6 +14,7 @@ import { checkoutFormSchema, type CheckoutFormData } from '../utils/validation';
 import { PageSEO } from './seo/PageSEO';
 import { Breadcrumbs } from './seo/Breadcrumbs';
 import { usePublicArtist } from '../hooks/usePublicArtist';
+import { safeParseJson } from '../lib/fetchJson';
 import type { Flash } from '../types/supabase';
 
 type ArtistBookingInfo = {
@@ -171,7 +172,7 @@ export const PublicBookingCheckoutPage: React.FC = () => {
           client_phone: data.client_phone?.trim() || undefined,
         }),
       });
-      const createJson = await createRes.json();
+      const createJson = await safeParseJson<{ booking_id?: string; error?: string }>(createRes);
       if (!createRes.ok || !createJson.booking_id) {
         setError(createJson.error || 'Impossible d\'enregistrer la réservation.');
         setSubmitting(false);

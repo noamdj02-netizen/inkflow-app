@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { Loader2, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { safeParseJson } from '../lib/fetchJson';
 
 interface StripeCheckoutButtonProps {
   priceId: string; // Stripe Price ID
@@ -56,10 +57,10 @@ export const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
         }),
       });
 
-      const data = await response.json();
+      const data = await safeParseJson<{ url?: string; error?: string }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error || `Erreur serveur (${response.status})`);
+        throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
       }
 
       if (data.url) {

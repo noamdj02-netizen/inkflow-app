@@ -134,8 +134,8 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
       <SEOHead
-        title="InkFlow | La Plateforme Premium pour Tatoueurs"
-        description="Gestion et réservation pour tatoueurs professionnels. Gérez vos flashs, projets et paiements en ligne. Agenda, acomptes Stripe, vitrine personnalisable."
+        title="InkFlow — Logiciel de gestion tatoueur & agenda tatouage | Réservation en ligne"
+        description="Logiciel de gestion tatoueur avec agenda tatouage intégré : réservation en ligne, flashs, paiements et vitrine. Pour artistes et studios."
         canonical="/"
         image={`${SITE_URL.replace(/\/$/, '')}/pwa-512x512.png`}
         ogType="website"
@@ -176,12 +176,12 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
         <div className="absolute inset-0 hero-vignette" />
       </div>
 
-      {/* Navigation - Glass Effect */}
+      {/* Navigation - Glass Effect ; header-safe = padding-top safe-area (encoche / barre de statut iOS) */}
       <motion.nav 
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.2 }}
-        className="fixed top-0 left-0 right-0 z-50 glass"
+        className="fixed top-0 left-0 right-0 z-50 glass header-safe"
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -246,7 +246,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-l border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
+              className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-l border-white/10 z-[70] md:hidden flex flex-col shadow-2xl safe-area-top"
               aria-label="Menu de navigation"
             >
               <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
@@ -341,22 +341,19 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                 variants={fadeInUp}
                 className="text-5xl md:text-5xl lg:text-7xl font-display font-bold leading-[1.08] md:leading-[1.05] mb-6 md:mb-8 tracking-tight"
               >
-                <span className="gradient-text">Maîtrisez</span>
+                <span className="gradient-text">Logiciel de gestion tatoueur</span>
                 <br />
-                votre art.
+                avec agenda tatouage
                 <br />
-                <span className="text-zinc-600">Simplifiez</span>
-                <br />
-                le reste.
+                <span className="text-zinc-600">et réservation en ligne</span>
               </motion.h1>
               
               <motion.p 
                 variants={fadeInUp}
                 className="text-zinc-300 text-base md:text-lg leading-relaxed mb-10 md:mb-10 max-w-md sm:max-w-md"
               >
-                Une plateforme élégante pour gérer vos réservations, 
-                présenter vos flashs et recevoir vos paiements. 
-                Sans friction.
+                Un seul outil pour votre agenda tatouage, vos réservations, 
+                vos flashs et vos paiements. Le logiciel de gestion tatoueur pensé pour les artistes.
               </motion.p>
               
               <motion.div 
@@ -514,7 +511,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               Fonctionnalités
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
-              Tout ce qu'il vous faut
+              Tout ce qu&apos;il faut dans un logiciel de gestion tatoueur
             </motion.h2>
           </motion.div>
 
@@ -526,9 +523,9 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
           >
             {[
-              { icon: LayoutGrid, title: "Galerie de Flashs", desc: "Présentez vos designs dans une galerie élégante. Réservation et paiement en un clic.", color: "purple" },
+              { icon: LayoutGrid, title: "Galerie de Flashs", desc: "Présentez vos designs dans une galerie élégante. Réservation et paiement en un clic depuis votre logiciel de gestion tatoueur.", color: "purple" },
               { icon: CreditCard, title: "Paiements Stripe", desc: "Acomptes automatiques, factures générées. Vos revenus sont sécurisés.", color: "emerald" },
-              { icon: Calendar, title: "Agenda intelligent", desc: "Vue claire sur vos rendez-vous, synchronisation automatique, rappels clients.", color: "cyan" },
+              { icon: Calendar, title: "Agenda tatouage", desc: "Agenda tatouage clair : rendez-vous, synchronisation calendrier et rappels clients. Au cœur de votre gestion.", color: "cyan" },
               { icon: Filter, title: "Demandes filtrées", desc: "Formulaire structuré. Recevez uniquement des demandes qualifiées.", color: "amber" },
               { icon: Users, title: "Gestion clients", desc: "Base de données complète, historique des rendez-vous, notes personnalisées.", color: "pink" },
               { icon: BarChart3, title: "Analytics", desc: "Suivez vos revenus, analysez vos performances, prenez les bonnes décisions.", color: "blue" },
@@ -567,11 +564,11 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               Vitrine
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
-              Votre portfolio en ligne
+              Vitrine et agenda tatouage en ligne
             </motion.h2>
             <motion.p variants={fadeInUp} className="text-zinc-500 text-sm md:text-base mt-4 md:mt-6 max-w-2xl mx-auto px-4">
-              Une page publique élégante où vos clients découvrent vos flashs, 
-              réservent et paient — sans effort de votre part.
+              Une page publique où vos clients voient vos flashs, consultent votre agenda tatouage 
+              et réservent en ligne. Tout depuis votre logiciel de gestion tatoueur.
             </motion.p>
           </motion.div>
 
@@ -812,10 +809,10 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
               Tarifs
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-display font-bold gradient-text">
-              Simple et transparent
+              Tarifs du logiciel de gestion tatoueur
             </motion.h2>
             <motion.p variants={fadeInUp} className="text-zinc-400 text-sm md:text-base mt-4 md:mt-6">
-              Un seul no-show évité rembourse votre abonnement.
+              Abonnement simple et transparent. Un seul no-show évité rembourse votre logiciel et votre agenda tatouage.
             </motion.p>
           </motion.div>
 
@@ -946,7 +943,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             viewport={{ once: true }}
             className="text-2xl md:text-3xl font-display font-bold text-white mb-10 md:mb-12 text-center"
           >
-            Foire aux questions
+            FAQ — Logiciel de gestion tatoueur et agenda tatouage
           </motion.h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {faqItems.map((item, index) => {
@@ -1013,11 +1010,11 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             transition={{ duration: 4, repeat: Infinity }}
           >
             <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold gradient-text mb-4 md:mb-6">
-              Prêt à transformer votre activité ?
+              Prêt à adopter un logiciel de gestion tatoueur avec agenda tatouage ?
             </h2>
           </motion.div>
           <p className="text-zinc-500 text-base md:text-lg mb-8 md:mb-10 px-4">
-            Rejoignez +500 artistes qui utilisent InkFlow chaque jour.
+            Rejoignez +500 artistes qui gèrent leur agenda tatouage et leurs réservations avec InkFlow.
           </p>
           <motion.button 
             whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(255,255,255,0.15)" }}

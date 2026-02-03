@@ -6,6 +6,7 @@ import { Toaster, toast } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { SubscriptionProtectedRoute } from './components/SubscriptionProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RedirectToHome } from './components/common/RedirectToHome';
 import { DelayedFallback } from './components/common/DelayedFallback';

@@ -108,7 +108,7 @@ const DashboardLayoutInner: React.FC = () => {
       <PWAInstallPrompt />
       
       {/* Mobile Header — safe area top pour barre de statut / encoche (PWA standalone) */}
-      <header className="fixed top-0 left-0 right-0 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe" style={{ minHeight: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
+      <header className="fixed top-0 left-0 right-0 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(true)}
@@ -365,7 +365,7 @@ const DashboardLayoutInner: React.FC = () => {
       {/* Main — padding top/bottom = hauteur header/nav + safe areas (PWA standalone) */}
       <main
         id="main-content"
-        className="relative z-10 flex-1 flex min-w-0 overflow-hidden pt-[calc(4rem+max(1rem,env(safe-area-inset-top,0px)))] md:pt-0 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom,0px)))] md:pb-0"
+        className="relative z-10 flex-1 flex min-w-0 overflow-hidden main-below-header md:pt-0 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom,0px)))] md:pb-0"
         role="main"
       >
         {/* Zone 2 : Contenu principal (prend tout l'espace restant) */}

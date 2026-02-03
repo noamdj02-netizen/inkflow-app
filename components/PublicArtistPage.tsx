@@ -12,6 +12,7 @@ import type { Artist, Flash } from '../types/supabase';
 import { CustomProjectForm } from './CustomProjectForm';
 import { bookingFormSchema, type BookingFormData } from '../utils/validation';
 import { usePublicArtist, type ArtistVitrine } from '../hooks/usePublicArtist';
+import { safeParseJson } from '../lib/fetchJson';
 import { ArtistHero } from './vitrine/ArtistHero';
 import { FlashGallery } from './vitrine/FlashGallery';
 import { BookingCTA } from './vitrine/BookingCTA';
@@ -136,7 +137,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
           client_phone: data.client_phone?.trim() || undefined,
         }),
       });
-      const createJson = await createRes.json();
+      const createJson = await safeParseJson<{ booking_id?: string; error?: string }>(createRes);
       if (!createRes.ok || !createJson.booking_id) {
         setError(createJson.error || 'Impossible d\'enregistrer la réservation.');
         return;

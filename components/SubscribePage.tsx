@@ -8,9 +8,10 @@ import { useNavigate } from 'react-router-dom';
 import { PageSEO } from './seo/PageSEO';
 import { SITE_URL } from '../constants/seo';
 import { motion } from 'framer-motion';
-import { Check, Zap, Sparkles, Building2, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Zap, Sparkles, Building2, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { PLAN_CONFIG } from '../lib/subscription-utils';
+import { safeParseJson } from '../lib/fetchJson';
 import { toast } from 'sonner';
 
 const fadeInUp = {
@@ -72,10 +73,10 @@ export const SubscribePage: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
+      const data = await safeParseJson<{ url?: string; error?: string }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la création de la session de paiement');
+        throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
       }
 
       if (data.url) {
@@ -124,6 +125,19 @@ export const SubscribePage: React.FC = () => {
           animate="visible"
           className="max-w-7xl mx-auto"
         >
+          {/* Bouton retour */}
+          <motion.div variants={fadeInUp} className="mb-8">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium"
+              aria-label="Retour"
+            >
+              <ArrowLeft size={20} />
+              Retour
+            </button>
+          </motion.div>
+
           {/* Header */}
           <motion.div variants={fadeInUp} className="text-center mb-16 md:mb-20">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-transparent">
