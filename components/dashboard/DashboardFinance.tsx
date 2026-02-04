@@ -158,7 +158,7 @@ export const DashboardFinance: React.FC = () => {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col bg-[#050505] min-h-0">
-        <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
+        <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-3 sm:py-4 flex-shrink-0">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
               <Skeleton className="h-6 w-40" />
@@ -171,7 +171,7 @@ export const DashboardFinance: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-2 md:pt-3 pb-20 md:pb-6 space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="glass rounded-xl md:rounded-2xl p-4 md:p-6">
@@ -243,7 +243,7 @@ export const DashboardFinance: React.FC = () => {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-2 md:pt-3 pb-20 md:pb-6">
         {/* KPI Cards - 2x2 Grid on Mobile */}
         <motion.div 
           initial="hidden"

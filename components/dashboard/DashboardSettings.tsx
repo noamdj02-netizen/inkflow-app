@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useSubscription } from '../../hooks/useSubscription';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
 import { SITE_URL } from '../../constants/seo';
 import { safeParseJson } from '../../lib/fetchJson';
@@ -619,7 +620,7 @@ export const DashboardSettings: React.FC = () => {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 pb-4 md:pb-6">
         <div className="max-w-4xl mx-auto w-full">
           {/* Quick tools */}
           <motion.div
@@ -1400,11 +1401,11 @@ export const DashboardSettings: React.FC = () => {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       type="button"
-                      onClick={() => navigate('/subscribe')}
-                      className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-semibold py-3 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all flex items-center justify-center gap-2"
+                      onClick={() => {}}
+                      className="w-full bg-white/10 text-zinc-400 font-semibold py-3 rounded-xl cursor-default flex items-center justify-center gap-2"
                     >
                       <Crown size={18} />
-                      Choisir un plan
+                      Accès inclus avec votre essai
                     </motion.button>
                   </div>
                 )}

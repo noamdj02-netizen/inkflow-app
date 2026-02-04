@@ -362,14 +362,14 @@ const DashboardLayoutInner: React.FC = () => {
       </aside>
 
       {/* Zone 2 (Centre) + Zone 3 (Droite) : flex pour partager l'espace */}
-      {/* Main — padding top/bottom = hauteur header/nav + safe areas (PWA standalone) */}
+      {/* Main — L inversé : pas d'espace au-dessus du contenu. Mobile: main-below-header pousse sous le header fixe; desktop: pt-0. Les pages enfants ne doivent pas ajouter de pt/mt en haut. */}
       <main
         id="main-content"
         className="relative z-10 flex-1 flex min-w-0 overflow-hidden main-below-header md:pt-0 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom,0px)))] md:pb-0"
         role="main"
       >
-        {/* Zone 2 : Contenu principal (prend tout l'espace restant) */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-transparent overflow-hidden">
+        {/* Zone 2 : Contenu principal — pas de padding-top pour coller au header */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-transparent overflow-hidden pt-0">
           <Suspense fallback={<DashboardContentFallback />}>
             <Outlet />
           </Suspense>

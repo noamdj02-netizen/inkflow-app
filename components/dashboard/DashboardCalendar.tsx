@@ -703,7 +703,7 @@ export const DashboardCalendar: React.FC = () => {
       </AnimatePresence>
 
       {/* Calendar — mobile: vue Liste/Agenda; desktop: grille avec overflow contrôlé */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 relative pb-20 md:pb-6 min-w-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 relative pb-20 md:pb-6 min-w-0">
         {loading ? (
           isMobile ? (
             <div className="space-y-3">

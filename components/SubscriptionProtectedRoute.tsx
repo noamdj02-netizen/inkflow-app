@@ -1,7 +1,7 @@
 /**
  * Composant de protection des routes basé sur l'abonnement
  * 
- * Redirige vers /subscribe si l'utilisateur n'a pas d'abonnement actif.
+ * Accès dashboard : essai 14j créé si besoin ; plus de redirection vers /subscribe.
  * Si période d'essai dépassée (new Date() > trialEndsAt), met à jour le statut en 'expired' puis redirige.
  */
 
@@ -33,10 +33,39 @@ const LoadingSkeleton = React.memo(() => (
 ));
 LoadingSkeleton.displayName = 'LoadingSkeleton';
 
+const isEmptySubscription = (s: { status: SubscriptionStatus | null; plan: unknown } | null) =>
+  s && s.status === null && s.plan === null;
+
 export const SubscriptionProtectedRoute: React.FC<SubscriptionProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const { subscription, loading: subscriptionLoading } = useSubscription();
+  const { subscription, loading: subscriptionLoading, refetch } = useSubscription();
   const [pendingExpire, setPendingExpire] = useState(false);
+  const [ensuringTrial, setEnsuringTrial] = useState(false);
+
+  // Nouvel utilisateur sans ligne dans users : créer l'essai 14j puis afficher le dashboard
+  useEffect(() => {
+    if (authLoading || subscriptionLoading || ensuringTrial || !user || !subscription) return;
+    if (!isEmptySubscription(subscription)) return;
+
+    let cancelled = false;
+    (async () => {
+      setEnsuringTrial(true);
+      try {
+        const res = await fetch('/api/ensure-trial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        if (cancelled) return;
+        if (res.ok) await refetch();
+      } catch (e) {
+        if (!cancelled) setEnsuringTrial(false);
+      } finally {
+        if (!cancelled) setEnsuringTrial(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authLoading, subscriptionLoading, user, subscription, refetch, ensuringTrial]);
 
   // Si période d'essai dépassée : mettre à jour le statut en 'expired' puis rediriger
   useEffect(() => {
@@ -67,18 +96,19 @@ export const SubscriptionProtectedRoute: React.FC<SubscriptionProtectedRouteProp
   const content = useMemo(() => {
     if (authLoading) return <LoadingSkeleton />;
     if (!user) return <Navigate to="/login" replace />;
-    if (subscriptionLoading) return <LoadingSkeleton />;
+    if (subscriptionLoading || ensuringTrial) return <LoadingSkeleton />;
 
     if (pendingExpire || subscription?.status === SubscriptionStatus.expired) {
-      return <Navigate to="/subscribe" replace />;
+      return <>{children}</>;
     }
 
     if (!subscription || !hasActiveSubscription(subscription)) {
-      return <Navigate to="/subscribe" replace />;
+      if (isEmptySubscription(subscription)) return <LoadingSkeleton />;
+      return <>{children}</>;
     }
 
     return <>{children}</>;
-  }, [authLoading, subscriptionLoading, user, subscription, pendingExpire, children]);
+  }, [authLoading, subscriptionLoading, user, subscription, pendingExpire, ensuringTrial, children]);
 
   return content;
 };

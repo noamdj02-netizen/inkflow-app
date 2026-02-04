@@ -5,7 +5,7 @@ import React from 'react';
  * (Overview, Calendar, etc.). Évite un écran vide lors du changement d'onglet.
  */
 export const DashboardContentFallback: React.FC = () => (
-  <div className="flex flex-col h-full p-4 md:p-6 gap-6">
+  <div className="flex flex-col h-full px-4 md:px-6 pt-2 md:pt-3 pb-4 md:pb-6 gap-6">
     <div className="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {[1, 2, 3].map((i) => (

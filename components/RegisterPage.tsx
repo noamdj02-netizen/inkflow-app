@@ -49,7 +49,7 @@ export const RegisterPage: React.FC = () => {
       setError(message);
       setLoading(false);
     } else {
-      navigate('/onboarding');
+      navigate('/dashboard');
     }
   };
 

@@ -1,6 +1,10 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/subscribe", "destination": "/dashboard", "permanent": false },
+    { "source": "/subscribe/success", "destination": "/dashboard", "permanent": false }
+  ],
   "crons": [
     {
       "path": "/api/trial-reminder",

@@ -77,7 +77,7 @@ export default async function handler(req: any, res: any) {
       return json(res, 500, { error: 'Failed to update status' });
     }
 
-    return json(res, 200, { ok: true, expired: true, redirect: '/subscribe' });
+    return json(res, 200, { ok: true, expired: true, redirect: '/dashboard' });
   } catch (err: any) {
     console.error('[expire-trial] Error:', err);
     return json(res, 500, { error: err.message || 'Server error' });

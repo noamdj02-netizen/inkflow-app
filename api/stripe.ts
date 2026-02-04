@@ -357,8 +357,8 @@ export default async function handler(req: any, res: any) {
           line_items: [{ price: safePriceId, quantity: 1 }],
           metadata: { userId: body.userId, plan: body.plan },
           subscription_data: { metadata: { userId: body.userId, plan: body.plan } },
-          success_url: `${baseUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${baseUrl}/subscribe?canceled=true`,
+          success_url: `${baseUrl}/dashboard/settings?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${baseUrl}/dashboard/settings`,
         });
 
         return json(res, 200, { success: true, sessionId: session.id, url: session.url });

@@ -269,7 +269,7 @@ export const DashboardOverview: React.FC = () => {
           height: isHeaderVisible ? (typeof headerHeight === 'number' ? `${headerHeight}px` : 'auto') : '0px',
         }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="sticky top-0 flex flex-col gap-3 py-3 px-4 md:flex-row md:gap-0 md:h-16 md:items-center md:justify-between md:py-0 md:px-6 border-b border-white/5 bg-[#0a0a0a] z-10 flex-shrink-0"
+        className="sticky top-0 flex flex-col gap-2 py-2 px-4 md:flex-row md:gap-0 md:h-14 md:items-center md:justify-between md:py-0 md:px-6 border-b border-white/5 bg-[#0a0a0a] z-10 flex-shrink-0"
         style={{ 
           pointerEvents: isHeaderVisible ? 'auto' : 'none',
           overflow: 'hidden',
@@ -327,7 +327,7 @@ export const DashboardOverview: React.FC = () => {
 
       <div 
         ref={scrollContainerRef} 
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 md:pb-6"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 pb-20 md:pb-6"
       >
         <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
           <SortableContext items={widgetIds} strategy={verticalListSortingStrategy}>

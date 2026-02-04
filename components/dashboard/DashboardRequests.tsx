@@ -447,7 +447,7 @@ export const DashboardRequests: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="h-16 border-b border-white/5 bg-[#0a0a0a] flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
+      <header className="h-14 border-b border-white/5 bg-[#0a0a0a] flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
         <motion.h2 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
