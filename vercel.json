@@ -12,6 +12,26 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/ensure-trial",
+      "destination": "/api/trial?action=ensure"
+    },
+    {
+      "source": "/api/expire-trial",
+      "destination": "/api/trial?action=expire"
+    },
+    {
+      "source": "/api/trial-reminder",
+      "destination": "/api/trial?action=reminder"
+    },
+    {
+      "source": "/api/robots",
+      "destination": "/api/static?path=robots"
+    },
+    {
+      "source": "/api/sitemap",
+      "destination": "/api/static?path=sitemap"
+    },
+    {
       "source": "/api/artist-booking-info",
       "destination": "/api/booking"
     },
@@ -65,11 +85,11 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
+      "destination": "/api/static?path=sitemap"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/robots"
+      "destination": "/api/static?path=robots"
     },
     {
       "source": "/(.*)",

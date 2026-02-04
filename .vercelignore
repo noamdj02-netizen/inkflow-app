@@ -10,3 +10,10 @@ ios/
 
 # Archives
 _archive/
+
+# Routes fusionnées (servies via api/trial.ts et api/static.ts pour rester ≤12 functions)
+api/ensure-trial.ts
+api/expire-trial.ts
+api/trial-reminder.ts
+api/robots.ts
+api/sitemap.ts
