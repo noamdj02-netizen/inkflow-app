@@ -337,6 +337,82 @@ export interface Database {
           updated_at?: string
         }
       }
+      clients: {
+        Row: {
+          id: string
+          artist_id: string
+          nom: string
+          prenom: string
+          email: string
+          telephone: string | null
+          date_naissance: string | null
+          allergies: string[]
+          notes: string | null
+          consentement_signe: boolean
+          tags: string[]
+          date_inscription: string
+          dernier_rdv: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          artist_id: string
+          nom: string
+          prenom: string
+          email: string
+          telephone?: string | null
+          date_naissance?: string | null
+          allergies?: string[]
+          notes?: string | null
+          consentement_signe?: boolean
+          tags?: string[]
+          date_inscription?: string
+          dernier_rdv?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          artist_id?: string
+          nom?: string
+          prenom?: string
+          email?: string
+          telephone?: string | null
+          date_naissance?: string | null
+          allergies?: string[]
+          notes?: string | null
+          consentement_signe?: boolean
+          tags?: string[]
+          date_inscription?: string
+          dernier_rdv?: string | null
+          updated_at?: string
+        }
+      }
+      client_photos: {
+        Row: {
+          id: string
+          client_id: string
+          url: string
+          type: 'reference' | 'realisation'
+          caption: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          url: string
+          type: 'reference' | 'realisation'
+          caption?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          url?: string
+          type?: 'reference' | 'realisation'
+          caption?: string | null
+          created_at?: string
+        }
+      }
       stripe_transactions: {
         Row: {
           id: string
@@ -403,16 +479,22 @@ export type Flash = Database['public']['Tables']['flashs']['Row']
 export type Project = Database['public']['Tables']['projects']['Row']
 export type Booking = Database['public']['Tables']['bookings']['Row']
 export type StripeTransaction = Database['public']['Tables']['stripe_transactions']['Row']
+export type Client = Database['public']['Tables']['clients']['Row']
+export type ClientPhoto = Database['public']['Tables']['client_photos']['Row']
 
 export type ArtistInsert = Database['public']['Tables']['artists']['Insert']
 export type CustomerInsert = Database['public']['Tables']['customers']['Insert']
 export type FlashInsert = Database['public']['Tables']['flashs']['Insert']
 export type ProjectInsert = Database['public']['Tables']['projects']['Insert']
 export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
+export type ClientInsert = Database['public']['Tables']['clients']['Insert']
+export type ClientPhotoInsert = Database['public']['Tables']['client_photos']['Insert']
 
 export type ArtistUpdate = Database['public']['Tables']['artists']['Update']
 export type CustomerUpdate = Database['public']['Tables']['customers']['Update']
 export type FlashUpdate = Database['public']['Tables']['flashs']['Update']
 export type ProjectUpdate = Database['public']['Tables']['projects']['Update']
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
+export type ClientUpdate = Database['public']['Tables']['clients']['Update']
+export type ClientPhotoUpdate = Database['public']['Tables']['client_photos']['Update']
 

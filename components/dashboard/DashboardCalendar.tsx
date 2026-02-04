@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Plus, Loader2, X, User, Mail, Phone, Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,16 @@ import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
 import { Skeleton } from '../common/Skeleton';
 import { ImageSkeleton } from '../common/ImageSkeleton';
+import { CalendarGrid, DisponibilitesEditor, QuickAddModal } from '../calendar';
+import { CalendarModeSwitch } from '../calendar/CalendarModeSwitch';
+import type { CalendarViewMode } from '../calendar';
+import type { DayViewEvent } from '../calendar';
+
+const MobileCalendar = lazy(() =>
+  import('../calendar/MobileCalendar').then((m) => ({ default: m.MobileCalendar }))
+);
+import { celebrateAppointment, shakeElement } from '../../utils/calendarAnimations';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 type BookingRow = Database['public']['Tables']['bookings']['Row'];
 type Booking = BookingRow & {
@@ -250,17 +260,37 @@ export const DashboardCalendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewRDVOpen, setIsNewRDVOpen] = useState(false);
-  const [newRDVSaving, setNewRDVSaving] = useState(false);
-  const [newRDVError, setNewRDVError] = useState<string | null>(null);
-  const [newRDVForm, setNewRDVForm] = useState({
-    client_name: '',
-    client_email: '',
-    client_phone: '',
-    date_debut: '',
-    duree_minutes: 60,
-  });
+  const [quickAddDefaultDateTime, setQuickAddDefaultDateTime] = useState('');
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
+  const [calendarViewMode, setCalendarViewMode] = useState<'week' | 'fullcalendar'>('week');
+  const [calendarMainMode, setCalendarMainMode] = useState<CalendarViewMode>('clients');
+  const newRDVFormRef = useRef<HTMLDivElement>(null);
+
+  const openQuickAdd = useCallback(() => {
+    if (calendarMainMode !== 'clients') return;
+    const next = new Date();
+    next.setMinutes(Math.ceil(next.getMinutes() / 30) * 30, 0, 0);
+    if (next <= new Date()) next.setMinutes(next.getMinutes() + 30, 0, 0);
+    setQuickAddDefaultDateTime(next.toISOString().slice(0, 16));
+    setIsNewRDVOpen(true);
+  }, [calendarMainMode]);
+
+  const toggleAvailabilityMode = useCallback(() => {
+    setCalendarMainMode((prev) => (prev === 'clients' ? 'disponibilites' : 'clients'));
+  }, []);
+
+  const closeAllModals = useCallback(() => {
+    setIsModalOpen(false);
+    setIsNewRDVOpen(false);
+    setQuickAddDefaultDateTime('');
+  }, []);
+
+  useKeyboardShortcuts({
+    onNewRDV: openQuickAdd,
+    onToggleAvailability: toggleAvailabilityMode,
+    onEscape: closeAllModals,
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -358,74 +388,64 @@ export const DashboardCalendar: React.FC = () => {
     fetchBookings();
   };
 
-  const handleCreateManualRDV = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleQuickAddCreate = async (payload: {
+    client_name: string | null;
+    client_email: string;
+    client_phone: string | null;
+    date_debut: string;
+    duree_minutes: number;
+  }) => {
     if (!user) return;
-    setNewRDVError(null);
-    setNewRDVSaving(true);
+    const start = new Date(payload.date_debut);
+    const end = new Date(start.getTime() + payload.duree_minutes * 60 * 1000);
 
-    const start = new Date(newRDVForm.date_debut);
-    const end = new Date(start.getTime() + newRDVForm.duree_minutes * 60 * 1000);
+    const { data: overlapping } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('artist_id', user.id)
+      .in('statut_booking', ['pending', 'confirmed'])
+      .lt('date_debut', end.toISOString())
+      .gt('date_fin', start.toISOString())
+      .limit(1);
 
-    try {
-      // Vérification doublon : aucun autre RDV (pending/confirmed) sur ce créneau
-      const { data: overlapping } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('artist_id', user.id)
-        .in('statut_booking', ['pending', 'confirmed'])
-        .lt('date_debut', end.toISOString())
-        .gt('date_fin', start.toISOString())
-        .limit(1);
-
-      if (overlapping && overlapping.length > 0) {
-        setNewRDVError('Ce créneau est déjà pris. Choisissez une autre date ou heure.');
-        toast.error('Créneau indisponible', { description: 'Un rendez-vous existe déjà sur ce créneau.' });
-        setNewRDVSaving(false);
-        return;
-      }
-
-      const { error: insertError } = await supabase
-        .from('bookings')
-        .insert({
-          artist_id: user.id,
-          flash_id: null,
-          project_id: null,
-          is_manual_booking: true,
-          client_name: newRDVForm.client_name.trim() || null,
-          client_email: newRDVForm.client_email.trim(),
-          client_phone: newRDVForm.client_phone.trim() || null,
-          date_debut: start.toISOString(),
-          date_fin: end.toISOString(),
-          duree_minutes: newRDVForm.duree_minutes,
-          prix_total: 0,
-          deposit_amount: 0,
-          deposit_percentage: 0,
-          statut_booking: 'confirmed',
-          statut_paiement: 'pending',
-        });
-
-      if (insertError) {
-        const msg = insertError.code === '23505'
-          ? 'Ce créneau est déjà pris.'
-          : insertError.message || 'Erreur lors de la création du RDV';
-        setNewRDVError(msg);
-        toast.error('Erreur', { description: msg });
-        setNewRDVSaving(false);
-        return;
-      }
-
-      toast.success('RDV créé', { description: 'Le rendez-vous a été ajouté au calendrier.' });
-      setIsNewRDVOpen(false);
-      setNewRDVForm({ client_name: '', client_email: '', client_phone: '', date_debut: '', duree_minutes: 60 });
-      fetchBookings();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la création du RDV';
-      setNewRDVError(msg);
-      toast.error('Erreur', { description: msg });
-    } finally {
-      setNewRDVSaving(false);
+    if (overlapping && overlapping.length > 0) {
+      toast.error('Créneau indisponible', { description: 'Un rendez-vous existe déjà sur ce créneau.' });
+      shakeElement(newRDVFormRef);
+      throw new Error('Créneau indisponible');
     }
+
+    const { error: insertError } = await (supabase as any)
+      .from('bookings')
+      .insert({
+        artist_id: user.id,
+        flash_id: null,
+        project_id: null,
+        is_manual_booking: true,
+        client_name: payload.client_name,
+        client_email: payload.client_email.trim(),
+        client_phone: payload.client_phone || null,
+        date_debut: start.toISOString(),
+        date_fin: end.toISOString(),
+        duree_minutes: payload.duree_minutes,
+        prix_total: 0,
+        deposit_amount: 0,
+        deposit_percentage: 0,
+        statut_booking: 'confirmed',
+        statut_paiement: 'pending',
+      });
+
+    if (insertError) {
+      const msg = insertError.code === '23505'
+        ? 'Ce créneau est déjà pris.'
+        : insertError.message || 'Erreur lors de la création du RDV';
+      toast.error('Erreur', { description: msg });
+      shakeElement(newRDVFormRef);
+      throw new Error(msg);
+    }
+
+    celebrateAppointment();
+    toast.success('RDV créé', { description: 'Le rendez-vous a été ajouté au calendrier.' });
+    fetchBookings();
   };
 
   const getWeekDays = () => {
@@ -476,6 +496,9 @@ export const DashboardCalendar: React.FC = () => {
               </div>
               <span className="truncate">Calendrier</span>
             </h1>
+            <CalendarModeSwitch value={calendarMainMode} onValueChange={setCalendarMainMode} className="shrink-0" />
+            {calendarMainMode === 'clients' && (
+            <>
             <div className="flex items-center gap-0.5 sm:gap-1 glass rounded-xl p-0.5 sm:p-1 shrink-0">
               <button
                 type="button"
@@ -512,28 +535,49 @@ export const DashboardCalendar: React.FC = () => {
             >
               Aujourd&apos;hui
             </button>
+            <div className="flex rounded-lg p-0.5 glass border border-white/10" role="tablist" aria-label="Vue calendrier">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={calendarViewMode === 'week'}
+                onClick={() => setCalendarViewMode('week')}
+                className={`min-h-[44px] px-3 py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${calendarViewMode === 'week' ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-white'}`}
+              >
+                Semaine
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={calendarViewMode === 'fullcalendar'}
+                onClick={() => setCalendarViewMode('fullcalendar')}
+                className={`min-h-[44px] px-3 py-2 text-sm font-medium rounded-md transition-colors touch-manipulation ${calendarViewMode === 'fullcalendar' ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-white'}`}
+              >
+                Calendrier
+              </button>
+            </div>
+            </>
+            )}
           </div>
+          {calendarMainMode === 'clients' && (
           <button
             type="button"
             onClick={() => {
               const next = new Date();
               next.setMinutes(Math.ceil(next.getMinutes() / 30) * 30, 0, 0);
               if (next <= new Date()) next.setMinutes(next.getMinutes() + 30, 0, 0);
-              setNewRDVForm((prev) => ({
-                ...prev,
-                date_debut: next.toISOString().slice(0, 16),
-              }));
-              setNewRDVError(null);
+              setQuickAddDefaultDateTime(next.toISOString().slice(0, 16));
               setIsNewRDVOpen(true);
             }}
             className="min-h-[44px] flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors touch-manipulation shrink-0 w-full sm:w-auto"
           >
             <Plus size={16}/> Nouveau RDV
           </button>
+          )}
         </div>
       </header>
 
-      {/* Section Mes disponibilités — synchronisée avec la page réservation (slug) */}
+      {/* Section Mes disponibilités — visible uniquement en vue RDV */}
+      {calendarMainMode === 'clients' && (
       <section aria-labelledby="dispo-heading" className="px-4 sm:px-6 py-3 flex-shrink-0 border-b border-white/5 bg-[#0a0a0a]/40">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -570,141 +614,25 @@ export const DashboardCalendar: React.FC = () => {
           )}
         </div>
       </section>
+      )}
 
-      {/* Modal Nouveau RDV (création manuelle) */}
-      <AnimatePresence>
-        {isNewRDVOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => !newRDVSaving && setIsNewRDVOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 safe-area-inset-bottom"
-            >
-              <div
-                className="bg-[#0a0a0a] border border-white/10 rounded-t-2xl sm:rounded-2xl max-w-md w-full p-6 pb-[env(safe-area-inset-bottom,0)] sm:pb-6 relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain"
-                onClick={(e) => e.stopPropagation()}
-                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-display font-bold text-white">Nouveau RDV</h2>
-                  <button
-                    type="button"
-                    aria-label="Fermer"
-                    onClick={() => !newRDVSaving && setIsNewRDVOpen(false)}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 text-zinc-500 hover:text-white transition-colors touch-manipulation"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <p className="text-zinc-400 text-sm mb-4">
-                  Ajoutez un rendez-vous manuel (réception, consultation, RDV hors plateforme).
-                </p>
-                <form onSubmit={handleCreateManualRDV} className="space-y-4">
-                  {newRDVError && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-sm">
-                      <AlertCircle size={16} /> {newRDVError}
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Nom du client</label>
-                    <input
-                      type="text"
-                      autoComplete="name"
-                      value={newRDVForm.client_name}
-                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_name: e.target.value })}
-                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
-                      placeholder="Jean Dupont"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Email <span className="text-red-500">*</span></label>
-                    <input
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={newRDVForm.client_email}
-                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_email: e.target.value })}
-                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
-                      placeholder="jean@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      inputMode="numeric"
-                      value={newRDVForm.client_phone}
-                      onChange={(e) => setNewRDVForm({ ...newRDVForm, client_phone: e.target.value })}
-                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 touch-manipulation"
-                      placeholder="06 12 34 56 78"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Date et heure <span className="text-red-500">*</span></label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={newRDVForm.date_debut}
-                      onChange={(e) => setNewRDVForm({ ...newRDVForm, date_debut: e.target.value })}
-                      min={new Date().toISOString().slice(0, 16)}
-                      onFocus={(e) => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30 touch-manipulation"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Durée</label>
-                    <select
-                      value={newRDVForm.duree_minutes}
-                      onChange={(e) => setNewRDVForm({ ...newRDVForm, duree_minutes: Number(e.target.value) })}
-                      className="w-full min-h-[44px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30 touch-manipulation"
-                    >
-                      <option value={30}>30 min</option>
-                      <option value={60}>1 h</option>
-                      <option value={90}>1 h 30</option>
-                      <option value={120}>2 h</option>
-                      <option value={180}>3 h</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsNewRDVOpen(false)}
-                      disabled={newRDVSaving}
-                      className="flex-1 min-h-[44px] py-3 rounded-xl border border-white/10 text-zinc-400 hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50 touch-manipulation"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={newRDVSaving}
-                      className="flex-1 min-h-[44px] py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation"
-                    >
-                      {newRDVSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} />}
-                      {newRDVSaving ? 'Création...' : 'Créer le RDV'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* QuickAdd : Nouveau RDV en 3 étapes (client → créneau → confirmer) */}
+      <QuickAddModal
+        isOpen={isNewRDVOpen}
+        onClose={() => { setIsNewRDVOpen(false); setQuickAddDefaultDateTime(''); }}
+        artistId={user?.id}
+        defaultDateTime={quickAddDefaultDateTime}
+        onCreate={handleQuickAddCreate}
+        formRef={newRDVFormRef}
+      />
 
-      {/* Calendar — mobile: vue Liste/Agenda; desktop: grille avec overflow contrôlé */}
+      {/* Calendar — Mes RDV (grille / FullCalendar) ou Mes Disponibilités (éditeur peinture) */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 relative pb-20 md:pb-6 min-w-0">
-        {loading ? (
+        {calendarMainMode === 'disponibilites' ? (
+          <DisponibilitesEditor />
+        ) : calendarViewMode === 'fullcalendar' ? (
+          <CalendarGrid height={600} className="min-h-[500px]" initialView="timeGridWeek" />
+        ) : loading ? (
           isMobile ? (
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -755,66 +683,25 @@ export const DashboardCalendar: React.FC = () => {
             </div>
           )
         ) : isMobile ? (
-          /* Mobile: vue Liste/Agenda — pas de grille, touch targets ≥ 44px */
-          <div className="space-y-3">
-            {events.length === 0 ? (
-              <div className="text-center py-12 glass rounded-2xl">
-                <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="text-zinc-600" size={28} />
-                </div>
-                <p className="text-lg font-medium text-white">Aucun rendez-vous</p>
-                <p className="text-sm mt-2 text-zinc-500">Vos rendez-vous confirmés apparaîtront ici</p>
+          <Suspense
+            fallback={
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="glass rounded-xl p-4 min-h-[72px]">
+                    <Skeleton className="h-3 w-20 mb-2" />
+                    <Skeleton className="h-4 w-2/3 mb-1" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                ))}
               </div>
-            ) : (
-              events.map((event) => {
-                const start = new Date(event.start);
-                const end = new Date(event.end);
-                return (
-                  <motion.button
-                    type="button"
-                    key={event.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => handleEventClick(event)}
-                    className={`w-full text-left glass rounded-xl p-4 min-h-[72px] cursor-pointer hover:bg-white/10 active:bg-white/15 transition-colors touch-manipulation ${
-                      event.type === 'flash'
-                        ? 'border-l-4 border-l-brand-purple'
-                        : 'border-l-4 border-l-brand-cyan'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className={`text-xs font-medium mb-1 ${
-                          event.type === 'flash' ? 'text-brand-purple' : 'text-brand-cyan'
-                        }`}>
-                          {event.type === 'flash' ? '⚡ Flash' : '🎨 Projet'}
-                        </div>
-                        <div className="text-white font-semibold">
-                          {event.booking?.flashs?.title || event.booking?.projects?.body_part || 'Rendez-vous'}
-                        </div>
-                        <div className="text-zinc-500 text-sm">{event.booking?.client_name || 'Client'}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-zinc-500 mb-1">
-                          {start.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                        </div>
-                        <div className="text-sm font-semibold text-white">
-                          {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          {' - '}
-                          {end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-                    {event.booking?.flashs?.prix && (
-                      <div className="text-sm font-medium text-brand-mint">
-                        {Math.round(event.booking.flashs.prix / 100).toLocaleString('fr-FR')}€
-                      </div>
-                    )}
-                  </motion.button>
-                );
-              })
-            )}
-          </div>
+            }
+          >
+            <MobileCalendar
+              events={events as DayViewEvent[]}
+              onEventClick={handleEventClick}
+              onOpenQuickAdd={openQuickAdd}
+            />
+          </Suspense>
         ) : (
           <div className="overflow-x-auto overscroll-x-contain -mx-4 md:mx-0 px-4 md:px-0">
           <div className="bg-[#0a0a0a] rounded-2xl border border-white/5 min-w-0 w-full md:min-w-[800px] overflow-hidden inline-block">

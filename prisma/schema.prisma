@@ -22,6 +22,12 @@ enum BookingStatus {
   COMPLETED
 }
 
+enum BookingType {
+  CONSULTATION
+  SESSION
+  RETOUCHE
+}
+
 enum SubscriptionPlan {
   STARTER // 29€/mois - 1 artiste, 2% frais Stripe
   PRO     // 49€/mois - Illimité, 0% frais, Formulaire IA
@@ -60,6 +66,7 @@ model User {
   // Relations
   artistProfile ArtistProfile? // Si c'est un tatoueur
   bookings      Booking[]      @relation("ClientBookings") // Ses RDV en tant que client
+  recurringSeries RecurringBookingSeries[]
   
   @@index([stripeCustomerId])
   @@index([subscriptionStatus])
@@ -77,6 +84,9 @@ model ArtistProfile {
   // Paramètres du planning
   slotIntervalMin Int @default(30) // Découpage du planning (ex: toutes les 30min)
   minNoticeHours  Int @default(24) // Pas de rdv moins de 24h avant
+  defaultPrepTimeMin Int @default(15) // Temps de préparation par défaut
+  defaultCleanupTimeMin Int @default(15) // Temps de nettoyage par défaut
+  bufferTimeMin Int @default(0) // Temps de pause entre sessions (minutes)
 
   // Champs existants (compatibilité)
   nomStudio                String?
@@ -94,6 +104,8 @@ model ArtistProfile {
   workingHours WorkingHour[]
   bookings     Booking[]     @relation("ArtistBookings")
   leaves       Leave[]       // Vacances / Absences
+  recurringSeries RecurringBookingSeries[]
+  payments     Payment[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -168,31 +180,129 @@ model Booking {
   artistId  String
   artist    ArtistProfile @relation("ArtistBookings", fields: [artistId], references: [id], onDelete: Cascade)
   
-  serviceId String
-  service   Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
   // Quand
   startTime DateTime
-  endTime   DateTime // Calculé automatiquement : startTime + service.durationMin
+  endTime   DateTime // Calculé automatiquement : startTime + durationMin
+
+  // Type et durée
+  type      BookingType @default(SESSION)
+  durationMin Int       // Durée en minutes (peut différer du service si personnalisé)
 
   // État
   status        BookingStatus @default(PENDING_PAYMENT)
   paymentIntent String?       // ID Stripe pour retrouver le paiement
   
+  // Prix et acompte
+  price         Decimal @db.Decimal(10, 2) // Prix total en euros
+  depositAmount Decimal? @db.Decimal(10, 2) // Montant de l'acompte
+  depositPaid   Boolean @default(false)
+  
+  // Détails du projet
+  projectDescription String? // Description du projet
+  zone              String?  // Zone du corps
+  size              String?  // ex: "10x15cm"
+  style             String?  // ex: "Réalisme", "Traditionnel"
+  referencePhotos   String[] // URLs des photos de référence
+  
+  // Notifications et rappels
+  remindersSent DateTime[] // Dates des rappels envoyés
+  
+  // Notes
+  notes String? // Notes internes
+  
+  // Réservations récurrentes
+  recurringSeriesId String? // ID de la série si réservation récurrente
+  recurringPattern  String? // JSON: { frequency: "weekly", interval: 1, endDate: "..." }
+  
+  // Temps de préparation/nettoyage
+  prepTimeMin Int @default(15) // Temps de préparation avant (minutes)
+  cleanupTimeMin Int @default(15) // Temps de nettoyage après (minutes)
+  
   // Relations
   stripeTransactions StripeTransaction[]
+  payments           Payment[]
+  recurringSeries   RecurringBookingSeries? @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
   
   @@index([artistId, startTime])
   @@index([clientId])
   @@index([serviceId])
   @@index([status])
   @@index([artistId, status, startTime])
+  @@index([recurringSeriesId])
+}
+
+model RecurringBookingSeries {
+  id        String    @id @default(cuid())
+  artistId  String
+  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  frequency String    // "daily", "weekly", "monthly"
+  interval  Int       @default(1) // Tous les X jours/semaines/mois
+  endDate   DateTime? // Date de fin de la série
+  occurrences Int?    // Nombre d'occurrences max
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  bookings Booking[]
+  
+  @@index([artistId])
+  @@index([clientId])
+}
+
+enum PaymentType {
+  ACOMPTE
+  SOLDE
+  TOTAL
+}
+
+enum PaymentMethod {
+  STRIPE
+  ESPECES
+  VIREMENT
+}
+
+enum PaymentStatus {
+  EN_ATTENTE
+  REGLE
+  REMBOURSE
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  bookingId           String
+  booking             Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  artistId            String
+  artist              ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  
+  montant             Decimal       @db.Decimal(10, 2) // En euros
+  type                PaymentType
+  methode            PaymentMethod
+  statut             PaymentStatus @default(EN_ATTENTE)
+  
+  dateReglement       DateTime?
+  stripePaymentIntentId String?     @unique
+  
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@index([bookingId])
+  @@index([artistId])
+  @@index([statut])
+  @@index([type])
 }
 
 model StripeTransaction {
   id                  String   @id @default(cuid())
   bookingId           String?
   booking             Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  paymentId           String?
+  payment             Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   artistId            String
   stripePaymentIntentId String @unique
   amount              Int      // En centimes
@@ -203,4 +313,5 @@ model StripeTransaction {
 
   @@index([artistId])
   @@index([bookingId])
+  @@index([paymentId])
 }

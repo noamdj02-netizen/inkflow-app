@@ -68,10 +68,22 @@ const MonthlyGoalWidget = lazy(() =>
 const AverageCartWidget = lazy(() =>
   import('./widgets/AverageCartWidget').then((m) => ({ default: m.AverageCartWidget }))
 );
+const StatsWidget = lazy(() =>
+  import('./widgets/StatsWidget').then((m) => ({ default: m.StatsWidget }))
+);
+const AlertsWidget = lazy(() =>
+  import('./widgets/AlertsWidget').then((m) => ({ default: m.AlertsWidget }))
+);
+const UpcomingBookingsWidget = lazy(() =>
+  import('./widgets/UpcomingBookingsWidget').then((m) => ({ default: m.UpcomingBookingsWidget }))
+);
 
 const WIDGET_SKELETONS: Partial<Record<WidgetId, React.ReactNode>> = {
   nextAppointment: <WidgetSkeleton />,
   kpi: <KPISkeleton />,
+  stats: <KPISkeleton />,
+  alerts: <WidgetSkeleton />,
+  upcomingBookings: <WidgetSkeleton />,
   revenue: <ChartSkeleton />,
   recentActivity: <ActivitySkeleton />,
   flashes: <WidgetSkeleton />,
@@ -88,6 +100,9 @@ const WIDGET_SKELETONS: Partial<Record<WidgetId, React.ReactNode>> = {
 const WIDGET_COMPONENTS: Record<WidgetId, React.LazyExoticComponent<React.FC>> = {
   nextAppointment: NextAppointmentWidget,
   kpi: KPIWidgets,
+  stats: StatsWidget,
+  alerts: AlertsWidget,
+  upcomingBookings: UpcomingBookingsWidget,
   revenue: RevenueChartWidget,
   recentActivity: RecentActivityWidget,
   flashes: FlashesPreviewWidget,
@@ -132,7 +147,7 @@ function SortableWidgetItem({
         {...attributes}
         {...listeners}
       >
-        <div className="absolute left-2 top-2 z-10 p-1.5 rounded-lg text-zinc-500 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute left-2 top-2 z-10 p-1.5 rounded-md text-neutral-500 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical size={18} aria-hidden />
         </div>
         <Suspense fallback={Fallback}>
@@ -283,7 +298,7 @@ export const DashboardOverview: React.FC = () => {
           >
             Tableau de Bord
           </motion.h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-neutral-400 mt-0.5">
             Maintenez appuyé sur un widget pour le déplacer.
           </p>
         </div>
@@ -309,7 +324,7 @@ export const DashboardOverview: React.FC = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-white text-black px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-semibold hover:bg-zinc-100 transition-all touch-manipulation"
+            className="flex items-center gap-2 bg-white text-black px-3 py-2 min-h-[44px] md:min-h-0 rounded-md text-sm font-semibold hover:bg-zinc-100 transition-all touch-manipulation"
           >
             <Plus size={16} /> Nouveau Flash
           </motion.button>
@@ -360,9 +375,9 @@ export const DashboardOverview: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="glass rounded-2xl p-8 md:p-12 text-center border border-white/10"
+            className="bg-[#121212] border border-neutral-800 rounded-md p-6 md:p-8 text-center"
           >
-            <p className="text-zinc-400 mb-4">Aucun widget affiché.</p>
+            <p className="text-neutral-400 mb-4">Aucun widget affiché.</p>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -381,7 +396,7 @@ export const DashboardOverview: React.FC = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl glass text-white flex items-center gap-3 text-sm font-medium"
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-md bg-[#121212] border border-neutral-800 text-white flex items-center gap-3 text-sm font-medium shadow-sm shadow-black/50"
           >
             <CheckCircle size={16} className="text-emerald-400" />
             <span>{toast}</span>

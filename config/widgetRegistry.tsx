@@ -19,6 +19,8 @@ import {
   Activity,
   Target,
   ShoppingCart,
+  AlertTriangle,
+  TrendingUp as TrendingUpIcon,
 } from 'lucide-react';
 
 export type WidgetCategoryId = 'general' | 'calendrier' | 'flashs' | 'clients' | 'finance';
@@ -62,6 +64,33 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     icon: BarChart3,
     order: 0,
     colSpan: 12,
+  },
+  {
+    id: 'stats',
+    category: 'general',
+    title: 'Statistiques détaillées',
+    description: 'CA du mois, nombre de clients, taux de remplissage avec évolution.',
+    icon: TrendingUpIcon,
+    order: 0.5,
+    colSpan: 12,
+  },
+  {
+    id: 'alerts',
+    category: 'general',
+    title: 'Alertes',
+    description: 'Acomptes en attente, confirmations, RDV aujourd\'hui.',
+    icon: AlertTriangle,
+    order: 1.5,
+    colSpan: 6,
+  },
+  {
+    id: 'upcomingBookings',
+    category: 'calendrier',
+    title: 'RDV de la semaine',
+    description: 'Tous les rendez-vous d\'aujourd\'hui et de la semaine à venir.',
+    icon: CalendarDays,
+    order: 1,
+    colSpan: 6,
   },
   {
     id: 'nextAppointment',

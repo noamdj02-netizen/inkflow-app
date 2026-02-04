@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { SWRConfig } from 'swr';
 import { Toaster, toast } from 'sonner';
+import { Toaster as HotToaster } from 'react-hot-toast';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -77,6 +78,13 @@ const App: React.FC = () => {
                 richColors
                 toastOptions={{
                   className: 'glass border border-white/10 text-white',
+                }}
+              />
+              <HotToaster
+                position="top-center"
+                toastOptions={{
+                  className: '!bg-zinc-900 !text-white !border !border-white/10',
+                  duration: 4000,
                 }}
               />
               <Suspense fallback={<DelayedFallback />}>

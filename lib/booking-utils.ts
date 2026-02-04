@@ -7,43 +7,87 @@
  * Utiliser uniquement dans les API routes Vercel Serverless Functions.
  */
 
-import { PrismaClient, BookingStatus } from '@prisma/client';
+import { PrismaClient, BookingStatus, BookingType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+export type RecurringPattern = {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  interval: number; // Tous les X jours/semaines/mois
+  endDate?: string; // ISO date string
+  occurrences?: number; // Nombre max d'occurrences
+};
+
 /**
  * Vérifie si un créneau chevauche une réservation existante ou une absence
+ * Prend en compte les temps de préparation et nettoyage
  */
 export async function checkSlotAvailability(
   artistId: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  prepTimeMin: number = 15,
+  cleanupTimeMin: number = 15,
+  bufferTimeMin: number = 0
 ): Promise<{ available: boolean; reason?: string }> {
+  // Récupérer les paramètres de l'artiste pour les temps par défaut
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+    select: { defaultPrepTimeMin: true, defaultCleanupTimeMin: true, bufferTimeMin: true },
+  });
+
+  const prepTime = prepTimeMin || artist?.defaultPrepTimeMin || 15;
+  const cleanupTime = cleanupTimeMin || artist?.defaultCleanupTimeMin || 15;
+  const bufferTime = bufferTimeMin || artist?.bufferTimeMin || 0;
+
+  // Calculer les heures réelles avec préparation et nettoyage
+  const actualStart = new Date(startTime.getTime() - prepTime * 60 * 1000);
+  const actualEnd = new Date(endTime.getTime() + cleanupTime * 60 * 1000 + bufferTime * 60 * 1000);
+
   // 1. Vérifier les bookings existants (CONFIRMED ou PENDING_PAYMENT)
-  const overlappingBooking = await prisma.booking.findFirst({
+  // Inclure leurs temps de préparation/nettoyage dans la vérification
+  const overlappingBookings = await prisma.booking.findMany({
     where: {
       artistId,
       status: {
         in: [BookingStatus.CONFIRMED, BookingStatus.PENDING_PAYMENT],
       },
       OR: [
-        // Chevauchement: le booking existant commence avant la fin ET finit après le début
         {
           AND: [
-            { startTime: { lt: endTime } },
-            { endTime: { gt: startTime } },
+            { startTime: { lt: actualEnd } },
+            { endTime: { gt: actualStart } },
           ],
         },
       ],
     },
-    select: { id: true, startTime: true, endTime: true, status: true },
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      prepTimeMin: true,
+      cleanupTimeMin: true,
+    },
   });
 
-  if (overlappingBooking) {
-    return {
-      available: false,
-      reason: `Créneau chevauchant une réservation existante (${overlappingBooking.status})`,
-    };
+  for (const booking of overlappingBookings) {
+    const bookingPrep = booking.prepTimeMin || artist?.defaultPrepTimeMin || 15;
+    const bookingCleanup = booking.cleanupTimeMin || artist?.defaultCleanupTimeMin || 15;
+    const bookingBuffer = artist?.bufferTimeMin || 0;
+
+    const bookingActualStart = new Date(booking.startTime.getTime() - bookingPrep * 60 * 1000);
+    const bookingActualEnd = new Date(
+      booking.endTime.getTime() + bookingCleanup * 60 * 1000 + bookingBuffer * 60 * 1000
+    );
+
+    // Vérifier le chevauchement réel
+    if (bookingActualStart < actualEnd && bookingActualEnd > actualStart) {
+      return {
+        available: false,
+        reason: `Créneau chevauchant une réservation existante (${booking.status}) - temps de préparation/nettoyage inclus`,
+      };
+    }
   }
 
   // 2. Vérifier les absences (leaves)
@@ -201,4 +245,185 @@ export async function getAvailableSlots(
   }
 
   return slots;
+}
+
+/**
+ * Vérifie la disponibilité avec gestion intelligente des durées selon le type
+ */
+export async function verifierDisponibilite(
+  tatoueurId: string,
+  dateDebut: Date,
+  duree: number,
+  type: BookingType = BookingType.SESSION,
+  prepTimeMin?: number,
+  cleanupTimeMin?: number
+): Promise<{ available: boolean; reason?: string }> {
+  // Durées par défaut selon le type
+  const defaultDurations: Record<BookingType, { prep: number; cleanup: number }> = {
+    [BookingType.CONSULTATION]: { prep: 5, cleanup: 5 },
+    [BookingType.SESSION]: { prep: 15, cleanup: 15 },
+    [BookingType.RETOUCHE]: { prep: 10, cleanup: 10 },
+  };
+
+  const defaults = defaultDurations[type];
+  const prep = prepTimeMin ?? defaults.prep;
+  const cleanup = cleanupTimeMin ?? defaults.cleanup;
+
+  const dateFin = new Date(dateDebut.getTime() + duree * 60 * 1000);
+
+  return checkSlotAvailability(tatoueurId, dateDebut, dateFin, prep, cleanup);
+}
+
+/**
+ * Crée une série de réservations récurrentes
+ */
+export async function createRecurringBookings(
+  artistId: string,
+  clientId: string,
+  firstStartTime: Date,
+  durationMin: number,
+  pattern: RecurringPattern,
+  bookingData: {
+    serviceId?: string;
+    type: BookingType;
+    price: number;
+    depositAmount?: number;
+    projectDescription?: string;
+    zone?: string;
+    size?: string;
+    style?: string;
+    prepTimeMin?: number;
+    cleanupTimeMin?: number;
+  }
+): Promise<{ seriesId: string; bookingIds: string[] }> {
+  // Créer la série récurrente
+  const series = await prisma.recurringBookingSeries.create({
+    data: {
+      artistId,
+      clientId,
+      frequency: pattern.frequency,
+      interval: pattern.interval,
+      endDate: pattern.endDate ? new Date(pattern.endDate) : null,
+      occurrences: pattern.occurrences ?? null,
+    },
+  });
+
+  const bookings: string[] = [];
+  let currentDate = new Date(firstStartTime);
+  let count = 0;
+  const maxOccurrences = pattern.occurrences ?? 100; // Limite par défaut
+
+  while (count < maxOccurrences) {
+    // Vérifier la date de fin si définie
+    if (pattern.endDate && currentDate > new Date(pattern.endDate)) {
+      break;
+    }
+
+    // Vérifier la disponibilité
+    const availability = await verifierDisponibilite(
+      artistId,
+      currentDate,
+      durationMin,
+      bookingData.type,
+      bookingData.prepTimeMin,
+      bookingData.cleanupTimeMin
+    );
+
+    if (!availability.available) {
+      // Skip ce créneau et passer au suivant
+      currentDate = getNextRecurringDate(currentDate, pattern);
+      continue;
+    }
+
+    // Créer la réservation
+    const endTime = new Date(currentDate.getTime() + durationMin * 60 * 1000);
+    const booking = await prisma.booking.create({
+      data: {
+        artistId,
+        clientId,
+        serviceId: bookingData.serviceId,
+        startTime: currentDate,
+        endTime,
+        type: bookingData.type,
+        durationMin,
+        status: BookingStatus.PENDING_PAYMENT,
+        price: bookingData.price,
+        depositAmount: bookingData.depositAmount,
+        depositPaid: false,
+        projectDescription: bookingData.projectDescription,
+        zone: bookingData.zone,
+        size: bookingData.size,
+        style: bookingData.style,
+        prepTimeMin: bookingData.prepTimeMin,
+        cleanupTimeMin: bookingData.cleanupTimeMin,
+        recurringSeriesId: series.id,
+        recurringPattern: JSON.stringify(pattern),
+      },
+    });
+
+    bookings.push(booking.id);
+    count++;
+
+    // Passer à la prochaine occurrence
+    currentDate = getNextRecurringDate(currentDate, pattern);
+  }
+
+  return { seriesId: series.id, bookingIds: bookings };
+}
+
+/**
+ * Calcule la prochaine date d'une série récurrente
+ */
+function getNextRecurringDate(currentDate: Date, pattern: RecurringPattern): Date {
+  const next = new Date(currentDate);
+
+  switch (pattern.frequency) {
+    case 'daily':
+      next.setDate(next.getDate() + pattern.interval);
+      break;
+    case 'weekly':
+      next.setDate(next.getDate() + pattern.interval * 7);
+      break;
+    case 'monthly':
+      next.setMonth(next.getMonth() + pattern.interval);
+      break;
+  }
+
+  return next;
+}
+
+/**
+ * Détecte automatiquement les créneaux disponibles pour une durée donnée
+ */
+export async function detecterCreneauxDisponibles(
+  artistId: string,
+  startDate: Date,
+  endDate: Date,
+  durationMin: number,
+  type: BookingType = BookingType.SESSION,
+  slotIntervalMin: number = 30
+): Promise<Array<{ startTime: Date; endTime: Date; available: boolean }>> {
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+    select: {
+      slotIntervalMin: true,
+      defaultPrepTimeMin: true,
+      defaultCleanupTimeMin: true,
+      bufferTimeMin: true,
+    },
+  });
+
+  const interval = slotIntervalMin || artist?.slotIntervalMin || 30;
+  const defaultDurations: Record<BookingType, { prep: number; cleanup: number }> = {
+    [BookingType.CONSULTATION]: { prep: 5, cleanup: 5 },
+    [BookingType.SESSION]: { prep: 15, cleanup: 15 },
+    [BookingType.RETOUCHE]: { prep: 10, cleanup: 10 },
+  };
+
+  const defaults = defaultDurations[type];
+  const prep = artist?.defaultPrepTimeMin ?? defaults.prep;
+  const cleanup = artist?.defaultCleanupTimeMin ?? defaults.cleanup;
+  const buffer = artist?.bufferTimeMin ?? 0;
+
+  return getAvailableSlots(artistId, startDate, endDate, durationMin, interval);
 }
