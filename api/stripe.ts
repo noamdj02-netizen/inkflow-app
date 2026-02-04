@@ -80,20 +80,23 @@ const FALLBACK_PRICE_IDS_LIVE: Record<string, string> = {
   STUDIO: '',
 };
 
-/** Stripe Checkout attend un Price ID (price_xxx). Les Product ID (prod_xxx) provoquent "No such price". */
+/** Stripe Checkout attend un Price ID (price_xxx) complet. Les IDs tronqués (ex. 28 car. sur Vercel) provoquent "No such price". */
 function isValidStripePriceId(id: string): boolean {
-  return typeof id === 'string' && id.startsWith('price_') && id.length > 6;
+  return typeof id === 'string' && id.startsWith('price_') && id.length >= 29;
 }
 
 function resolvePriceId(envValue: string | undefined, fallback: string): string {
   const raw = (envValue || '').trim();
-  if (isValidStripePriceId(raw)) return raw;
-  return fallback;
+  if (!raw || !raw.startsWith('price_') || raw.length < 29) return fallback;
+  return raw;
 }
 
 function getStripePriceIds(secretKey: string): Record<string, string> {
   const isTestMode = secretKey.startsWith('sk_test_');
   const fallbacks = isTestMode ? FALLBACK_PRICE_IDS_TEST : FALLBACK_PRICE_IDS_LIVE;
+  if (isTestMode) {
+    return { ...FALLBACK_PRICE_IDS_TEST };
+  }
   return {
     STARTER: resolvePriceId(process.env.STRIPE_PRICE_ID_STARTER, fallbacks.STARTER),
     PRO: resolvePriceId(process.env.STRIPE_PRICE_ID_PRO, fallbacks.PRO),
