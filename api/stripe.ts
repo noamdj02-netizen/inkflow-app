@@ -161,7 +161,7 @@ export default async function handler(req: any, res: any) {
           .eq('id', artist.id);
       }
 
-      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';
+      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'https://ink-flow.me/';
       const baseUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || origin;
       
       // Rediriger vers le dashboard avec le statut
@@ -171,7 +171,7 @@ export default async function handler(req: any, res: any) {
       return;
     } catch (error: any) {
       console.error('Stripe Connect callback error:', error);
-      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'http://localhost:5173';
+      const origin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/') || 'https://ink-flow.me/';
       const baseUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || origin;
       res.writeHead(302, { Location: `${baseUrl}/dashboard/settings?stripe_incomplete=true` });
       res.end();
