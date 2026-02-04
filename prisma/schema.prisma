@@ -36,6 +36,7 @@ enum SubscriptionStatus {
   incomplete // Paiement incomplet
   incomplete_expired // Paiement incomplet expiré
   unpaid     // Non payé
+  expired    // Période d'essai ou abonnement expiré → rediriger vers /subscribe
 }
 
 model User {
@@ -53,6 +54,8 @@ model User {
   subscriptionPlan    SubscriptionPlan?
   subscriptionStatus  SubscriptionStatus?
   subscriptionCurrentPeriodEnd DateTime?   // Date de fin de période actuelle
+  trialStartedAt      DateTime?            // Début période d'essai
+  trialEndsAt         DateTime?            // Fin période d'essai (ex: +14 jours)
   
   // Relations
   artistProfile ArtistProfile? // Si c'est un tatoueur

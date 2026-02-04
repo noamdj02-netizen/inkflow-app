@@ -21,6 +21,7 @@ export enum SubscriptionStatus {
   incomplete = 'incomplete',
   incomplete_expired = 'incomplete_expired',
   unpaid = 'unpaid',
+  expired = 'expired',
 }
 
 // Enum BookingStatus (si nécessaire côté client)

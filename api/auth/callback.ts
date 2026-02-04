@@ -106,6 +106,49 @@ export default async function handler(req: any, res: any) {
       return redirect(res, redirectUrl.toString());
     }
 
+    // Free Trial First : créer ou laisser l'utilisateur dans public.users avec essai 14j si nouveau
+    const authUser = data.session.user;
+    const userId = authUser.id;
+    const email = (authUser.email || '').trim() || '';
+    const name =
+      (authUser.user_metadata?.full_name as string) ||
+      (authUser.user_metadata?.name as string) ||
+      (email ? email.split('@')[0] : '') ||
+      'Utilisateur';
+
+    try {
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+      if (serviceKey) {
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+        const { data: existing } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        if (!existing) {
+          const now = new Date();
+          const trialEndsAt = new Date(now);
+          trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+          await supabaseAdmin.from('users').insert({
+            id: userId,
+            email: email || 'unknown@inkflow.local',
+            name: name.slice(0, 255) || 'Utilisateur',
+            subscription_status: 'trialing',
+            subscription_plan: 'STARTER',
+            trial_started_at: now.toISOString(),
+            trial_ends_at: trialEndsAt.toISOString(),
+          } as Record<string, unknown>);
+          console.log('✅ User created in public.users with 14-day trial:', userId);
+        }
+      }
+    } catch (dbErr: unknown) {
+      console.error('⚠️ Auth callback: could not ensure user row (trial):', dbErr);
+      // Ne pas bloquer la redirection : l'utilisateur pourra être créé au premier appel API (ex: stripe)
+    }
+
     // Déterminer l'URL de redirection
     let redirectPath = '/dashboard';
     

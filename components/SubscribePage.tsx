@@ -10,7 +10,9 @@ import { SITE_URL } from '../constants/seo';
 import { motion } from 'framer-motion';
 import { Check, Zap, Sparkles, Building2, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useSubscription } from '../hooks/useSubscription';
 import { PLAN_CONFIG } from '../lib/subscription-utils';
+import { SubscriptionStatus } from '../types/prisma-enums';
 import { safeParseJson } from '../lib/fetchJson';
 import { toast } from 'sonner';
 
@@ -47,8 +49,11 @@ const PLANS = [
 export const SubscribePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { subscription } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isExpiredTrial = subscription?.status === SubscriptionStatus.expired;
 
   const handleSubscribe = async (plan: 'STARTER' | 'PRO' | 'STUDIO') => {
     if (!user) {
@@ -161,7 +166,9 @@ export const SubscribePage: React.FC = () => {
               Choisissez votre abonnement
             </h1>
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto">
-              Accédez à toutes les fonctionnalités d'InkFlow avec un abonnement mensuel.
+              {isExpiredTrial
+                ? 'Votre période d\'essai est terminée, choisissez un plan pour continuer.'
+                : 'Accédez à toutes les fonctionnalités d\'InkFlow avec un abonnement mensuel.'}
             </p>
           </motion.div>
 
@@ -270,7 +277,9 @@ export const SubscribePage: React.FC = () => {
           {/* Footer Note */}
           <motion.div variants={fadeInUp} className="text-center mt-12">
             <p className="text-sm text-zinc-500">
-              Tous les plans incluent un essai gratuit de 14 jours. Annulez à tout moment.
+              {isExpiredTrial
+                ? 'Choisissez un plan pour retrouver l\'accès à votre dashboard.'
+                : 'Tous les plans incluent un essai gratuit de 14 jours. Annulez à tout moment.'}
             </p>
           </motion.div>
         </motion.section>

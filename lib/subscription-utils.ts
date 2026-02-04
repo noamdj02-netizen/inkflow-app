@@ -9,9 +9,9 @@ import { SubscriptionPlan, SubscriptionStatus } from '../types/prisma-enums';
 // ============================================
 
 export const STRIPE_PRICE_IDS = {
-  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_starter_monthly',
-  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_pro_monthly',
-  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_studio_monthly',
+  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_1SwmnQ5JVD1yZUQvxC8AqM8y',
+  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_1SwmnS5JVD1yZUQvvlxQCuG5',
+  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_1SwmnU5JVD1yZUQvZf5SS7WO',
 } as const;
 
 export const PLAN_CONFIG = {
@@ -75,6 +75,8 @@ export function mapStripeStatusToPrisma(
       return SubscriptionStatus.incomplete_expired;
     case 'unpaid':
       return SubscriptionStatus.unpaid;
+    case 'expired':
+      return SubscriptionStatus.expired;
     default:
       return SubscriptionStatus.canceled;
   }

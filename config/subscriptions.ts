@@ -45,7 +45,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   STARTER: {
     title: 'Starter',
     price: 29,
-    priceId: 'price_1SwmmH5JVD1yZUQvapWip4ds', // Stripe Price ID (Starter)
+    priceId: 'price_1SwmnQ5JVD1yZUQvxC8AqM8y', // Stripe Price ID (Starter)
     description: 'Pour démarrer',
     features: [
       '1 artiste',
@@ -64,7 +64,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   PRO: {
     title: 'Pro',
     price: 49,
-    priceId: 'price_1Swmmj5JVD1yZUQvJXiZN5F2', // Stripe Price ID (Pro)
+    priceId: 'price_1SwmnS5JVD1yZUQvvlxQCuG5', // Stripe Price ID (Pro)
     description: 'Pour les établis',
     features: [
       'Tout du Starter',
@@ -84,7 +84,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   STUDIO: {
     title: 'Studio',
     price: 99,
-    priceId: 'price_1Swmn35JVD1yZUQvg8ZIGyJk', // Stripe Price ID (Studio)
+    priceId: 'price_1SwmnU5JVD1yZUQvZf5SS7WO', // Stripe Price ID (Studio)
     description: 'Pour les équipes',
     features: [
       'Jusqu\'à 3 artistes',

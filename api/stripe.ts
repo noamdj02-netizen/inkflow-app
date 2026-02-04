@@ -68,11 +68,38 @@ type StripeActionBody = {
   account_id?: string;
 };
 
-const STRIPE_PRICE_IDS: Record<string, string> = {
-  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_1SwmmH5JVD1yZUQvapWip4ds',
-  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_1Swmmj5JVD1yZUQvJXiZN5F2',
-  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_1Swmn35JVD1yZUQvg8ZIGyJk',
+// Price IDs TEST (à utiliser uniquement avec sk_test_) — Stripe attend des Price ID (price_xxx), pas des Product ID (prod_xxx)
+const FALLBACK_PRICE_IDS_TEST: Record<string, string> = {
+  STARTER: 'price_1SwmnQ5JVD1yZUQvxC8AqM8y',
+  PRO: 'price_1SwmnS5JVD1yZUQvvlxQCuG5',
+  STUDIO: 'price_1SwmnU5JVD1yZUQvZf5SS7WO',
 };
+const FALLBACK_PRICE_IDS_LIVE: Record<string, string> = {
+  STARTER: '',
+  PRO: '',
+  STUDIO: '',
+};
+
+/** Stripe Checkout attend un Price ID (price_xxx). Les Product ID (prod_xxx) provoquent "No such price". */
+function isValidStripePriceId(id: string): boolean {
+  return typeof id === 'string' && id.startsWith('price_') && id.length > 6;
+}
+
+function resolvePriceId(envValue: string | undefined, fallback: string): string {
+  const raw = (envValue || '').trim();
+  if (isValidStripePriceId(raw)) return raw;
+  return fallback;
+}
+
+function getStripePriceIds(secretKey: string): Record<string, string> {
+  const isTestMode = secretKey.startsWith('sk_test_');
+  const fallbacks = isTestMode ? FALLBACK_PRICE_IDS_TEST : FALLBACK_PRICE_IDS_LIVE;
+  return {
+    STARTER: resolvePriceId(process.env.STRIPE_PRICE_ID_STARTER, fallbacks.STARTER),
+    PRO: resolvePriceId(process.env.STRIPE_PRICE_ID_PRO, fallbacks.PRO),
+    STUDIO: resolvePriceId(process.env.STRIPE_PRICE_ID_STUDIO, fallbacks.STUDIO),
+  };
+}
 
 /** Email admin : bypass Stripe, accès PRO direct. */
 const ADMIN_EMAIL_STRICT = 'noamdj02@gmail.com';
@@ -197,9 +224,11 @@ export default async function handler(req: any, res: any) {
           return json(res, 400, { error: 'Missing userId' });
         }
 
-        const priceId = STRIPE_PRICE_IDS[body.plan];
+        const priceId = getStripePriceIds(stripeSecretKey)[body.plan];
         if (!priceId) {
-          return json(res, 500, { error: `Price ID not configured for plan ${body.plan}` });
+          return json(res, 500, {
+            error: `Price ID non configuré pour ${body.plan}. En mode live, définir STRIPE_PRICE_ID_STARTER/PRO/STUDIO.`,
+          });
         }
 
         // ——— 1. RÉCUPÉRATION AUTH (obligatoire) ———
@@ -249,28 +278,60 @@ export default async function handler(req: any, res: any) {
           });
         }
 
-        // ——— 3. FIX "USER NOT FOUND" — upsert garanti (jamais findUnique) ———
-        const { data: dbUser, error: upsertErr } = await supabase
+        // ——— 3. FIX "USER NOT FOUND" — get or create avec période d'essai 14j si nouveau ———
+        const { data: existingUser } = await supabase
           .from('users')
-          .upsert(
-            {
+          .select('id, email, stripe_customer_id')
+          .eq('id', body.userId)
+          .single();
+
+        let dbUser: { id: string; email: string | null; stripe_customer_id: string | null } | null = existingUser as typeof existingUser;
+
+        if (!dbUser) {
+          const now = new Date();
+          const trialEndsAt = new Date(now);
+          trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+          const { data: inserted, error: insertErr } = await supabase
+            .from('users')
+            .insert({
               id: authUser.id,
               email: authUser.email || authEmail || '',
               name: safeName,
-            } as never,
-            { onConflict: 'id' }
-          )
-          .select('id, email, stripe_customer_id')
-          .single();
-
-        if (upsertErr || !dbUser) {
-          console.error('[stripe] User upsert failed:', upsertErr);
-          return json(res, 500, { error: 'Impossible de créer ou récupérer votre compte.' });
+              subscription_status: 'trialing',
+              trial_started_at: now.toISOString(),
+              trial_ends_at: trialEndsAt.toISOString(),
+            } as never)
+            .select('id, email, stripe_customer_id')
+            .single();
+          if (insertErr) {
+            if (insertErr.code === '23505') {
+              const { data: retry } = await supabase.from('users').select('id, email, stripe_customer_id').eq('id', body.userId).single();
+              dbUser = retry as typeof dbUser;
+            } else {
+              console.error('[stripe] User create failed:', insertErr);
+              return json(res, 500, { error: 'Impossible de créer votre compte.' });
+            }
+          } else {
+            dbUser = inserted as typeof dbUser;
+          }
         }
 
-        const user = dbUser as { id: string; email: string | null; stripe_customer_id: string | null };
+        if (!dbUser) {
+          return json(res, 500, { error: 'Impossible de récupérer votre compte.' });
+        }
+
+        const user = dbUser;
 
         // ——— 4. SUITE LOGIQUE STRIPE ———
+        // Dernier recours : ne jamais envoyer un Product ID (prod_xxx) à Stripe
+        const fallbacks = stripeSecretKey.startsWith('sk_test_') ? FALLBACK_PRICE_IDS_TEST : FALLBACK_PRICE_IDS_LIVE;
+        const safePriceId = isValidStripePriceId(priceId) ? priceId : (fallbacks[body.plan!] || priceId);
+        if (!safePriceId || !isValidStripePriceId(safePriceId)) {
+          return json(res, 500, {
+            error: `Price ID invalide pour ${body.plan}. Utilisez un Price ID (price_xxx) dans STRIPE_PRICE_ID_* sur Vercel, pas un Product ID (prod_xxx).`,
+          });
+        }
+
         let customerId: string;
         if (user.stripe_customer_id) {
           customerId = user.stripe_customer_id;
@@ -290,7 +351,7 @@ export default async function handler(req: any, res: any) {
           mode: 'subscription',
           payment_method_types: ['card'],
           customer: customerId,
-          line_items: [{ price: priceId, quantity: 1 }],
+          line_items: [{ price: safePriceId, quantity: 1 }],
           metadata: { userId: body.userId, plan: body.plan },
           subscription_data: { metadata: { userId: body.userId, plan: body.plan } },
           success_url: `${baseUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,

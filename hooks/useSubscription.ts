@@ -13,6 +13,7 @@ export interface UserSubscription {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   subscriptionCurrentPeriodEnd: Date | null;
+  trialEndsAt: Date | null;
 }
 
 export const useSubscription = () => {
@@ -37,7 +38,7 @@ export const useSubscription = () => {
         // Note: La table 'users' doit avoir les colonnes subscription_plan, subscription_status, etc.
         const { data, error: fetchError } = await supabase
           .from('users')
-          .select('stripe_customer_id, stripe_subscription_id, subscription_plan, subscription_status, subscription_current_period_end')
+          .select('stripe_customer_id, stripe_subscription_id, subscription_plan, subscription_status, subscription_current_period_end, trial_ends_at')
           .eq('id', user.id)
           .single();
 
@@ -50,6 +51,7 @@ export const useSubscription = () => {
               stripeCustomerId: null,
               stripeSubscriptionId: null,
               subscriptionCurrentPeriodEnd: null,
+              trialEndsAt: null,
             });
             return;
           }
@@ -65,6 +67,7 @@ export const useSubscription = () => {
           subscriptionCurrentPeriodEnd: data.subscription_current_period_end 
             ? new Date(data.subscription_current_period_end) 
             : null,
+          trialEndsAt: data.trial_ends_at ? new Date(data.trial_ends_at) : null,
         });
       } catch (err: any) {
         console.error('Error fetching subscription:', err);

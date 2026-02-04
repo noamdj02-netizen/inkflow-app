@@ -35,9 +35,9 @@ function requireEnv(name: string): string {
 }
 
 const STRIPE_PRICE_IDS = {
-  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_1SwmmH5JVD1yZUQvapWip4ds',
-  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_1Swmmj5JVD1yZUQvJXiZN5F2',
-  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_1Swmn35JVD1yZUQvg8ZIGyJk',
+  STARTER: process.env.STRIPE_PRICE_ID_STARTER || 'price_1SwmnQ5JVD1yZUQvxC8AqM8y',
+  PRO: process.env.STRIPE_PRICE_ID_PRO || 'price_1SwmnS5JVD1yZUQvvlxQCuG5',
+  STUDIO: process.env.STRIPE_PRICE_ID_STUDIO || 'price_1SwmnU5JVD1yZUQvZf5SS7WO',
 };
 
 function getPriceIdToPlanMap(): Record<string, string> {
