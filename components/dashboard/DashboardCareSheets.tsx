@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Plus, Save, Trash2, ArrowLeft, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import type { Database } from '../../types/supabase';
@@ -16,7 +16,7 @@ const fadeInUp = {
 
 export const DashboardCareSheets: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const [templates, setTemplates] = useState<CareTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,7 +165,7 @@ export const DashboardCareSheets: React.FC = () => {
           <div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/dashboard/settings')}
+                onClick={() => router.push('/dashboard/settings')}
                 className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
                 aria-label="Retour"
               >

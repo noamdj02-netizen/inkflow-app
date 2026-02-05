@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink, Calendar, Crown } from 'lucide-react';
@@ -16,7 +16,7 @@ export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
   const { user, loading: authLoading } = useAuth();
   const { subscription, loading: subscriptionLoading } = useSubscription();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -45,6 +45,7 @@ export const DashboardSettings: React.FC = () => {
     instagram_url: '',
     tiktok_url: '',
     facebook_url: '',
+    calcom_username: '',
   });
   const [slugError, setSlugError] = useState<string | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
@@ -97,7 +98,7 @@ export const DashboardSettings: React.FC = () => {
       }
 
       // Check if we're in development mode
-      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
       
       // Call the API route to create Stripe Connect account and get onboarding link
       const apiUrl = isDevelopment 
@@ -123,7 +124,7 @@ export const DashboardSettings: React.FC = () => {
         
         // Handle 404 specifically (route not found)
         if (response.status === 404) {
-          const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+          const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
           if (isDevelopment) {
             errorMessage = 'Les routes API ne fonctionnent qu\'en production sur Vercel. Déployez votre projet sur Vercel pour tester Stripe Connect.';
             console.error('API routes are only available in production on Vercel. Deploy your project to test Stripe Connect.');
@@ -197,7 +198,7 @@ export const DashboardSettings: React.FC = () => {
       setError(errorMessage);
       
       // Show more helpful error message
-      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
       const displayMessage = isDevelopment && errorMessage.includes('non trouvée')
         ? 'Les routes API ne fonctionnent qu\'en production. Déployez sur Vercel pour tester.'
         : errorMessage;
@@ -224,7 +225,7 @@ export const DashboardSettings: React.FC = () => {
     setError(null);
 
     try {
-      const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
       const apiUrl = isDevelopment 
         ? `${window.location.origin}/api/stripe`
         : '/api/stripe';
@@ -502,6 +503,7 @@ export const DashboardSettings: React.FC = () => {
         vitrine_hero_background_url: heroBackgroundUrl,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
+        calcom_username: formData.calcom_username?.trim() || null,
       };
       if (formData.ville !== undefined) updates.ville = formData.ville.trim() || null;
       if (formData.rating !== '' && formData.rating !== undefined) updates.rating = Number(formData.rating) || null;
@@ -556,7 +558,7 @@ export const DashboardSettings: React.FC = () => {
           <AlertCircle className="text-brand-pink mx-auto mb-4" size={48} />
           <p className="text-zinc-400 mb-4">Vous devez être connecté</p>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => router.push('/login')}
             className="bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-zinc-200"
           >
             Se connecter
@@ -574,7 +576,7 @@ export const DashboardSettings: React.FC = () => {
           <h2 className="text-xl font-display font-bold text-white mb-2">Erreur</h2>
           <p className="text-zinc-400 mb-6">{profileError}</p>
           <button
-            onClick={() => navigate('/dashboard/overview')}
+            onClick={() => router.push('/dashboard/overview')}
             className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
           >
             Retour au dashboard
@@ -594,7 +596,7 @@ export const DashboardSettings: React.FC = () => {
             Vous devez d'abord compléter votre profil dans l'onboarding.
           </p>
           <button
-            onClick={() => navigate('/onboarding')}
+            onClick={() => router.push('/onboarding')}
             className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
           >
             Créer mon profil
@@ -637,7 +639,7 @@ export const DashboardSettings: React.FC = () => {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   type="button"
-                  onClick={() => navigate('/dashboard/settings/care-sheets')}
+                  onClick={() => router.push('/dashboard/settings/care-sheets')}
                   className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 text-sm whitespace-nowrap"
                 >
                   Gérer mes Care Sheets
@@ -1305,6 +1307,65 @@ export const DashboardSettings: React.FC = () => {
                 })()}
               </div>
 
+              {/* Configuration Cal.com */}
+              <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Calendar className="text-zinc-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-white">Cal.com - Réservation en ligne</h3>
+                    <p className="text-xs text-zinc-500">Intégration calendrier Cal.com</p>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4">
+                  Connectez votre compte Cal.com pour permettre à vos clients de réserver directement en ligne. 
+                  Entrez votre nom d&apos;utilisateur Cal.com (ex: si votre lien est cal.com/john-doe, entrez &quot;john-doe&quot;).
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Nom d&apos;utilisateur Cal.com
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.calcom_username}
+                      onChange={(e) => {
+                        let value = e.target.value.trim();
+                        // Extraire le username si l'utilisateur entre l'URL complète
+                        // Ex: "cal.com/noam-41pyox" ou "https://cal.com/noam-41pyox" → "noam-41pyox"
+                        if (value.includes('cal.com/')) {
+                          value = value.split('cal.com/')[1]?.split('?')[0]?.split('/')[0] || value;
+                        }
+                        // Supprimer les protocoles et domaines
+                        value = value.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                        setFormData({ ...formData, calcom_username: value.toLowerCase() });
+                      }}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                      placeholder="noam-41pyox"
+                    />
+                    <p className="text-xs text-zinc-500 mt-2">
+                      Entrez votre username Cal.com (ex: <code className="bg-white/10 px-1 rounded">noam-41pyox</code>). 
+                      Vous pouvez aussi coller le lien complet, il sera automatiquement extrait.
+                    </p>
+                  </div>
+                  {formData.calcom_username && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                      <p className="text-xs text-zinc-400 mb-2">Aperçu de votre lien Cal.com :</p>
+                      <a
+                        href={`https://cal.com/${formData.calcom_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-white hover:text-zinc-300 underline flex items-center gap-2"
+                      >
+                        cal.com/{formData.calcom_username}
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Pourcentage d'acompte
@@ -1512,7 +1573,7 @@ export const DashboardSettings: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard/overview')}
+                onClick={() => router.push('/dashboard/overview')}
                 className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base"
               >
                 Annuler

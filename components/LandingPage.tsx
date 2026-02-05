@@ -1,6 +1,9 @@
+'use client';
+
 import React, { useState, useEffect, startTransition } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { SEOHead } from './seo/SEOHead';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+// SEOHead retiré - Next.js gère le SEO via metadata dans les Server Components
 import { SITE_URL } from '../constants/seo';
 import {
   getOrganizationSchema,
@@ -100,7 +103,7 @@ const faqItems: { question: string; answer: string }[] = [
 ];
 
 export const LandingPage: React.FC<LandingPageProps> = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
@@ -133,21 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
 
   return (
     <div className="min-h-screen bg-[#02040a] text-white font-sans antialiased overflow-x-hidden relative">
-      <SEOHead
-        title="InkFlow — Logiciel de gestion tatoueur & agenda tatouage | Réservation en ligne"
-        description="Logiciel de gestion tatoueur avec agenda tatouage intégré : réservation en ligne, flashs, paiements et vitrine. Pour artistes et studios."
-        canonical="/"
-        image={`${SITE_URL.replace(/\/$/, '')}/pwa-512x512.png`}
-        ogType="website"
-        addSoftwareApplicationSchema
-        jsonLd={[
-          getOrganizationSchema(),
-          getWebSiteSchema(),
-          getWebApplicationSchema(),
-          getFAQPageSchema(faqItems),
-          ...(getTestimonialsAggregateSchema(testimonials.length) ? [getTestimonialsAggregateSchema(testimonials.length)!] : []),
-        ]}
-      />
+      {/* SEO géré par Next.js metadata dans app/page.tsx */}
 
 
       {/* Hero Background - fond immersif luxe (z-0) : encre noire + glows subtils */}
@@ -209,7 +198,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
             <motion.button 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/register')}
+              onClick={() => router.push('/register')}
               className="bg-white text-black px-6 py-2.5 text-sm font-semibold hover:bg-zinc-100 transition-all min-h-[44px]"
             >
               Commencer
@@ -363,7 +352,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                 <motion.button 
                   whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.1)" }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => startTransition(() => navigate('/offres'))}
+                  onClick={() => startTransition(() => router.push('/offres'))}
                   className="group bg-white text-black px-6 md:px-8 py-3.5 md:py-4 font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 min-h-[48px] w-full sm:w-auto"
                 >
                   Essai gratuit

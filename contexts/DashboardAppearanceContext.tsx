@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Dashboard Appearance – intensité des néons et couleurs du fond.
  * Persisté en localStorage, modifiable depuis le Widget Store (onglet Apparence).

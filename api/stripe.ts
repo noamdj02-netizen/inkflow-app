@@ -314,8 +314,8 @@ export default async function handler(req: any, res: any) {
               console.error('[stripe] User create failed:', insertErr);
               return json(res, 500, { error: 'Impossible de créer votre compte.' });
             }
-          } else {
-            dbUser = inserted as typeof dbUser;
+          } else if (inserted) {
+            dbUser = inserted;
           }
         }
 

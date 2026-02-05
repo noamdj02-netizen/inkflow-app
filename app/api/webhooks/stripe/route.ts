@@ -4,40 +4,19 @@
  * POST /api/webhooks/stripe
  * 
  * Événements gérés:
- * - payment_intent.succeeded: Confirmer le booking (PENDING_PAYMENT → CONFIRMED)
+ * - payment_intent.succeeded: Confirmer le booking (pending → confirmed)
  * - payment_intent.payment_failed: Marquer le paiement comme échoué
  */
 
 import type Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
-import { BookingStatus } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
-import { stripe } from '@/lib/stripe';
-import { sendBookingNotificationToArtist } from '@/lib/emails/sendArtistNotification';
+import { createClient } from '@/lib/supabase/server';
+import StripeLib from 'stripe';
+import { createBooking } from '@/lib/calcom';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const stripe = new StripeLib(process.env.STRIPE_SECRET_KEY!);
 
-const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-function formatDateFr(date: Date): string {
-  const d = new Date(date);
-  const dayName = DAYS_FR[d.getDay()];
-  const day = d.getDate();
-  const month = MONTHS_FR[d.getMonth()];
-  return `${dayName} ${day} ${month}`;
-}
-
-function formatTimeFr(date: Date): string {
-  const d = new Date(date);
-  const h = d.getHours().toString().padStart(2, '0');
-  const m = d.getMinutes().toString().padStart(2, '0');
-  return `${h}h${m}`;
-}
-
-/**
- * Handler POST: Recevoir les webhooks Stripe
- */
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
@@ -68,120 +47,108 @@ export async function POST(request: NextRequest) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const bookingId = paymentIntent.metadata?.booking_id;
-        const paymentType = paymentIntent.metadata?.type;
 
-        // Ne traiter que les acomptes de réservation
-        if (!bookingId || paymentType !== 'booking_deposit') {
-          console.log('Ignoring payment_intent.succeeded (not a booking deposit)');
+        if (!bookingId) {
           return NextResponse.json({ received: true });
         }
 
-        // Mettre à jour le booking de manière atomique
-        const booking = await prisma.$transaction(async (tx) => {
-          // Vérifier que le booking existe et est toujours en PENDING_PAYMENT
-          const existingBooking = await tx.booking.findUnique({
-            where: { id: bookingId },
-            select: {
-              id: true,
-              status: true,
-              paymentIntent: true,
-            },
-          });
+        const supabase = createClient();
 
-          if (!existingBooking) {
-            throw new Error(`Booking ${bookingId} not found`);
-          }
+        // Récupérer le booking
+        const { data: booking, error: bookingError } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            artists (cal_com_username, cal_com_event_type_id, email, nom_studio)
+          `)
+          .eq('id', bookingId)
+          .single();
 
-          if (existingBooking.status !== BookingStatus.PENDING_PAYMENT) {
-            console.log(
-              `Booking ${bookingId} already processed (status: ${existingBooking.status})`
-            );
-            return existingBooking;
-          }
+        if (bookingError || !booking) {
+          console.error(`Booking ${bookingId} not found`);
+          return NextResponse.json({ received: true });
+        }
 
-          // Vérifier que le PaymentIntent correspond
-          if (existingBooking.paymentIntent !== paymentIntent.id) {
-            throw new Error(
-              `PaymentIntent mismatch: expected ${existingBooking.paymentIntent}, got ${paymentIntent.id}`
-            );
-          }
+        const bookingData = booking as any;
 
-          // Mettre à jour le statut du booking
-          const updatedBooking = await tx.booking.update({
-            where: {
-              id: bookingId,
-              status: BookingStatus.PENDING_PAYMENT, // Condition atomique
-            },
-            data: {
-              status: BookingStatus.CONFIRMED,
-            },
-            include: {
-              client: {
-                select: {
-                  email: true,
-                  name: true,
-                },
-              },
-              service: {
-                select: {
-                  name: true,
-                },
-              },
-              artist: {
-                select: {
-                  slug: true,
-                  user: {
-                    select: {
-                      email: true,
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
+        // Vérifier que le booking est toujours pending
+        if (bookingData.status !== 'pending') {
+          return NextResponse.json({ received: true });
+        }
 
-          // Enregistrer la transaction Stripe pour traçabilité
-          await tx.stripeTransaction.create({
-            data: {
-              bookingId: bookingId,
-              artistId: updatedBooking.artistId,
-              stripePaymentIntentId: paymentIntent.id,
-              amount: paymentIntent.amount,
-              currency: paymentIntent.currency || 'eur',
-              status: 'succeeded',
-              paymentType: 'deposit',
-            },
-          }).catch((err) => {
-            // Log mais ne pas faire échouer la transaction
-            console.error('Error creating stripe_transaction:', err);
-          });
+        // Vérifier que le PaymentIntent correspond
+        if (bookingData.stripe_payment_intent_id !== paymentIntent.id) {
+          console.error(
+            `PaymentIntent mismatch: expected ${bookingData.stripe_payment_intent_id}, got ${paymentIntent.id}`
+          );
+          return NextResponse.json({ received: true });
+        }
 
-          return updatedBooking;
-        });
-
-        // Envoyer la notification email au tatoueur (ne doit pas faire échouer le webhook)
-        if (booking.status === BookingStatus.CONFIRMED) {
+        // Créer le booking Cal.com si pas encore créé et si configuré
+        let calComBookingId = bookingData.cal_com_booking_id;
+        const artist = bookingData.artists as any;
+        
+        if (!calComBookingId && artist?.cal_com_username && artist?.cal_com_event_type_id) {
           try {
-            const artistEmail = booking.artist.user.email;
-            const clientName = booking.client.name ?? booking.client.email ?? 'Client';
-            const projectName = booking.service.name;
-            const date = formatDateFr(booking.startTime);
-            const time = formatTimeFr(booking.startTime);
-            const baseUrl = (process.env.SITE_URL ?? process.env.VITE_SITE_URL ?? 'https://ink-flow.me').replace(/\/$/, '');
-            const bookingUrl = `${baseUrl}/dashboard`;
+            const calComBooking = await createBooking(
+              artist.cal_com_username,
+              artist.cal_com_event_type_id,
+              bookingData.scheduled_at,
+              {
+                name: bookingData.client_name || 'Client',
+                email: bookingData.client_email,
+                phone: bookingData.client_phone || '',
+              }
+            );
+            calComBookingId = calComBooking.id;
+          } catch (calComError) {
+            console.error('Error creating Cal.com booking:', calComError);
+            // Continue même si Cal.com échoue
+          }
+        }
 
-            await sendBookingNotificationToArtist({
-              artistEmail,
-              clientName,
-              projectName,
-              date,
-              time,
-              bookingUrl,
+        // Mettre à jour le booking: status = confirmed, acompte_paid = true
+        const { error: updateError } = await (supabase
+          .from('bookings') as any)
+          .update({
+            status: 'confirmed',
+            acompte_paid: true,
+            cal_com_booking_id: calComBookingId || bookingData.cal_com_booking_id,
+            confirmed_by_artist_at: new Date().toISOString(),
+          })
+          .eq('id', bookingId)
+          .eq('status', 'pending'); // Condition atomique
+
+        if (updateError) {
+          console.error('Error updating booking:', updateError);
+          return NextResponse.json({ received: true });
+        }
+
+        // Envoyer notification email au tatoueur (si Resend configuré)
+        if (process.env.RESEND_API_KEY && artist?.email) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'InkFlow <notifications@ink-flow.me>',
+                to: artist.email,
+                subject: '🎨 Nouvelle réservation confirmée !',
+                html: `
+                  <h1>Réservation confirmée</h1>
+                  <p><strong>Client :</strong> ${bookingData.client_name || bookingData.client_email}</p>
+                  <p><strong>Type :</strong> ${bookingData.type === 'flash' ? 'Flash' : 'Projet personnalisé'}</p>
+                  <p><strong>Date :</strong> ${new Date(bookingData.scheduled_at).toLocaleString('fr-FR')}</p>
+                  <p><strong>Acompte :</strong> ${bookingData.acompte_amount}€</p>
+                  <a href="https://ink-flow.me/dashboard/bookings/${bookingId}">Voir la réservation</a>
+                `
+              })
             });
-            console.log(`Booking ${bookingId} confirmed; notification email sent to artist`);
           } catch (emailErr) {
-            console.error('Failed to send booking notification to artist (webhook continues):', emailErr);
+            console.error('Failed to send booking notification (webhook continues):', emailErr);
           }
         }
 
@@ -193,34 +160,26 @@ export async function POST(request: NextRequest) {
         const bookingId = paymentIntent.metadata?.booking_id;
 
         if (bookingId) {
-          // Optionnel: Marquer le booking comme échoué ou le supprimer
-          // Pour l'instant, on garde PENDING_PAYMENT pour permettre un réessai
-          console.log(`Payment failed for booking ${bookingId}`);
-          
-          // Vous pouvez ajouter une logique ici pour:
-          // - Envoyer un email au client
-          // - Annuler automatiquement après X heures
-          // - Notifier l'artiste
+          // Optionnel: Marquer le booking comme échoué ou envoyer un email
+          // Pour l'instant, on garde le statut pending pour permettre un réessai
         }
 
         return NextResponse.json({ received: true });
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
         return NextResponse.json({ received: true });
     }
   } catch (error: unknown) {
     console.error('Webhook processing error:', error);
 
     // Retourner 200 pour éviter que Stripe réessaie indéfiniment
-    // Mais logger l'erreur pour debugging
     return NextResponse.json(
       {
         error: 'Webhook processing failed',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 200 } // Important: 200 pour éviter les retries Stripe
+      { status: 200 }
     );
   }
 }

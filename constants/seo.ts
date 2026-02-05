@@ -3,7 +3,7 @@
  * SITE_URL : utilisé pour canonical, og:url, sitemap, JSON-LD.
  */
 export const SITE_URL =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SITE_URL) ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
   (typeof window !== 'undefined' ? window.location.origin : '') ||
   'https://ink-flow.me';
 

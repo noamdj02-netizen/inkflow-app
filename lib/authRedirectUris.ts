@@ -4,13 +4,9 @@
  * pour éviter l'erreur "redirect_uri_mismatch" (Error 400).
  */
 
-const supabaseUrl = typeof import.meta !== 'undefined'
-  ? (import.meta as any).env?.VITE_SUPABASE_URL || ''
-  : '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
-const siteUrl = typeof import.meta !== 'undefined'
-  ? (import.meta as any).env?.VITE_SITE_URL || ''
-  : '';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
 /** URL de callback Supabase (c'est celle que Google doit autoriser). */
 export function getSupabaseCallbackUri(): string {

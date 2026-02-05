@@ -37,7 +37,7 @@ export function AIConsultant({ isOpen, onClose, artistName }: AIConsultantProps)
     setIsLoading(true);
 
     try {
-      const isDev = import.meta.env.DEV || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+      const isDev = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
       const base = isDev ? window.location.origin : '';
       const response = await fetch(`${base}/api/tattoo-advice`, {
         method: 'POST',

@@ -4,11 +4,12 @@ import type { Database } from '../types/supabase';
 // ============================================
 // 🔍 DEBUG: Vérification des variables d'env
 // ============================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Support Next.js (process.env)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Log de debug (visible dans la console du navigateur)
-const DEBUG_MODE = import.meta.env.DEV || false;
+const DEBUG_MODE = process.env.NODE_ENV === 'development';
 
 if (DEBUG_MODE) {
   console.group('🔧 Supabase Configuration Debug');
@@ -24,17 +25,17 @@ const validateConfig = (): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
   
   if (!supabaseUrl) {
-    errors.push('VITE_SUPABASE_URL est manquant dans .env.local');
+    errors.push('NEXT_PUBLIC_SUPABASE_URL est manquant dans .env.local');
   } else if (!supabaseUrl.startsWith('https://')) {
-    errors.push('VITE_SUPABASE_URL doit commencer par https://');
+    errors.push('NEXT_PUBLIC_SUPABASE_URL doit commencer par https://');
   } else if (!supabaseUrl.includes('.supabase.co')) {
-    errors.push('VITE_SUPABASE_URL ne semble pas être une URL Supabase valide');
+    errors.push('NEXT_PUBLIC_SUPABASE_URL ne semble pas être une URL Supabase valide');
   }
   
   if (!supabaseAnonKey) {
-    errors.push('VITE_SUPABASE_ANON_KEY est manquant dans .env.local');
+    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY est manquant dans .env.local');
   } else if (supabaseAnonKey.length < 100) {
-    errors.push('VITE_SUPABASE_ANON_KEY semble trop court (clé invalide?)');
+    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY semble trop court (clé invalide?)');
   }
   
   return { isValid: errors.length === 0, errors };
@@ -46,8 +47,8 @@ if (!isValid && DEBUG_MODE) {
   console.error('🚨 Erreurs de configuration Supabase:');
   errors.forEach(err => console.error(`   • ${err}`));
   console.error('\n📝 Solution: Créez un fichier .env.local à la racine avec:');
-  console.error('   VITE_SUPABASE_URL=https://votre-projet.supabase.co');
-  console.error('   VITE_SUPABASE_ANON_KEY=votre-clé-anon-publique');
+  console.error('   NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co');
+  console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY=votre-clé-anon-publique');
 }
 
 // ============================================

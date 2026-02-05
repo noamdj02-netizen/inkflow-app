@@ -15,7 +15,7 @@ import { Breadcrumbs } from './seo/Breadcrumbs';
 type Slot = { date: string; time: string; iso: string; displayDate: string };
 
 const getApiBase = () => {
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     return window.location.origin;
   }
   return '';
@@ -72,7 +72,7 @@ export const PublicBookingPage: React.FC = () => {
         if (cancelled) return;
         if (data.slots && data.slots.length > 0) {
           setSlots(data.slots);
-        } else if (import.meta.env.DEV) {
+        } else if (process.env.NODE_ENV === 'development') {
           setSlots(buildMockSlots());
         } else {
           setSlots([]);
@@ -80,7 +80,7 @@ export const PublicBookingPage: React.FC = () => {
       })
       .catch(() => {
         if (!cancelled) {
-          if (import.meta.env.DEV) setSlots(buildMockSlots());
+          if (process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && (import.meta as any)?.env?.DEV)) setSlots(buildMockSlots());
           else setSlots([]);
         }
       })
@@ -174,7 +174,7 @@ export const PublicBookingPage: React.FC = () => {
         <p className="text-zinc-300 text-sm md:text-base mb-8">
           Choisissez un créneau disponible, puis vous pourrez sélectionner un flash sur la vitrine.
         </p>
-        {import.meta.env.DEV && slots.length > 0 && (
+        {process.env.NODE_ENV === 'development' && slots.length > 0 && (
           <p className="mb-4 text-amber-400/90 text-sm font-medium" role="status">
             Données de démo (API non servie en local) — le planning est fictif.
           </p>

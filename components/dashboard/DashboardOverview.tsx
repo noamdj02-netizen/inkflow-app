@@ -5,7 +5,7 @@
 import React, { Suspense, useState, lazy, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Share2, CheckCircle, X, LayoutDashboard, GripVertical } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import {
   DndContext,
   pointerWithin,
@@ -160,7 +160,7 @@ function SortableWidgetItem({
 
 export const DashboardOverview: React.FC = () => {
   const { profile } = useArtistProfile();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -323,7 +323,7 @@ export const DashboardOverview: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/dashboard/flashs')}
+            onClick={() => router.push('/dashboard/flashs')}
             className="flex items-center gap-2 bg-white text-black px-3 py-2 min-h-[44px] md:min-h-0 rounded-md text-sm font-semibold hover:bg-zinc-100 transition-all touch-manipulation"
           >
             <Plus size={16} /> Nouveau Flash

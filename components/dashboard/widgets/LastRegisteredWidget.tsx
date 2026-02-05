@@ -5,11 +5,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useDashboardData } from '../../../hooks/useDashboardData';
 
 export const LastRegisteredWidget: React.FC = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { recentBookings, loading } = useDashboardData();
   const items = (recentBookings ?? []).slice(0, 3);
 
@@ -26,7 +26,7 @@ export const LastRegisteredWidget: React.FC = () => {
         </div>
         <button
           type="button"
-          onClick={() => navigate('/dashboard/clients')}
+          onClick={() => router.push('/dashboard/clients')}
           className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
         >
           Voir tout

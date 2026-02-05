@@ -5,11 +5,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useDashboardData } from '../../../hooks/useDashboardData';
 
 export const PendingRequestsWidget: React.FC = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { pendingProjects, loading } = useDashboardData();
   const count = pendingProjects?.length ?? 0;
 
@@ -44,7 +44,7 @@ export const PendingRequestsWidget: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/dashboard/requests')}
+          onClick={() => router.push('/dashboard/requests')}
           className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
         >
           Voir les demandes

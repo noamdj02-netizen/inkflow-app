@@ -1,11 +1,13 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, Lock, AlertCircle, ArrowLeft, Sparkles, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { PageSEO } from './seo/PageSEO';
+// PageSEO retiré - Next.js gère le SEO via metadata dans les Server Components
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
 import { LoginFormErrorBoundary } from './auth/LoginFormErrorBoundary';
 
 export const LoginPage: React.FC = () => {
@@ -14,41 +16,61 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
-  const { signIn, signInWithOAuth, authError } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, signInWithOAuth, authError, isConfigured } = useAuth();
+  const router = useRouter();
   
   // Vérification de la configuration Supabase
-  const isConfigured = isSupabaseConfigured();
-  const configErrors = getConfigErrors();
+  const configErrors = isConfigured ? [] : [
+    'NEXT_PUBLIC_SUPABASE_URL est manquant dans .env.local',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY est manquant dans .env.local'
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      // Timeout de sécurité pour éviter que le bouton reste bloqué indéfiniment
+      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
+        setTimeout(() => {
+          resolve({ error: { message: 'Timeout: La connexion prend trop de temps. Vérifiez votre connexion internet.' } });
+        }, 30000); // 30 secondes
+      });
 
-    if (error) {
-      const msg = error.message;
-      let errorMessage = msg;
-      const isNetworkError = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Impossible de se connecter');
+      const signInPromise = signIn(email, password);
+      const result = await Promise.race([signInPromise, timeoutPromise]);
 
-      if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials')) {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, cliquez sur "S\'inscrire" ci-dessous.';
-      } else if (msg.includes('Email not confirmed')) {
-        errorMessage = 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.';
-      } else if (msg.includes('User not found')) {
-        errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte en cliquant sur "S\'inscrire".';
-      } else if (isNetworkError) {
-        toast.error('Erreur réseau', {
-          description: 'Vérifiez votre connexion internet et réessayez.',
-        });
+      if (result.error) {
+        const msg = result.error.message;
+        let errorMessage = msg;
+        const isNetworkError = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Impossible de se connecter') || msg.includes('Timeout');
+
+        if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials')) {
+          errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, cliquez sur "S\'inscrire" ci-dessous.';
+        } else if (msg.includes('Email not confirmed')) {
+          errorMessage = 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.';
+        } else if (msg.includes('User not found')) {
+          errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte en cliquant sur "S\'inscrire".';
+        } else if (isNetworkError) {
+          toast.error('Erreur réseau', {
+            description: 'Vérifiez votre connexion internet et réessayez.',
+          });
+        }
+
+        setError(errorMessage);
+        setLoading(false);
+      } else {
+        // Succès - redirection vers le dashboard
+        router.push('/dashboard');
+        // Note: setLoading(false) n'est pas nécessaire ici car on navigue vers une autre page
       }
-
+    } catch (err) {
+      // Gestion des erreurs non capturées
+      console.error('🚨 Erreur inattendue lors de la connexion:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite';
       setError(errorMessage);
       setLoading(false);
-    } else {
-      navigate('/dashboard');
     }
   };
 
@@ -73,11 +95,6 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      <PageSEO
-        title="Connexion | InkFlow"
-        description="Connectez-vous à votre espace InkFlow pour gérer vos réservations, flashs et clients."
-        canonical="/login"
-      />
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -92,7 +109,7 @@ export const LoginPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <Link
-            to="/"
+            href="/"
             className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-8 group"
           >
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -285,7 +302,7 @@ export const LoginPage: React.FC = () => {
           <div className="mt-8 text-center">
             <p className="text-zinc-500 text-sm">
               Pas encore de compte ?{' '}
-              <Link to="/register" className="text-white hover:text-zinc-300 font-semibold transition-colors">
+              <Link href="/register" className="text-white hover:text-zinc-300 font-semibold transition-colors">
                 S'inscrire
               </Link>
             </p>

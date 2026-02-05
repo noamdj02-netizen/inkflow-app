@@ -1,8 +1,11 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, Lock, AlertCircle, CheckCircle, ArrowLeft, Sparkles, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { PageSEO } from './seo/PageSEO';
+// PageSEO retiré - Next.js gère le SEO via metadata dans les Server Components
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
@@ -49,17 +52,12 @@ export const RegisterPage: React.FC = () => {
       setError(message);
       setLoading(false);
     } else {
-      navigate('/dashboard');
+      router.push('/dashboard');
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      <PageSEO
-        title="Inscription | InkFlow — Créer un compte tatoueur"
-        description="Créez votre compte InkFlow : gestion de réservations, flashs et paiements pour tatoueurs professionnels."
-        canonical="/register"
-      />
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 -right-32 w-96 h-96 bg-purple-500/5 rounded-full blur-[120px] animate-pulse" />
@@ -74,7 +72,7 @@ export const RegisterPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <Link
-            to="/"
+            href="/"
             className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-8 group"
             aria-label="Retour à l'accueil"
           >
@@ -255,7 +253,7 @@ export const RegisterPage: React.FC = () => {
           <div className="mt-8 text-center">
             <p className="text-zinc-500 text-sm">
               Déjà un compte ?{' '}
-              <Link to="/login" className="text-white hover:text-zinc-300 font-semibold transition-colors">
+              <Link href="/login" className="text-white hover:text-zinc-300 font-semibold transition-colors">
                 Se connecter
               </Link>
             </p>

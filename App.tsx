@@ -116,7 +116,7 @@ const App: React.FC = () => {
                   {/* Demo Routes - Lazy loaded */}
                   <Route path="/client" element={<ClientHome onNavigate={() => {}} />} />
                   <Route path="/flashs" element={<FlashGallery />} />
-                  <Route path="/project" element={<CustomProjectForm />} />
+                  <Route path="/project" element={<CustomProjectForm artistId="" />} />
                   <Route path="/apropos" element={<AproposPage />} />
                   <Route path="/offres" element={<OffresPage />} />
                   <Route path="/mentions-legales" element={<PlaceholderPage title="Mentions légales" description="Cette page sera bientôt disponible." icon="file" />} />

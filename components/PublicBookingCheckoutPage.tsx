@@ -35,7 +35,7 @@ type ArtistBookingInfo = {
 };
 
 const getApiBase = () => {
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     return window.location.origin;
   }
   return '';
@@ -123,7 +123,7 @@ export const PublicBookingCheckoutPage: React.FC = () => {
       })
       .catch(() => {
         if (!cancelled) {
-          const inDev = import.meta.env.DEV;
+          const inDev = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && (import.meta as any)?.env?.DEV);
           setInfoError(
             inDev
               ? 'Service indisponible. En local, lancez "vercel dev" pour activer les API.'
@@ -181,8 +181,8 @@ export const PublicBookingCheckoutPage: React.FC = () => {
       const bookingId = createJson.booking_id;
 
       if (info.artist.stripe_configured) {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
         if (!supabaseUrl || !supabaseAnonKey) {
           setError('Configuration serveur manquante. Contactez le support.');
           setSubmitting(false);

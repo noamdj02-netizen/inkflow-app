@@ -1,8 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysisResult, CustomProjectRequest } from "../types";
 
-const parseAIResponse = (text: string): AIAnalysisResult => {
+const parseAIResponse = (text: string | undefined): AIAnalysisResult => {
   try {
+    if (!text) {
+      throw new Error('Empty response text');
+    }
     // Attempt to extract JSON if the model wrapped it in markdown code blocks
     const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
     const jsonString = jsonMatch ? jsonMatch[1] : text;
@@ -20,7 +23,7 @@ const parseAIResponse = (text: string): AIAnalysisResult => {
 };
 
 export const analyzeProjectRequest = async (request: CustomProjectRequest): Promise<AIAnalysisResult> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   
   if (!apiKey) {
     console.warn("No API Key provided. Returning mock data.");
@@ -92,7 +95,7 @@ export const analyzeProjectRequest = async (request: CustomProjectRequest): Prom
       }
     });
 
-    const result = parseAIResponse(response.text);
+    const result = parseAIResponse(response.text || undefined);
     
     // Validation et fallback si nécessaire
     if (!result.estimatedTimeHours || result.estimatedTimeHours < 1) {

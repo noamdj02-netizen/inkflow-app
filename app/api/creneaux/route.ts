@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { detecterCreneauxDisponibles, verifierDisponibilite } from '@/lib/booking-utils';
-import { BookingType } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,8 +41,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const type = typeParam.toUpperCase() as BookingType;
-    if (!Object.values(BookingType).includes(type)) {
+    const type = typeParam.toUpperCase();
+    const validTypes = ['SESSION', 'CONSULTATION', 'RETOUCHE'];
+    if (!validTypes.includes(type)) {
       return NextResponse.json(
         { error: 'Type de réservation invalide' },
         { status: 400 }

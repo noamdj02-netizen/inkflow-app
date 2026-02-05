@@ -26,7 +26,6 @@ interface StripeCheckoutButtonProps {
 export const StripeCheckoutButton: React.FC<StripeCheckoutButtonProps> = ({
   priceId,
   userId,
-  onSuccess,
   onError,
   className = '',
   children,

@@ -47,10 +47,9 @@ export const BookingFormExample: React.FC = () => {
         notes: formData.notes,
       };
 
-      const result = await creerReservation(data);
+      await creerReservation(data);
       
       toast.success('Réservation créée avec succès !');
-      console.log('Réservation créée:', result);
     } catch (error) {
       // Gestion d'erreurs explicite avec types d'erreurs spécifiques
       if (error instanceof CreneauIndisponibleError) {

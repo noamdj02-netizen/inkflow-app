@@ -1,9 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase, isSupabaseConfigured, getConfigErrors } from '../services/supabase';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { createClient } from '../lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
+// Helpers pour vérifier la configuration
+const isSupabaseConfigured = (): boolean => {
+  return !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+};
+
+const getConfigErrors = (): string[] => {
+  const errors: string[] = [];
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    errors.push('NEXT_PUBLIC_SUPABASE_URL est manquant dans .env.local');
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY est manquant dans .env.local');
+  }
+  return errors;
+};
+
 // Debug mode (only in development)
-const DEBUG_MODE = import.meta.env.DEV || false;
+const DEBUG_MODE = process.env.NODE_ENV === 'development';
 
 // ============================================
 // 🔄 Cache de session (module-level)
@@ -26,9 +45,20 @@ export const useAuth = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
 
+  // Créer le client Supabase uniquement côté client
+  const supabase = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return createClient();
+    } catch (err) {
+      console.warn('⚠️ useAuth: Impossible de créer le client Supabase:', err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     // Si Supabase n'est pas configuré, on arrête là
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !supabase) {
       const errors = getConfigErrors();
       console.warn('⚠️ useAuth: Supabase non configuré', errors);
       setAuthError(errors.join('. '));
@@ -48,7 +78,7 @@ export const useAuth = () => {
         }
 
         // Cache expiré ou inexistant, vérifier la session
-        if (!isCheckingSession) {
+        if (!isCheckingSession && supabase) {
           isCheckingSession = true;
           
           const { data: { session }, error } = await supabase.auth.getSession();
@@ -91,6 +121,11 @@ export const useAuth = () => {
     initializeAuth();
 
     // Écouter les changements d'authentification
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -110,13 +145,14 @@ export const useAuth = () => {
         subscriptionRef.current.unsubscribe();
       }
     };
-  }, []);
+  }, [supabase]);
 
   // ============================================
   // 📝 Inscription
   // ============================================
   const signUp = async (email: string, password: string) => {
-    if (!isSupabaseConfigured()) {
+    const client = supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { 
         data: null, 
         error: { message: 'Supabase n\'est pas configuré. ' + getConfigErrors().join('. ') } as any 
@@ -124,7 +160,7 @@ export const useAuth = () => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await client.auth.signUp({
         email,
         password,
       });
@@ -161,7 +197,8 @@ export const useAuth = () => {
   // 🔑 Connexion
   // ============================================
   const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured()) {
+    const client = supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { 
         data: null, 
         error: { message: 'Supabase n\'est pas configuré. ' + getConfigErrors().join('. ') } as any 
@@ -169,6 +206,7 @@ export const useAuth = () => {
     }
 
     try {
+      console.log('🔐 useAuth: Tentative de connexion pour:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -179,6 +217,7 @@ export const useAuth = () => {
         return { data: null, error };
       }
       
+      console.log('✅ useAuth: Connexion réussie');
       if (data?.session) {
         sessionCache = {
           session: data.session,
@@ -206,7 +245,8 @@ export const useAuth = () => {
   // 🔐 Connexion OAuth (Google, Apple, etc.)
   // ============================================
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
-    if (!isSupabaseConfigured()) {
+    const client = supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { 
         data: null, 
         error: { message: 'Supabase n\'est pas configuré. ' + getConfigErrors().join('. ') } as any 
@@ -254,12 +294,13 @@ export const useAuth = () => {
   // 🚪 Déconnexion
   // ============================================
   const signOut = async () => {
-    if (!isSupabaseConfigured()) {
+    const client = supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { error: { message: 'Supabase n\'est pas configuré' } as any };
     }
 
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await client.auth.signOut();
       
       if (error) {
         console.error('❌ useAuth: Erreur déconnexion:', error.message);
@@ -284,5 +325,6 @@ export const useAuth = () => {
     signOut,
     isAuthenticated: !!user,
     isConfigured: isSupabaseConfigured(),
+    getConfigErrors, // Exporter pour utilisation dans les composants
   };
 };

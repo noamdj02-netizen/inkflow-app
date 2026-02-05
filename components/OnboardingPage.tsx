@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { PenTool, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -17,7 +19,7 @@ export const OnboardingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { refreshProfile } = useArtistProfile();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Générer le slug automatiquement depuis le nom du studio
   useEffect(() => {
@@ -75,8 +77,8 @@ export const OnboardingPage: React.FC = () => {
     setError(null);
 
     // Vérifier si Supabase est configuré
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
     if (!supabaseUrl || !supabaseAnonKey) {
       setError('Supabase n\'est pas configuré. Veuillez configurer les variables d\'environnement.');
@@ -95,7 +97,7 @@ export const OnboardingPage: React.FC = () => {
 
     if (!user) {
       setError('Vous devez être connecté pour créer un profil');
-      navigate('/login');
+      router.push('/login');
       return;
     }
 
@@ -162,7 +164,7 @@ export const OnboardingPage: React.FC = () => {
         <div className="text-center relative z-10">
           <p className="text-slate-400 mb-4">Vous devez être connecté</p>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => router.push('/login')}
             className="bg-gradient-to-r from-amber-400 to-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:from-amber-500 hover:to-amber-700 transition-all shadow-lg shadow-amber-400/20"
           >
             Se connecter

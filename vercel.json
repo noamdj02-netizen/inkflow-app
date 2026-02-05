@@ -1,10 +1,8 @@
 {
+  "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "redirects": [
-    { "source": "/subscribe", "destination": "/dashboard", "permanent": false },
-    { "source": "/subscribe/success", "destination": "/dashboard", "permanent": false }
-  ],
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
   "crons": [
     {
       "path": "/api/trial-reminder",
@@ -17,95 +15,6 @@
     {
       "path": "/api/cron/rappel-solde-j1",
       "schedule": "0 9 * * *"
-    }
-  ],
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/api/ensure-trial",
-      "destination": "/api/trial?action=ensure"
-    },
-    {
-      "source": "/api/expire-trial",
-      "destination": "/api/trial?action=expire"
-    },
-    {
-      "source": "/api/trial-reminder",
-      "destination": "/api/trial?action=reminder"
-    },
-    {
-      "source": "/api/robots",
-      "destination": "/api/static?path=robots"
-    },
-    {
-      "source": "/api/sitemap",
-      "destination": "/api/static?path=sitemap"
-    },
-    {
-      "source": "/api/artist-booking-info",
-      "destination": "/api/booking"
-    },
-    {
-      "source": "/api/create-booking",
-      "destination": "/api/booking"
-    },
-    {
-      "source": "/api/cancel-pending-booking",
-      "destination": "/api/booking"
-    },
-    {
-      "source": "/api/create-subscription-checkout",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/create-customer-portal",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/create-checkout-session",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/create-flash-checkout",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/create-payment-intent",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/create-booking-payment-intent",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/stripe-connect-onboard",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/stripe-connect-callback",
-      "destination": "/api/stripe"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/auth/callback",
-      "destination": "/api/auth/callback"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/static?path=sitemap"
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "/api/static?path=robots"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -153,10 +62,8 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Cache-Control", "value": "public, s-maxage=10, stale-while-revalidate=59" }
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
       ]
     }
   ]
 }
-

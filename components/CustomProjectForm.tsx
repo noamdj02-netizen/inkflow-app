@@ -325,14 +325,14 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
           help = 'Erreur serveur (500). Vérifiez les logs Vercel dans Functions → api/submit-project-request → Logs pour plus de détails.';
         }
       } else if (isEdgeFnSendFailure || isNetworkError) {
-        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+        const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
         if (isDevelopment) {
           help = "Les routes API ne fonctionnent qu'en production sur Vercel. Déployez votre projet sur Vercel pour tester, ou déployez l'Edge Function 'submit-project-request' dans Supabase.";
         } else {
           help = "Impossible de contacter le serveur. Vérifiez que '/api/submit-project-request' est déployée sur Vercel, ou déployez l'Edge Function 'submit-project-request' dans Supabase.";
         }
       } else if (status === 404 || rawMessage.includes('404') || rawMessage.includes('not found')) {
-        const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+        const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
         if (isDevelopment) {
           help = "Route API non trouvée. Les routes API ne fonctionnent qu'en production sur Vercel. Déployez votre projet sur Vercel pour tester.";
         } else {

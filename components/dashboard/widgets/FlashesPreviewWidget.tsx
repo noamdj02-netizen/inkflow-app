@@ -5,11 +5,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useDashboardData } from '../../../hooks/useDashboardData';
 
 export const FlashesPreviewWidget: React.FC = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { stats, loading } = useDashboardData();
   const count = stats.totalFlashs ?? 0;
 
@@ -40,7 +40,7 @@ export const FlashesPreviewWidget: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/dashboard/flashs')}
+          onClick={() => router.push('/dashboard/flashs')}
           className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
         >
           Voir la galerie

@@ -145,8 +145,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
       const bookingData = { id: createJson.booking_id };
 
       // --- 2. Configuration Stripe (Edge Function)
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
       if (!supabaseUrl || !supabaseAnonKey) {
         await cancelPendingBooking(bookingData.id, origin);
         setError('Configuration serveur manquante. Contactez le support.');

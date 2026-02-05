@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useArtistProfile } from '../contexts/ArtistProfileContext';
-import { FlashManagement } from './FlashManagement';
+import { FlashManagement } from '../components/FlashManagement';
 import { useDashboardData } from '../hooks/useDashboardData';
 
 // Mock Data for Revenue Sparkline

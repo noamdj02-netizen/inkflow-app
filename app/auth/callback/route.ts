@@ -140,9 +140,6 @@ export async function GET(request: NextRequest) {
     // Créer une réponse avec les cookies de session
     // Les cookies sont automatiquement gérés par createServerClient via les callbacks
     const response = NextResponse.redirect(redirectUrl);
-
-    console.log('✅ Auth callback successful, redirecting to:', redirectPath);
-    console.log('✅ Session created for user:', data.session.user.email);
     
     return response;
 

@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
 import { InvoiceButton } from './InvoiceButton';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { EmptyState } from '../common/EmptyState';
 import { Skeleton } from '../common/Skeleton';
 import { ImageSkeleton } from '../common/ImageSkeleton';
@@ -32,7 +32,7 @@ const fadeInUp = {
 export const DashboardRequests: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useArtistProfile();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [careTemplates, setCareTemplates] = useState<CareTemplate[]>([]);
@@ -325,12 +325,13 @@ export const DashboardRequests: React.FC = () => {
     setUpdating(bookingId);
 
     try {
+      const updateData: any = { 
+        statut_booking: newStatus,
+        updated_at: new Date().toISOString(),
+      };
       const { error } = await (supabase as any)
         .from('bookings')
-        .update({ 
-          statut_booking: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', bookingId)
         .eq('artist_id', user.id);
 
@@ -545,7 +546,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={CheckCircle}
                           title="Tout est à jour !"
                           description="Aucune réservation flash en attente. Créez des flashs et partagez votre lien pour recevoir plus de demandes."
-                          primaryAction={{ label: 'Créer un flash', onClick: () => navigate('/dashboard/flashs') }}
+                          primaryAction={{ label: 'Créer un flash', onClick: () => router.push('/dashboard/flashs') }}
                           secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
                         />
                       ) : (
@@ -553,7 +554,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={Calendar}
                           title="Aucun historique"
                           description="Les réservations confirmées/refusées apparaîtront ici."
-                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => router.push('/dashboard/calendar') }}
                         />
                       )}
                     </motion.div>
@@ -684,7 +685,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={MessageSquare}
                           title="Aucune demande de projet perso"
                           description="Les demandes personnalisées envoyées par vos clients apparaîtront ici."
-                          primaryAction={{ label: 'Optimiser mon profil', onClick: () => navigate('/dashboard/settings') }}
+                          primaryAction={{ label: 'Optimiser mon profil', onClick: () => router.push('/dashboard/settings') }}
                           secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
                         />
                       ) : (
@@ -692,7 +693,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={MessageSquare}
                           title="Aucun historique"
                           description="Les projets approuvés/refusés apparaîtront ici."
-                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => router.push('/dashboard/calendar') }}
                         />
                       )}
                     </motion.div>
@@ -863,7 +864,7 @@ export const DashboardRequests: React.FC = () => {
                     <button
                       onClick={() => {
                         const url = '/dashboard/settings/care-sheets';
-                        navigate(url);
+                        router.push(url);
                         sonnerToast('Ouverture', { description: 'Gérez vos templates dans les paramètres.' });
                       }}
                       className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 text-sm"
