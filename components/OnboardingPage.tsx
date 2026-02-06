@@ -107,6 +107,7 @@ export const OnboardingPage: React.FC = () => {
       // Créer l'entrée dans la table artists
       const { data, error: insertError } = await supabase
         .from('artists')
+        // @ts-expect-error - Supabase builder Insert type can resolve to never with some type versions
         .insert({
           id: user.id, // Utiliser l'ID de l'utilisateur Supabase Auth
           email: user.email!,
@@ -124,7 +125,7 @@ export const OnboardingPage: React.FC = () => {
       await refreshProfile();
 
       // Rediriger vers le dashboard
-      navigate('/dashboard');
+      router.push('/dashboard');
     } catch (err) {
       console.error('Error creating artist profile:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création du profil';
@@ -146,12 +147,12 @@ export const OnboardingPage: React.FC = () => {
 
       if (data) {
         // L'utilisateur a déjà un profil, rediriger vers le dashboard
-        navigate('/dashboard');
+        router.push('/dashboard');
       }
     };
 
     checkExistingProfile();
-  }, [user, navigate]);
+  }, [user, router]);
 
   if (!user) {
     return (

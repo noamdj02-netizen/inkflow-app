@@ -292,7 +292,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      navigate('/register');
+                      router.push('/register');
                     }}
                     className="w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl font-semibold hover:bg-zinc-100 transition-colors text-sm"
                   >
@@ -361,7 +361,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/apropos')}
+                  onClick={() => router.push('/apropos')}
                   className="border border-white/50 text-white bg-transparent hover:bg-white/10 px-6 md:px-8 py-3.5 md:py-4 font-medium transition-all flex items-center justify-center gap-2 min-h-[48px] w-full sm:w-auto"
                 >
                   Qui sommes-nous ?
@@ -1008,7 +1008,7 @@ export const LandingPage: React.FC<LandingPageProps> = () => {
           <motion.button 
             whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(255,255,255,0.15)" }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/register')}
+            onClick={() => router.push('/register')}
             className="group bg-white text-black px-8 md:px-12 py-4 md:py-5 font-bold text-base md:text-lg hover:bg-zinc-100 transition-all inline-flex items-center gap-3 min-h-[52px]"
           >
             Commencer gratuitement

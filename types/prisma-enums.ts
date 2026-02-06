@@ -31,3 +31,10 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED',
 }
+
+// Enum BookingType
+export enum BookingType {
+  CONSULTATION = 'CONSULTATION',
+  SESSION = 'SESSION',
+  RETOUCHE = 'RETOUCHE',
+}

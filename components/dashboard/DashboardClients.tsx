@@ -696,7 +696,7 @@ export const DashboardClients: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!c.consentement_signe && (
-                      <AlertTriangle size={16} className="text-amber-400" title="Consentement non signé" />
+                      <AlertTriangle size={16} className="text-amber-400" />
                     )}
                     <ChevronRight size={18} className="text-zinc-500" />
                   </div>

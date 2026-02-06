@@ -1,0 +1,38 @@
+{
+  "components\\dashboard\\station\\RevenueStationWidget.tsx -> recharts": {
+    "id": "components\\dashboard\\station\\RevenueStationWidget.tsx -> recharts",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_recharts_es6_index_js.js"
+    ]
+  },
+  "components\\dashboard\\station\\WidgetStation.tsx -> ./InboxStationWidget": {
+    "id": "components\\dashboard\\station\\WidgetStation.tsx -> ./InboxStationWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_station_InboxStationWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\station\\WidgetStation.tsx -> ./NoteRapideStationWidget": {
+    "id": "components\\dashboard\\station\\WidgetStation.tsx -> ./NoteRapideStationWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_station_NoteRapideStationWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\station\\WidgetStation.tsx -> ./RevenueStationWidget": {
+    "id": "components\\dashboard\\station\\WidgetStation.tsx -> ./RevenueStationWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_station_RevenueStationWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\station\\WidgetStation.tsx -> ./TimerStationWidget": {
+    "id": "components\\dashboard\\station\\WidgetStation.tsx -> ./TimerStationWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_station_TimerStationWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\station\\WidgetStation.tsx -> ./VibeStationWidget": {
+    "id": "components\\dashboard\\station\\WidgetStation.tsx -> ./VibeStationWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_station_VibeStationWidget_tsx.js"
+    ]
+  }
+}

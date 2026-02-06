@@ -97,6 +97,7 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
 
       const { data, error: updateError } = await supabase
         .from('artists')
+        // @ts-expect-error - Supabase builder Update type can resolve to never with some type versions
         .update(updates)
         .eq('id', user.id)
         .select()

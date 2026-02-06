@@ -49,15 +49,23 @@ export const useSubscription = () => {
         throw fetchError;
       }
 
+      const row = data as {
+        subscription_plan?: string | null;
+        subscription_status?: string | null;
+        stripe_customer_id?: string | null;
+        stripe_subscription_id?: string | null;
+        subscription_current_period_end?: string | null;
+        trial_ends_at?: string | null;
+      };
       setSubscription({
-        plan: data.subscription_plan as SubscriptionPlan | null,
-        status: data.subscription_status as SubscriptionStatus | null,
-        stripeCustomerId: data.stripe_customer_id || null,
-        stripeSubscriptionId: data.stripe_subscription_id || null,
-        subscriptionCurrentPeriodEnd: data.subscription_current_period_end
-          ? new Date(data.subscription_current_period_end)
+        plan: row.subscription_plan as SubscriptionPlan | null,
+        status: row.subscription_status as SubscriptionStatus | null,
+        stripeCustomerId: row.stripe_customer_id || null,
+        stripeSubscriptionId: row.stripe_subscription_id || null,
+        subscriptionCurrentPeriodEnd: row.subscription_current_period_end
+          ? new Date(row.subscription_current_period_end)
           : null,
-        trialEndsAt: data.trial_ends_at ? new Date(data.trial_ends_at) : null,
+        trialEndsAt: row.trial_ends_at ? new Date(row.trial_ends_at) : null,
       });
     } catch (err: any) {
       console.error('Error fetching subscription:', err);

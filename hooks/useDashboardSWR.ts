@@ -56,7 +56,7 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
       .eq('status', 'succeeded'),
   ]);
 
-  const totalRevenue = revenueData.data?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+  const totalRevenue = (revenueData.data as { amount?: number }[] | null)?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
   const pendingProjects = (projectsData.data?.length || 0);
   const upcomingBookings = bookingsData.data?.length || 0;
   const totalFlashs = flashsData.count || 0;

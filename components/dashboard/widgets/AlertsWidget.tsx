@@ -8,7 +8,6 @@ import { AlertTriangle, CreditCard, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../services/supabase';
 import useSWR from 'swr';
-import { WidgetCard } from '../WidgetCard';
 
 type Alert = {
   id: string;
@@ -107,24 +106,36 @@ export const AlertsWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <WidgetCard title="Alertes" icon={AlertTriangle}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <AlertTriangle size={20} />
+          </div>
+          <h3 className="text-lg font-semibold text-white">Alertes</h3>
+        </div>
         <div className="space-y-2">
           {[1, 2].map((i) => (
             <div key={i} className="h-14 bg-[#1a1a1a] border border-neutral-800 rounded-md animate-pulse" />
           ))}
         </div>
-      </WidgetCard>
+      </div>
     );
   }
 
   if (error || alerts.length === 0) {
     return (
-      <WidgetCard title="Alertes" icon={AlertTriangle}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <AlertTriangle size={20} />
+          </div>
+          <h3 className="text-lg font-semibold text-white">Alertes</h3>
+        </div>
         <div className="text-center py-8">
           <CheckCircle className="text-emerald-400 mx-auto mb-2" size={32} />
           <p className="text-neutral-400 text-sm">Aucune alerte</p>
         </div>
-      </WidgetCard>
+      </div>
     );
   }
 
@@ -153,7 +164,13 @@ export const AlertsWidget: React.FC = () => {
   };
 
   return (
-    <WidgetCard title="Alertes" icon={AlertTriangle}>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+          <AlertTriangle size={20} />
+        </div>
+        <h3 className="text-lg font-semibold text-white">Alertes</h3>
+      </div>
       <div className="space-y-2">
         {alerts.map((alert) => (
           <motion.div
@@ -183,6 +200,6 @@ export const AlertsWidget: React.FC = () => {
           </motion.div>
         ))}
       </div>
-    </WidgetCard>
+    </div>
   );
 };

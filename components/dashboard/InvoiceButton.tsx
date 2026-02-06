@@ -33,9 +33,9 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ booking, artist })
     let yPos = 20;
 
     // Couleurs
-    const primaryColor = [251, 191, 36]; // Amber
-    const textColor = [15, 23, 42]; // Slate 900
-    const lightText = [100, 116, 139]; // Slate 500
+    const primaryColor: [number, number, number] = [251, 191, 36]; // Amber
+    const textColor: [number, number, number] = [15, 23, 42]; // Slate 900
+    const lightText: [number, number, number] = [100, 116, 139]; // Slate 500
 
     // Header avec logo
     doc.setFillColor(...primaryColor);

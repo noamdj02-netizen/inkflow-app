@@ -58,7 +58,7 @@ export const RevenueChartWidget: React.FC = () => {
               borderRadius: '8px',
               color: '#fff',
             }}
-            formatter={(value: number) => [`${value}€`, 'Revenus']}
+            formatter={(value: number | undefined) => [`${value ?? 0}€`, 'Revenus']}
           />
           <Bar dataKey="revenue" fill="url(#colorGradient)" radius={[8, 8, 0, 0]} />
           <defs>

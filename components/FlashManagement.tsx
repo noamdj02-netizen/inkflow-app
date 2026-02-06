@@ -126,6 +126,7 @@ export const FlashManagement: React.FC = () => {
 
         const { error: updateError } = await supabase
           .from('flashs')
+          // @ts-expect-error - Supabase builder Update type can resolve to never with some type versions
           .update(updateData)
           .eq('id', editingFlash.id);
 
@@ -145,6 +146,7 @@ export const FlashManagement: React.FC = () => {
 
         const { error: insertError } = await supabase
           .from('flashs')
+          // @ts-expect-error - Supabase builder Insert type can resolve to never with some type versions
           .insert(insertData);
 
         if (insertError) throw insertError;

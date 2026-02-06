@@ -65,26 +65,30 @@ export const DashboardFinance: React.FC = () => {
       if (error) throw error;
 
       const totalRevenue = bookings?.reduce((sum, b) => {
-        if (b.statut_paiement === 'deposit_paid' || b.statut_paiement === 'completed') {
-          return sum + (b.deposit_amount || 0);
+        const booking = b as any;
+        if (booking.statut_paiement === 'deposit_paid' || booking.statut_paiement === 'completed') {
+          return sum + (booking.deposit_amount || 0);
         }
         return sum;
       }, 0) || 0;
 
-      const monthlyBookings = bookings?.filter(b => 
-        new Date(b.created_at) >= startOfMonth
-      ) || [];
+      const monthlyBookings = bookings?.filter(b => {
+        const booking = b as any;
+        return new Date(booking.created_at) >= startOfMonth;
+      }) || [];
 
       const monthlyRevenue = monthlyBookings.reduce((sum, b) => {
-        if (b.statut_paiement === 'deposit_paid' || b.statut_paiement === 'completed') {
-          return sum + (b.deposit_amount || 0);
+        const booking = b as any;
+        if (booking.statut_paiement === 'deposit_paid' || booking.statut_paiement === 'completed') {
+          return sum + (booking.deposit_amount || 0);
         }
         return sum;
       }, 0);
 
       const pendingPayouts = bookings?.reduce((sum, b) => {
-        if (b.statut_paiement === 'pending') {
-          return sum + (b.deposit_amount || 0);
+        const booking = b as any;
+        if (booking.statut_paiement === 'pending') {
+          return sum + (booking.deposit_amount || 0);
         }
         return sum;
       }, 0) || 0;
@@ -96,16 +100,19 @@ export const DashboardFinance: React.FC = () => {
         totalTransactions: bookings?.length || 0,
       });
 
-      const txns: Transaction[] = (bookings || []).slice(0, 10).map(b => ({
-        id: b.id,
-        date: b.created_at,
-        description: b.flashs?.title ? `Réservation Flash: ${b.flashs.title}` : 'Réservation',
-        amount: b.deposit_amount || 0,
-        type: 'income' as const,
-        status: b.statut_paiement === 'deposit_paid' ? 'completed' : 
-                b.statut_paiement === 'pending' ? 'pending' : 'completed',
-        client: b.client_name || undefined,
-      }));
+      const txns: Transaction[] = (bookings || []).slice(0, 10).map(b => {
+        const booking = b as any;
+        return {
+          id: booking.id,
+          date: booking.created_at,
+          description: booking.flashs?.title ? `Réservation Flash: ${booking.flashs.title}` : 'Réservation',
+          amount: booking.deposit_amount || 0,
+          type: 'income' as const,
+          status: booking.statut_paiement === 'deposit_paid' ? 'completed' : 
+                  booking.statut_paiement === 'pending' ? 'pending' : 'completed',
+          client: booking.client_name || undefined,
+        };
+      });
 
       setTransactions(txns);
     } catch (err) {

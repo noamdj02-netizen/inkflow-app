@@ -1,0 +1,68 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma'; // Vérifie que ce chemin correspond bien à l'emplacement de ton instance Prisma, souvent '@/lib/prisma' ou '@/lib/db'
+
+// Note : Cal.com peut envoyer une signature pour la sécurité.
+// Ici, on vérifie uniquement le type d'événement (trigger).
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { triggerEvent, payload } = body;
+
+    // On ne s'intéresse qu'aux nouvelles réservations
+    if (triggerEvent !== 'BOOKING_CREATED') {
+      return NextResponse.json({ message: 'Ignored event' }, { status: 200 });
+    }
+
+    console.log("🔔 Webhook Cal.com reçu pour :", payload.organizer.email);
+
+    // 1. Trouver l'artiste dans TA base de données via son email
+    // (L'email utilisé pour configurer le compte Cal.com)
+    const artistUser = await prisma.user.findUnique({
+      where: {
+        email: payload.organizer.email, 
+      },
+      include: {
+        artist: true // On inclut le profil artiste si besoin de l'ID artiste spécifique
+      }
+    });
+
+    if (!artistUser) {
+      console.error("❌ Artiste non trouvé pour l'email:", payload.organizer.email);
+      return NextResponse.json({ message: 'Artist not found' }, { status: 404 });
+    }
+
+    // 2. Créer la réservation dans TA table Booking
+    // ADAPTE LES CHAMPS ICI selon ton schema.prisma exact !
+    const newBooking = await prisma.booking.create({
+      data: {
+        // Liaison avec l'artiste (selon comment ton schema est fait, soit userId soit artistId)
+        artistId: artistUser.artist?.id || artistUser.id, 
+        
+        // Dates (Cal.com envoie des ISO strings, Prisma les convertit en Date)
+        startTime: new Date(payload.startTime),
+        endTime: new Date(payload.endTime),
+        
+        // Infos Client
+        clientName: payload.attendees[0].name || 'Client Inconnu',
+        clientEmail: payload.attendees[0].email || 'No Email',
+        
+        // Infos Projet
+        projectName: payload.title || 'Réservation Cal.com',
+        description: payload.description || 'Importé depuis Cal.com',
+        
+        // Statut
+        status: 'CONFIRMED', // On considère que si c'est dans Cal, c'est validé
+        source: 'CAL_COM',   // Utile pour savoir d'où ça vient (si tu as ce champ)
+      },
+    });
+
+    console.log("✅ Réservation créée dans InkFlow :", newBooking.id);
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error("❌ Erreur Webhook:", error);
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}

@@ -18,7 +18,7 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signUp, authError } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   
   const isConfigured = isSupabaseConfigured();
   const passwordValidation = validatePasswordResult(password);

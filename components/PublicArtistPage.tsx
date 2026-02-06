@@ -689,7 +689,7 @@ export const PublicArtistPage: React.FC = () => {
               className="py-10 pb-28"
             >
               <div className="max-w-2xl mx-auto">
-                <CustomProjectForm artistId={artist.id} />
+                <CustomProjectForm artistId={artistVitrine?.id ?? ''} />
               </div>
             </motion.section>
           )}
@@ -698,7 +698,7 @@ export const PublicArtistPage: React.FC = () => {
 
       {/* Booking Drawer (conservé pour usage futur ou depuis URL) */}
       <AnimatePresence>
-        {selectedFlash && (
+        {selectedFlash && artist && (
           <BookingDrawer
             flash={selectedFlash}
             artist={artist}
@@ -716,7 +716,7 @@ export const PublicArtistPage: React.FC = () => {
 
       {/* Footer vitrine premium */}
       <footer className="mt-32 py-12 border-t border-white/5 text-center text-white/30 text-xs uppercase tracking-[0.2em]">
-        © 2026 Inkflow • {artist.nom_studio}
+        © 2026 Inkflow • {artist?.nom_studio ?? 'Vitrine'}
         {artistVitrine?.ville ? ` Studio ${artistVitrine.ville}` : ''}
       </footer>
 
@@ -724,7 +724,7 @@ export const PublicArtistPage: React.FC = () => {
       <BookingCTA artistSlug={slug ?? ''} isHidden={isDrawerOpen} />
 
       {/* Bouton flottant consultant IA (au-dessus du CTA mobile) */}
-      <AIButton artistName={artist.nom_studio} />
+      <AIButton artistName={artist?.nom_studio ?? 'Vitrine'} />
     </div>
   );
 };

@@ -53,8 +53,9 @@ export const DashboardCareSheets: React.FC = () => {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setTemplates(data || []);
-      if (!selectedId && data && data.length > 0) setSelectedId(data[0]?.id);
+      const templatesData = data as any;
+      setTemplates(templatesData || []);
+      if (!selectedId && templatesData && templatesData.length > 0) setSelectedId(templatesData[0]?.id);
     } catch (e) {
       toast.error('Impossible de charger les templates', {
         description: e instanceof Error ? e.message : 'Erreur inconnue',
@@ -85,19 +86,17 @@ export const DashboardCareSheets: React.FC = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase
+      const insertData: any = {
+        artist_id: user.id,
+        title: 'Nouveau template',
+        content: `Après votre séance :\n\n- Gardez le pansement X heures\n- Lavez doucement à l'eau tiède + savon neutre\n- Appliquez une fine couche de crème\n- Évitez soleil/piscine 2 semaines\n`,
+      };
+      const { data, error } = await (supabase as any)
         .from('care_templates')
-        .insert({
-          artist_id: user.id,
-          title: 'Nouveau template',
-          content: `Après votre séance :\n\n- Gardez le pansement X heures\n- Lavez doucement à l’eau tiède + savon neutre\n- Appliquez une fine couche de crème\n- Évitez soleil/piscine 2 semaines\n`,
-        })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-      setTemplates(prev => [data, ...prev]);
-      setSelectedId(data.id);
+        .insert(insertData)
+      const templateData = data as any;
+      setTemplates(prev => [templateData, ...prev]);
+      setSelectedId(templateData.id);
       toast.success('Template créé');
     } catch (e) {
       toast.error('Création impossible', { description: e instanceof Error ? e.message : 'Erreur inconnue' });
@@ -115,13 +114,14 @@ export const DashboardCareSheets: React.FC = () => {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase
+      const updateData: any = {
+        title,
+        content,
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await (supabase as any)
         .from('care_templates')
-        .update({
-          title,
-          content,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', selected.id)
         .eq('artist_id', user.id)
         .select('*')

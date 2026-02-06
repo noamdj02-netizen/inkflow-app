@@ -11,6 +11,7 @@ import { useSubscription } from '../../hooks/useSubscription';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
 import { SITE_URL } from '../../constants/seo';
 import { safeParseJson } from '../../lib/fetchJson';
+import { getPlanDisplayName } from '../../lib/subscription-utils';
 
 export const DashboardSettings: React.FC = () => {
   const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
@@ -264,18 +265,18 @@ export const DashboardSettings: React.FC = () => {
 
   useEffect(() => {
     if (profile) {
-      const p = profile as Record<string, unknown>;
+      const p = profile as any;
       setFormData({
-        nom_studio: profile.nom_studio || '',
-        slug_profil: profile.slug_profil || '',
-        bio_instagram: profile.bio_instagram || '',
-        pre_tattoo_instructions: profile.pre_tattoo_instructions || '',
-        theme_color: profile.theme_color || profile.accent_color || 'amber',
-        theme_accent_hex: profile.theme_accent_hex || '',
-        theme_secondary_hex: profile.theme_secondary_hex || '',
-        deposit_percentage: profile.deposit_percentage || 30,
+        nom_studio: p.nom_studio || '',
+        slug_profil: p.slug_profil || '',
+        bio_instagram: p.bio_instagram || '',
+        pre_tattoo_instructions: p.pre_tattoo_instructions || '',
+        theme_color: p.theme_color || p.accent_color || 'amber',
+        theme_accent_hex: p.theme_accent_hex || '',
+        theme_secondary_hex: p.theme_secondary_hex || '',
+        deposit_percentage: p.deposit_percentage || 30,
         avatarFile: null,
-        avatarUrl: profile.avatar_url || '',
+        avatarUrl: p.avatar_url || '',
         ville: (p.ville as string) || '',
         rating: (p.rating as number) ?? '',
         nb_avis: (p.nb_avis as number) ?? '',
@@ -286,6 +287,7 @@ export const DashboardSettings: React.FC = () => {
         instagram_url: (p.instagram_url as string) || '',
         tiktok_url: (p.tiktok_url as string) || '',
         facebook_url: (p.facebook_url as string) || '',
+        calcom_username: (p.calcom_username as string) || '',
       });
       setSlugError(null);
       setSlugAvailable(true);

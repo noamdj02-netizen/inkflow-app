@@ -119,6 +119,7 @@ export async function createClient(
 ): Promise<Client> {
   const { data: client, error } = await supabase
     .from('clients')
+    // @ts-expect-error - Supabase builder Insert type can resolve to never with some type versions
     .insert({ ...data, artist_id: artistId })
     .select()
     .single();
@@ -135,6 +136,7 @@ export async function updateClient(
 ): Promise<Client> {
   const { data: client, error } = await supabase
     .from('clients')
+    // @ts-expect-error - Supabase builder Update type can resolve to never with some type versions
     .update(data)
     .eq('id', clientId)
     .eq('artist_id', artistId)
@@ -168,6 +170,7 @@ export async function addClientPhoto(
 ): Promise<ClientPhoto> {
   const { data, error } = await supabase
     .from('client_photos')
+    // @ts-expect-error - Supabase builder Insert type can resolve to never with some type versions
     .insert({ client_id: clientId, url, type, caption })
     .select()
     .single();

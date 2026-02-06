@@ -3,7 +3,7 @@
  * Emails/SMS de confirmation, rappels, relances, etc.
  */
 
-import { BookingStatus, BookingType } from '@prisma/client';
+import { BookingStatus, BookingType } from '@/types/prisma-enums';
 
 const RESEND_API = 'https://api.resend.com/emails';
 
