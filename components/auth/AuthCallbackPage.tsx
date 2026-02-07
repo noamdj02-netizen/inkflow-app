@@ -93,7 +93,7 @@ export const AuthCallbackPage: React.FC = () => {
   }, [location.key]);
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
       <div className="w-full max-w-md glass rounded-2xl p-8 border border-white/10">
         <div className="text-center">
           {status === 'loading' && <Loader2 className="animate-spin text-white mx-auto mb-4" size={40} />}

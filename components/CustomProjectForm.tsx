@@ -143,23 +143,143 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
       };
 
       // Primary path (stable on Vercel): Serverless API route
-      const apiRes = await fetch('/api/submit-project-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (apiRes.ok) {
-        const json = await apiRes.json().catch(() => ({} as any));
-        if (!json?.success) throw new Error(json?.error || "Impossible d'envoyer la demande.");
-      } else if (apiRes.status === 404 || apiRes.status === 405) {
-        // Fallback (local dev / no /api): Supabase Edge Function
+      let apiRes: Response;
+      try {
+        apiRes = await fetch('/api/submit-project-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (fetchError) {
+        // Network error - try Supabase Edge Function fallback
+        console.warn('API route fetch failed, trying Supabase Edge Function:', fetchError);
         const { data, error } = await supabase.functions.invoke('submit-project-request', { body: payload });
         if (error) throw error;
         if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
+        // Success with Edge Function
+        toast.success('Demande envoyée !', { description: "L'artiste va revenir vers vous rapidement." });
+        goToStep(1);
+        setFormData({
+          bodyPart: '',
+          sizeCm: 10,
+          style: '',
+          description: '',
+          budget: '',
+          isCoverUp: false,
+          isFirstTattoo: false,
+          availability: [],
+          referenceImageCount: 0
+        });
+        setClientEmail('');
+        setClientName('');
+        setAnalysis(null);
+        return;
+      }
+
+      // Check if response is valid JSON
+      const contentType = apiRes.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      if (apiRes.ok) {
+        if (isJson) {
+          const json = await apiRes.json().catch(() => ({} as any));
+          if (!json?.success) throw new Error(json?.error || "Impossible d'envoyer la demande.");
+        } else {
+          // Response is not JSON, might be HTML (404 page)
+          const text = await apiRes.text();
+          if (apiRes.status === 404) {
+            // Try Supabase Edge Function fallback
+            console.warn('API route returned 404, trying Supabase Edge Function');
+            const { data, error } = await supabase.functions.invoke('submit-project-request', { body: payload });
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
+            // Success with Edge Function
+            toast.success('Demande envoyée !', { description: "L'artiste va revenir vers vous rapidement." });
+            goToStep(1);
+            setFormData({
+              bodyPart: '',
+              sizeCm: 10,
+              style: '',
+              description: '',
+              budget: '',
+              isCoverUp: false,
+              isFirstTattoo: false,
+              availability: [],
+              referenceImageCount: 0
+            });
+            setClientEmail('');
+            setClientName('');
+            setAnalysis(null);
+            return;
+          }
+          throw new Error(`Réponse invalide du serveur (${apiRes.status})`);
+        }
+      } else if (apiRes.status === 404 || apiRes.status === 405) {
+        // Fallback (local dev / no /api): Supabase Edge Function
+        console.warn('API route not found (404/405), trying Supabase Edge Function');
+        const { data, error } = await supabase.functions.invoke('submit-project-request', { body: payload });
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || "Impossible d'envoyer la demande.");
+        // Success with Edge Function
+        toast.success('Demande envoyée !', { description: "L'artiste va revenir vers vous rapidement." });
+        goToStep(1);
+        setFormData({
+          bodyPart: '',
+          sizeCm: 10,
+          style: '',
+          description: '',
+          budget: '',
+          isCoverUp: false,
+          isFirstTattoo: false,
+          availability: [],
+          referenceImageCount: 0
+        });
+        setClientEmail('');
+        setClientName('');
+        setAnalysis(null);
+        return;
       } else {
-        const json = await apiRes.json().catch(() => ({} as any));
-        throw new Error(json?.error || `Erreur serveur (HTTP ${apiRes.status})`);
+        // Other error status (including 500)
+        let errorMessage = `Erreur serveur (HTTP ${apiRes.status})`;
+        let errorDetails: any = null;
+        
+        if (isJson) {
+          try {
+            const json = await apiRes.json();
+            errorMessage = json?.error || errorMessage;
+            errorDetails = json?.details;
+          } catch {
+            // JSON parsing failed, try to read as text
+            try {
+              const text = await apiRes.text();
+              if (text && text.length < 200) {
+                errorMessage = text;
+              }
+            } catch {
+              // Use default message
+            }
+          }
+        } else {
+          // Try to read error message from HTML/text response
+          try {
+            const text = await apiRes.text();
+            // Extract error message if possible
+            if (text.includes('error') || text.includes('Error')) {
+              const match = text.match(/(?:error|Error)[:\s]+([^<\n]+)/i);
+              if (match && match[1]) {
+                errorMessage = match[1].trim().substring(0, 100);
+              }
+            }
+          } catch {
+            // Use default message
+          }
+        }
+        
+        // Create error with details
+        const error = new Error(errorMessage);
+        (error as any).status = apiRes.status;
+        (error as any).details = errorDetails;
+        throw error;
       }
 
       toast.success('Demande envoyée !', { description: "L'artiste va revenir vers vous rapidement." });
@@ -180,16 +300,60 @@ export const CustomProjectForm: React.FC<CustomProjectFormProps> = ({ artistId }
       setClientEmail('');
       setClientName('');
       setAnalysis(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting project:', err);
       const rawMessage = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
+      const status = err?.status || 0;
+      const errorDetails = err?.details;
+      
       const isEdgeFnSendFailure = rawMessage.includes('Failed to send a request to the Edge Function');
+      const isNetworkError = rawMessage.includes('fetch') || rawMessage.includes('Network');
 
-      const help = isEdgeFnSendFailure
-        ? "Impossible de contacter le serveur. Si vous êtes en production, vérifiez que `/api/submit-project-request` existe sur Vercel. Sinon, déployez l'Edge Function `submit-project-request` dans Supabase."
-        : rawMessage;
+      let help = rawMessage;
+      
+      // Handle specific HTTP status codes
+      if (status === 500) {
+        if (errorDetails) {
+          help = `Erreur serveur: ${errorDetails}`;
+        } else if (rawMessage.includes('Missing server env vars') || rawMessage.includes('Configuration serveur')) {
+          help = 'Configuration serveur manquante. Vérifiez que SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont configurées dans Vercel Dashboard → Settings → Environment Variables.';
+        } else if (rawMessage.includes('Failed to upsert customer')) {
+          help = 'Erreur lors de la création du client. Vérifiez que la table "customers" existe dans Supabase et que les politiques RLS sont correctement configurées.';
+        } else if (rawMessage.includes('Failed to create project')) {
+          help = 'Erreur lors de la création du projet. Vérifiez que la table "projects" existe dans Supabase et que l\'artiste existe.';
+        } else {
+          help = 'Erreur serveur (500). Vérifiez les logs Vercel dans Functions → api/submit-project-request → Logs pour plus de détails.';
+        }
+      } else if (isEdgeFnSendFailure || isNetworkError) {
+        const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+        if (isDevelopment) {
+          help = "Les routes API ne fonctionnent qu'en production sur Vercel. Déployez votre projet sur Vercel pour tester, ou déployez l'Edge Function 'submit-project-request' dans Supabase.";
+        } else {
+          help = "Impossible de contacter le serveur. Vérifiez que '/api/submit-project-request' est déployée sur Vercel, ou déployez l'Edge Function 'submit-project-request' dans Supabase.";
+        }
+      } else if (status === 404 || rawMessage.includes('404') || rawMessage.includes('not found')) {
+        const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+        if (isDevelopment) {
+          help = "Route API non trouvée. Les routes API ne fonctionnent qu'en production sur Vercel. Déployez votre projet sur Vercel pour tester.";
+        } else {
+          help = "Route API non trouvée. Vérifiez que '/api/submit-project-request' est déployée sur Vercel dans l'onglet Functions.";
+        }
+      } else if (status === 400) {
+        help = rawMessage || 'Données invalides. Vérifiez que tous les champs sont correctement remplis.';
+      } else if (status === 429) {
+        help = 'Trop de requêtes. Veuillez patienter quelques minutes avant de réessayer.';
+      }
 
-      toast.error("Erreur lors de l'envoi", { description: help });
+      toast.error("Erreur lors de l'envoi", { 
+        description: help,
+        duration: 10000, // Show longer for important errors
+        action: status === 500 ? {
+          label: 'Voir les logs',
+          onClick: () => {
+            window.open('https://vercel.com/dashboard', '_blank');
+          },
+        } : undefined,
+      });
     } finally {
       setIsLoading(false);
     }

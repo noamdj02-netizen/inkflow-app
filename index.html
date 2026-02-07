@@ -2,34 +2,57 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <!-- viewport-fit=cover : utilise tout l'écran en PWA standalone (safe-area-inset-* pour encoche / Home Indicator) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Gestion simplifiée pour tatoueurs pro." />
+    <meta name="description" content="Logiciel tatoueur à Rouen : planificateur tattoo, réservation tatouage en ligne, agenda et paiements. Pour artistes et studios." />
+    <meta name="keywords" content="Tatoueur Rouen, Planificateur Tattoo, Réservation Tatouage, Logiciel Tatoueur, agenda tatoueur, réservation en ligne tatouage, studio tattoo Rouen, gestion rendez-vous tatoueur" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ink-flow.me/" />
+    <meta property="og:site_name" content="InkFlow" />
+    <meta property="og:title" content="InkFlow - Planificateur Tattoo &amp; Réservation Tatouage | Tatoueurs Rouen" />
+    <meta property="og:description" content="Logiciel tatoueur à Rouen : planificateur tattoo, réservation tatouage en ligne, agenda et paiements. Pour artistes et studios." />
+    <meta property="og:image" content="https://ink-flow.me/pwa-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="InkFlow - Planificateur et réservation pour tatoueurs" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="InkFlow - Planificateur Tattoo &amp; Réservation Tatouage | Tatoueurs Rouen" />
+    <meta name="twitter:description" content="Logiciel tatoueur à Rouen : planificateur tattoo, réservation tatouage en ligne, agenda et paiements." />
+    <meta name="twitter:image" content="https://ink-flow.me/pwa-512x512.png" />
+    <link rel="canonical" href="https://ink-flow.me/" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="InkFlow" />
-    <link rel="icon" type="image/png" href="/inkflow-logo-v2.png" />
+    <link rel="icon" type="image/png" href="/pwa-512x512.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/pwa-512x512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/pwa-512x512.png" />
-    <title>InkFlow - Tattoo Booking SaaS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react/": "https://esm.sh/react@^19.2.3/"
-  }
-}
-</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>InkFlow - Planificateur Tattoo &amp; Réservation Tatouage pour Tatoueurs à Rouen</title>
+    <!-- Critical fonts only (Syne + Space Grotesk) for fast first paint on mobile -->
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+    <!-- Secondary fonts (Cinzel, Inter, Playfair) — load after first paint -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <style>
+      /* Shell immédiat : fond sombre + fallback font (mobile) ; safe areas pour PWA standalone */
+      html, body { margin: 0; padding: 0; background: #000000; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; overscroll-behavior: none; }
+      /* #root : safe-area top pour PWA iOS (encoche / barre de statut) ; contenu sous la zone safe */
+      #root { min-height: 100vh; background: #000000; display: flex; align-items: center; justify-content: center; padding-top: constant(safe-area-inset-top); padding-top: env(safe-area-inset-top, 0); padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0); padding-bottom: env(safe-area-inset-bottom, 0); box-sizing: border-box; }
+      #root .app-loading { text-align: center; color: rgba(255,255,255,0.9); }
+      #root .app-loading .logo { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.05em; }
+      #root .app-loading .logo span { color: #71717a; }
+      #root .app-loading .spinner { width: 28px; height: 28px; margin: 1rem auto 0; border: 2px solid rgba(251,191,36,0.3); border-top-color: #fbbf24; border-radius: 50%; animation: app-spin 0.8s linear infinite; }
+      @keyframes app-spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="app-loading" aria-live="polite"><div class="logo">INK<span>FLOW</span></div><div class="spinner" aria-hidden="true"></div></div></div>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

@@ -18,6 +18,35 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * Message d'erreur unique pour mot de passe faible (évite alertes Chrome)
+ */
+export const PASSWORD_ERROR_MESSAGE =
+  'Votre mot de passe doit être plus complexe pour garantir la sécurité de votre compte.';
+
+/**
+ * Schéma Zod pour mot de passe strict (min 8 car., majuscule, chiffre, caractère spécial)
+ */
+export const passwordSchema = z
+  .string()
+  .min(8, PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[A-Z]/.test(p), PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[0-9]/.test(p), PASSWORD_ERROR_MESSAGE)
+  .refine((p) => /[@$!%*?&]/.test(p), PASSWORD_ERROR_MESSAGE);
+
+/**
+ * Valide un mot de passe côté client (inscription, réinitialisation).
+ * Retourne { success: true } ou { success: false, error: string }.
+ */
+export function validatePasswordResult(
+  password: string
+): { success: true } | { success: false; error: string } {
+  const result = passwordSchema.safeParse(password);
+  if (result.success) return { success: true };
+  const msg = result.error?.issues?.[0]?.message ?? PASSWORD_ERROR_MESSAGE;
+  return { success: false, error: msg };
+}
+
+/**
  * Project Submission Schema
  * 
  * Strict schema that rejects unknown keys
@@ -162,6 +191,37 @@ export const bookingFormSchema = z.object({
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 /**
+ * Checkout Form Schema (Nom, Prénom, Email, Téléphone)
+ */
+export const checkoutFormSchema = z.object({
+  client_first_name: z
+    .string()
+    .min(1, 'Le prénom est requis')
+    .max(100, 'Prénom trop long')
+    .trim(),
+  client_last_name: z
+    .string()
+    .min(1, 'Le nom est requis')
+    .max(100, 'Nom trop long')
+    .trim(),
+  client_email: z
+    .string()
+    .min(1, 'L\'email est requis')
+    .email('Format d\'email invalide')
+    .toLowerCase()
+    .trim()
+    .max(255, 'Email trop long'),
+  client_phone: z
+    .string()
+    .max(20, 'Numéro trop long')
+    .trim()
+    .optional()
+    .nullable(),
+}).strict();
+
+export type CheckoutFormData = z.infer<typeof checkoutFormSchema>;
+
+/**
  * Care Instructions Schema
  */
 export const careInstructionsSchema = z.object({
@@ -223,11 +283,11 @@ export function validateProjectSubmission(data: unknown) {
     return { success: true, data: validated, error: null };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.issues[0];
+      const firstError = error.issues?.[0];
       return {
         success: false,
         data: null,
-        error: firstError.message || 'Validation failed',
+        error: firstError?.message || 'Validation failed',
         details: error.issues,
       };
     }

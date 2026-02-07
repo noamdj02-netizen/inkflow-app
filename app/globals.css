@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   SOFT UI Design System - InkFlow
+   Variables CSS pour Light/Dark Mode
+   ============================================ */
+
+@layer base {
+  :root {
+    /* MODE JOUR (Soft UI - Vert Menthe Pâle) */
+    --background: #eff6f3;
+    --card: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --primary: #0d9488; /* Teal */
+    --radius: 1.5rem;
+  }
+
+  .dark {
+    /* MODE NUIT (Luxe - Noir Profond) */
+    --background: #050505;
+    --card: #121212;
+    --text-primary: #ffffff;
+    --text-secondary: #a3a3a3;
+    --border: #262626;
+    --primary: #2dd4bf; /* Teal Lumineux */
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Mobile Safe Areas - iPhone notch / Home Indicator */
+  .safe-area-top {
+    padding-top: constant(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-area-bottom {
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .header-safe {
+    padding-top: constant(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
+    min-height: calc(3.5rem + constant(safe-area-inset-top));
+    min-height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+  .footer-safe {
+    padding-bottom: max(0.5rem, constant(safe-area-inset-bottom));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+  .main-below-header {
+    padding-top: calc(3.5rem + constant(safe-area-inset-top));
+    padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, constant(safe-area-inset-bottom));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Touch target minimum 44x44px (Apple HIG) */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Soft UI - Light: fond semi-transparent, Dark: glass */
+  .glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+  }
+
+  .dark .glass {
+    background: rgba(18, 18, 18, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Landing Awwwards: noise texture overlay (very subtle) */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* Glassmorphism dark (Landing cards) */
+  .glass-dark {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+  .glass-dark:hover {
+    @apply border-white/30;
+  }
+}

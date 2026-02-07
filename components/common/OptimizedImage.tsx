@@ -1,9 +1,9 @@
 /**
  * Optimized Image Component for Vite/React
- * 
+ *
  * Features:
- * - Lazy loading by default
- * - Priority loading for LCP images
+ * - Lazy loading via Intersection Observer : chargement uniquement au scroll
+ * - Priority loading for LCP images (above the fold)
  * - Responsive sizes
  * - Error handling with fallback
  * - Loading skeleton
@@ -12,11 +12,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
+const LAZY_ROOT_MARGIN = '200px'; // Déclencher le chargement un peu avant d'entrer dans le viewport
+
 interface OptimizedImageProps {
   src: string;
   alt: string;
   className?: string;
-  priority?: boolean; // For LCP images
+  priority?: boolean; // For LCP images — charge immédiatement
   sizes?: string; // Responsive sizes (e.g., "(max-width: 768px) 100vw, 50vw")
   width?: number;
   height?: number;
@@ -40,13 +42,36 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState(src);
+  const [inView, setInView] = useState(priority);
   const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setImageSrc(src);
     setIsLoading(true);
     setHasError(false);
   }, [src]);
+
+  // Intersection Observer : ne charger l'image que lorsqu'elle entre (ou approche) du viewport
+  useEffect(() => {
+    if (priority) {
+      setInView(true);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setInView(true);
+      },
+      { rootMargin: LAZY_ROOT_MARGIN, threshold: 0.01 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [priority]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -67,8 +92,14 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     ? `${src}?w=${width}&h=${height} 1x, ${src}?w=${width * 2}&h=${height * 2} 2x`
     : undefined;
 
+  const effectiveSrc = inView ? imageSrc : undefined;
+
   return (
-    <div className={`relative overflow-hidden ${className}`} style={{ width, height }}>
+    <div
+      ref={containerRef}
+      className={`relative overflow-hidden ${className}`}
+      style={{ width, height }}
+    >
       {/* Loading Skeleton */}
       {isLoading && (
         <motion.div
@@ -79,24 +110,26 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         />
       )}
 
-      {/* Image */}
-      <img
-        ref={imgRef}
-        src={imageSrc}
-        srcSet={srcSet}
-        sizes={sizes || '100vw'}
-        alt={alt}
-        width={width}
-        height={height}
-        loading={priority ? 'eager' : 'lazy'}
-        fetchPriority={priority ? 'high' : 'auto'}
-        decoding="async"
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
-          isLoading ? 'opacity-0' : 'opacity-100'
-        }`}
-        onLoad={handleLoad}
-        onError={handleError}
-      />
+      {/* Image — src défini seulement quand inView pour lazy load réel au scroll */}
+      {effectiveSrc && (
+        <img
+          ref={imgRef}
+          src={effectiveSrc}
+          srcSet={srcSet}
+          sizes={sizes || '100vw'}
+          alt={alt}
+          width={width}
+          height={height}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
+          decoding="async"
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            isLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      )}
 
       {/* Error State */}
       {hasError && imageSrc === fallbackSrc && (

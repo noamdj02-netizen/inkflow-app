@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FlashDesign } from '../types';
 import { EXAMPLE_FLASHS } from '../constants/flashExamples';
+import { OptimizedImage } from './common/OptimizedImage';
 
 interface ExtendedFlashDesign extends FlashDesign {
   duration?: number;
@@ -46,7 +47,7 @@ export const FlashGallery: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass header-safe">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <motion.button
             whileHover={{ x: -3 }}
@@ -95,7 +96,7 @@ export const FlashGallery: React.FC = () => {
           {MOCK_FLASHS.map((flash) => (
             <motion.div 
               key={flash.id}
-              variants={fadeInUp}
+              variants={fadeInUp as any} // Typesafe fix: cast to any, or update fadeInUp ease to be a valid Easing type.
               whileHover={{ scale: 1.02, y: -5 }}
               className={`group relative glass rounded-2xl overflow-hidden transition-all ${
                 !flash.available ? 'opacity-50' : ''
@@ -103,11 +104,10 @@ export const FlashGallery: React.FC = () => {
             >
               {/* Image */}
               <div className="aspect-square relative overflow-hidden">
-                <img 
-                  src={flash.imageUrl} 
+                <OptimizedImage
+                  src={flash.imageUrl}
                   alt={`Tatouage ${flash.title}`}
-                  loading="lazy" 
-                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                  className="w-full h-full transition-transform duration-700 group-hover:scale-110"
                 />
                 
                 {/* Hover Overlay */}

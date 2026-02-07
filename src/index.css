@@ -10,26 +10,129 @@
   --color-brand-purple-dark: #7C3AED;
   --color-brand-pink-dark: #DB2777;
 
+  /* Vitrine premium (ink palette) */
+  --color-ink-black: #0a0a0a;
+  --color-ink-dark: #121212;
+  --color-ink-card: #1a1a1a;
+  --color-ink-accent: #8b5cf6;
+  --color-ink-accent-hover: #7c3aed;
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-muted: rgba(255, 255, 255, 0.3);
+
   /* Custom font families */
   --font-family-display: 'Syne', system-ui, sans-serif;
   --font-family-serif: 'Cinzel', ui-serif, Georgia, serif;
   --font-family-sans: 'Space Grotesk', system-ui, sans-serif;
+  /* Vitrine premium only */
+  --font-family-vitrine-sans: 'Inter', system-ui, sans-serif;
+  --font-family-vitrine-serif: 'Playfair Display', Georgia, serif;
 }
 
 /* Custom styles */
 html, body {
-  background-color: #050505;
+  background-color: #000000;
   color: #fafafa;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  /* PWA standalone: désactive le rebond élastique pour un rendu plus "app native" */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* PWA / standalone: safe areas sur le shell (pages sans layout dédié) */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Ne pas appliquer top/bottom sur body pour laisser header/nav les gérer (évite double padding) */
+}
+
+/* Classe utilitaire pour les Safe Areas (constant() = iOS < 11.2, env() = moderne) */
+.safe-area-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-left {
+  padding-left: constant(safe-area-inset-left);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.safe-area-right {
+  padding-right: constant(safe-area-inset-right);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.safe-area-x {
+  padding-left: constant(safe-area-inset-left);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: constant(safe-area-inset-right);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.safe-area-y {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Pour les headers fixes (barre de statut / encoche iPhone PWA standalone) */
+.header-safe {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  min-height: calc(4rem + constant(safe-area-inset-top));
+  min-height: calc(4rem + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
+}
+
+/* Pour les footers / barre de navigation (Home Indicator iOS) */
+.footer-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Main content sous header fixe (Dashboard, etc.) — évite que le contenu passe sous l’encoche */
+.main-below-header {
+  padding-top: calc(4rem + constant(safe-area-inset-top));
+  padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+/* Hauteur de zone safe pour calculer le padding du main sous header/nav */
+.safe-area-inset-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-inset-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .glass {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Vitrine premium glass */
+.glass-vitrine {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Vitrine premium typography scope */
+.vitrine-fonts {
+  font-family: var(--font-family-vitrine-sans), system-ui, sans-serif;
 }
 
 .gradient-text {
@@ -68,3 +171,38 @@ html, body {
 .animate-float-delayed { animation: float 6s ease-in-out 2s infinite; }
 .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 .animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
+
+/* AI Consultant panel */
+@keyframes ai-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ai-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-ai-fade-in {
+  animation: ai-fade-in 0.2s ease-out;
+}
+.animate-ai-slide-in {
+  animation: ai-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hero background - grid pattern (Linear/Vercel style) */
+.hero-bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Hero vignette - assombrissement des bords */
+.hero-vignette {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 0%,
+    rgba(3, 3, 3, 0.4) 70%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}

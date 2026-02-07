@@ -56,14 +56,13 @@ Ce guide vous explique comment configurer l'authentification OAuth avec Google (
    
    - **Authorized redirect URIs**: 
      ```
+     https://VOTRE_PROJECT_REF.supabase.co/auth/v1/callback
+     https://ink-flow.me/auth/callback
      http://localhost:5173/auth/callback
-     https://votre-domaine.vercel.app/auth/callback
-     https://votre-projet.supabase.co/auth/v1/callback
      ```
      ⚠️ **Important**: 
-     - Ajoutez l'URL de callback de votre app (`/auth/callback`)
-     - **ET** l'URL de callback de Supabase (`https://votre-projet.supabase.co/auth/v1/callback`)
-     - Supabase utilise cette dernière URL pour recevoir le code OAuth de Google
+     - **La première URI est obligatoire** : remplacez `VOTRE_PROJECT_REF` par l’ID de votre projet Supabase (début de `VITE_SUPABASE_URL`). C’est celle que Google appelle ; si elle manque → **Error 400: redirect_uri_mismatch**.
+     - Les deux autres sont pour votre app (prod + dev). Voir [REDIRECT_URI_VERIFICATION.md](./REDIRECT_URI_VERIFICATION.md) pour la vérification détaillée.
 
 5. **Cliquez sur "Create"**
 6. **Copiez les identifiants** :
@@ -146,14 +145,15 @@ Ce guide vous explique comment configurer l'authentification OAuth avec Google (
 
 ### Erreurs Courantes
 
-#### ❌ "redirect_uri_mismatch"
+#### ❌ "redirect_uri_mismatch" (Error 400: This app's request is invalid)
 
-**Cause**: L'URL de callback dans Google Cloud Console ne correspond pas à celle utilisée par Supabase.
+**Cause**: L’URI de callback que Supabase envoie à Google n’est pas dans la liste « Authorized redirect URIs » de votre client OAuth.
 
 **Solution**:
-1. Vérifiez que vous avez ajouté **les deux URLs** dans Google Cloud Console :
-   - `https://votre-projet.supabase.co/auth/v1/callback` (URL Supabase)
-   - `http://localhost:5173/auth/callback` (URL locale, optionnel)
+1. Dans **Google Cloud Console** → Credentials → votre **OAuth 2.0 Client ID** → **Authorized redirect URIs**, ajoutez **exactement** (sans slash final) :
+   - `https://VOTRE_PROJECT_REF.supabase.co/auth/v1/callback` (remplacez `VOTRE_PROJECT_REF` par l’ID de votre projet Supabase, ex. `abcdefghijk` si `VITE_SUPABASE_URL=https://abcdefghijk.supabase.co`).
+2. Optionnel : `https://ink-flow.me/auth/callback` et `http://localhost:5173/auth/callback`.
+3. Voir [REDIRECT_URI_VERIFICATION.md](./REDIRECT_URI_VERIFICATION.md) pour la checklist complète.
 
 #### ❌ "invalid_client"
 
@@ -198,9 +198,9 @@ Ces identifiants sont stockés dans Supabase Dashboard et ne doivent pas être d
 - [ ] Écran de consentement OAuth configuré
 - [ ] OAuth Client ID créé (type "Web application")
 - [ ] URLs de callback ajoutées dans Google Console :
-  - [ ] `https://votre-projet.supabase.co/auth/v1/callback`
+  - [ ] `https://VOTRE_PROJECT_REF.supabase.co/auth/v1/callback` (obligatoire — remplacez par l’ID de votre projet Supabase)
+  - [ ] `https://ink-flow.me/auth/callback` (prod)
   - [ ] `http://localhost:5173/auth/callback` (dev)
-  - [ ] `https://votre-domaine.vercel.app/auth/callback` (prod)
 - [ ] Client ID et Secret copiés
 - [ ] Provider Google activé dans Supabase Dashboard
 - [ ] Client ID et Secret collés dans Supabase Dashboard
@@ -224,10 +224,11 @@ Ces identifiants sont stockés dans Supabase Dashboard et ne doivent pas être d
 1. **Allez dans Google Cloud Console** → **Credentials**
 2. **Modifiez votre OAuth Client ID**
 3. **Ajoutez les URLs de production** :
-   - **Authorized JavaScript origins**: `https://votre-domaine.vercel.app`
-   - **Authorized redirect URIs**: 
-     - `https://votre-domaine.vercel.app/auth/callback`
-     - `https://votre-projet.supabase.co/auth/v1/callback`
+   - **Authorized JavaScript origins**: `https://ink-flow.me`
+   - **Authorized redirect URIs** (exactement, sans slash final) :
+     - `https://VOTRE_PROJECT_REF.supabase.co/auth/v1/callback` (obligatoire)
+     - `https://ink-flow.me/auth/callback`
+     - `http://localhost:5173/auth/callback` (dev)
 
 ### Vérification Post-Déploiement
 

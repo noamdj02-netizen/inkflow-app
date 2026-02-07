@@ -7,10 +7,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import type { Database } from '../../types/supabase';
 import { InvoiceButton } from './InvoiceButton';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { EmptyState } from '../common/EmptyState';
 import { Skeleton } from '../common/Skeleton';
 import { ImageSkeleton } from '../common/ImageSkeleton';
+import { ThemeToggle } from '../ThemeToggle';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
   flashs?: {
@@ -32,7 +33,7 @@ const fadeInUp = {
 export const DashboardRequests: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useArtistProfile();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [careTemplates, setCareTemplates] = useState<CareTemplate[]>([]);
@@ -279,7 +280,7 @@ export const DashboardRequests: React.FC = () => {
     return (
       <div className="space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="glass rounded-2xl p-4 md:p-5">
+          <div key={i} className="rounded-2xl p-4 md:p-5 bg-card border border-border shadow-sm">
             <div className="flex flex-col md:flex-row gap-4">
               {showImage && (
                 <Skeleton className="w-full md:w-20 h-28 md:h-20 rounded-xl" />
@@ -306,7 +307,7 @@ export const DashboardRequests: React.FC = () => {
                   <Skeleton className="h-3 w-20" />
                 </div>
 
-                <div className="flex gap-2 pt-3 border-t border-white/5">
+                <div className="flex gap-2 pt-3 border-t border-border">
                   <Skeleton className="h-10 flex-1" />
                   <Skeleton className="h-10 flex-1" />
                 </div>
@@ -325,12 +326,13 @@ export const DashboardRequests: React.FC = () => {
     setUpdating(bookingId);
 
     try {
+      const updateData: any = { 
+        statut_booking: newStatus,
+        updated_at: new Date().toISOString(),
+      };
       const { error } = await (supabase as any)
         .from('bookings')
-        .update({ 
-          statut_booking: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', bookingId)
         .eq('artist_id', user.id);
 
@@ -418,12 +420,12 @@ export const DashboardRequests: React.FC = () => {
     const Icon = badge.icon;
 
     const colorClasses = {
-      amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      red: 'bg-red-500/10 text-red-400 border-red-500/20',
-      gold: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-      violet: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
-      zinc: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+      amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      red: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+      gold: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+      zinc: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20',
     };
 
     return (
@@ -447,27 +449,35 @@ export const DashboardRequests: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="h-16 border-b border-white/5 bg-[#0a0a0a] flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
-        <motion.h2 
+      <header className="h-14 border-b border-border bg-card shadow-sm flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0 transition-colors duration-300">
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-lg font-display font-bold flex items-center gap-2 text-white"
+          className="flex items-center gap-3"
         >
-          <MessageSquare className="text-zinc-500" size={18}/> 
-          <span className="hidden sm:inline">Demandes & Réservations</span>
-          <span className="sm:hidden">Demandes</span>
-        </motion.h2>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 dark:bg-primary/20 border border-border">
+            <MessageSquare className="text-primary" size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg font-display font-bold text-foreground">
+              <span className="hidden sm:inline">Demandes & Réservations</span>
+              <span className="sm:hidden">Demandes</span>
+            </h2>
+            <p className="text-xs text-foreground-muted hidden sm:block">Réservations flash et projets personnalisés</p>
+          </div>
+        </motion.div>
+        <ThemeToggle size="md" variant="outline" />
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-20 md:pb-0 bg-[#050505]">
+      <div className="flex-1 overflow-y-auto pb-24 md:pb-0 bg-background">
         {/* Tabs */}
-        <div className="border-b border-white/5 sticky top-0 z-20 bg-[#0a0a0a]">
+        <div className="border-b border-border sticky top-0 z-20 bg-card shadow-sm">
           <div className="flex">
             <button
               onClick={() => setActiveTab('bookings')}
               className={`flex-1 px-4 md:px-6 py-4 font-medium transition-colors relative text-sm ${
-                activeTab === 'bookings' ? 'text-white' : 'text-zinc-500 hover:text-white'
+                activeTab === 'bookings' ? 'text-foreground' : 'text-foreground-muted hover:text-foreground'
               }`}
             >
               <span className="flex items-center justify-center gap-2">
@@ -477,7 +487,7 @@ export const DashboardRequests: React.FC = () => {
               {activeTab === 'bookings' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-px bg-white"
+                  className="absolute bottom-0 left-0 right-0 h-px bg-primary"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -485,7 +495,7 @@ export const DashboardRequests: React.FC = () => {
             <button
               onClick={() => setActiveTab('projects')}
               className={`flex-1 px-4 md:px-6 py-4 font-medium transition-colors relative text-sm ${
-                activeTab === 'projects' ? 'text-white' : 'text-zinc-500 hover:text-white'
+                activeTab === 'projects' ? 'text-foreground' : 'text-foreground-muted hover:text-foreground'
               }`}
             >
               <span className="flex items-center justify-center gap-2">
@@ -495,7 +505,7 @@ export const DashboardRequests: React.FC = () => {
               {activeTab === 'projects' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-px bg-white"
+                  className="absolute bottom-0 left-0 right-0 h-px bg-primary"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -503,11 +513,11 @@ export const DashboardRequests: React.FC = () => {
           </div>
           
           {/* Sous-onglets */}
-          <div className="flex border-t border-white/5">
+          <div className="flex border-t border-border">
             <button
               onClick={() => setViewMode('pending')}
               className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
-                viewMode === 'pending' ? 'text-white bg-white/5' : 'text-zinc-600 hover:text-white'
+                viewMode === 'pending' ? 'text-foreground bg-background/50' : 'text-foreground-muted hover:text-foreground'
               }`}
             >
               En attente
@@ -515,7 +525,7 @@ export const DashboardRequests: React.FC = () => {
             <button
               onClick={() => setViewMode('history')}
               className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
-                viewMode === 'history' ? 'text-white bg-white/5' : 'text-zinc-600 hover:text-white'
+                viewMode === 'history' ? 'text-foreground bg-background/50' : 'text-foreground-muted hover:text-foreground'
               }`}
             >
               Historique
@@ -545,7 +555,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={CheckCircle}
                           title="Tout est à jour !"
                           description="Aucune réservation flash en attente. Créez des flashs et partagez votre lien pour recevoir plus de demandes."
-                          primaryAction={{ label: 'Créer un flash', onClick: () => navigate('/dashboard/flashs') }}
+                          primaryAction={{ label: 'Créer un flash', onClick: () => router.push('/dashboard/flashs') }}
                           secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
                         />
                       ) : (
@@ -553,7 +563,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={Calendar}
                           title="Aucun historique"
                           description="Les réservations confirmées/refusées apparaîtront ici."
-                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => router.push('/dashboard/calendar') }}
                         />
                       )}
                     </motion.div>
@@ -564,11 +574,11 @@ export const DashboardRequests: React.FC = () => {
                         variants={fadeInUp}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        className="glass rounded-2xl p-4 md:p-5 hover:bg-white/10 transition-all cursor-pointer"
+                        className="rounded-2xl p-4 md:p-5 bg-card border border-border shadow-sm hover:shadow-md transition-all cursor-pointer"
                       >
                         <div className="flex flex-col md:flex-row gap-4">
                           {/* Image du flash */}
-                          <div className="w-full md:w-20 h-28 md:h-20 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
+                          <div className="w-full md:w-20 h-28 md:h-20 rounded-xl overflow-hidden bg-background/50 flex-shrink-0">
                             {booking.flashs?.image_url ? (
                               <ImageSkeleton
                                 src={booking.flashs.image_url}
@@ -578,7 +588,7 @@ export const DashboardRequests: React.FC = () => {
                                 fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%2318181b' width='400' height='400'/%3E%3C/svg%3E"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                              <div className="w-full h-full flex items-center justify-center text-foreground-muted">
                                 <ImageIcon size={24} />
                               </div>
                             )}
@@ -588,10 +598,10 @@ export const DashboardRequests: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-semibold text-white mb-1 truncate">
+                                <h3 className="text-base font-semibold text-foreground mb-1 truncate">
                                   {booking.flashs?.title || 'Flash'}
                                 </h3>
-                                <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+                                <div className="flex flex-wrap gap-3 text-xs text-foreground-muted">
                                   <span className="flex items-center gap-1">
                                     <User size={12} /> {booking.client_name || 'Non renseigné'}
                                   </span>
@@ -603,7 +613,7 @@ export const DashboardRequests: React.FC = () => {
                               {getStatusBadge(booking.statut_booking, 'booking')}
                             </div>
 
-                            <div className="flex items-center gap-3 text-xs text-zinc-500 mb-3">
+                            <div className="flex items-center gap-3 text-xs text-foreground-muted mb-3">
                               <span className="flex items-center gap-1">
                                 <Calendar size={12} />
                                 {formatDate(booking.date_debut)}
@@ -616,11 +626,11 @@ export const DashboardRequests: React.FC = () => {
 
                             {/* Prix */}
                             <div className="flex items-center gap-4 text-xs mb-3">
-                              <span className="text-zinc-400">
-                                Total: <span className="font-semibold text-white">{Math.round(booking.prix_total / 100)}€</span>
+                              <span className="text-foreground-muted">
+                                Total: <span className="font-semibold text-foreground">{Math.round(booking.prix_total / 100)}€</span>
                               </span>
-                              <span className="text-zinc-400">
-                                Acompte: <span className="font-semibold text-white">{Math.round(booking.deposit_amount / 100)}€</span>
+                              <span className="text-foreground-muted">
+                                Acompte: <span className="font-semibold text-foreground">{Math.round(booking.deposit_amount / 100)}€</span>
                               </span>
                               {booking.statut_booking === 'confirmed' && booking.statut_paiement === 'deposit_paid' && profile && (
                                 <InvoiceButton booking={booking} artist={profile} />
@@ -629,12 +639,12 @@ export const DashboardRequests: React.FC = () => {
 
                             {/* Actions */}
                             {(booking.statut_booking === 'pending' || booking.statut_paiement === 'pending') && (
-                              <div className="flex gap-2 pt-3 border-t border-white/5">
+                              <div className="flex gap-2 pt-3 border-t border-border">
                                 <motion.button
                                   whileTap={{ scale: 0.95 }}
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'confirmed')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-emerald-500/10 text-emerald-400 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                  className="flex-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={14} />
@@ -649,7 +659,7 @@ export const DashboardRequests: React.FC = () => {
                                   whileTap={{ scale: 0.95 }}
                                   onClick={() => handleBookingStatusUpdate(booking.id, 'rejected')}
                                   disabled={updating === booking.id}
-                                  className="flex-1 bg-red-500/10 text-red-400 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                  className="flex-1 bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                   {updating === booking.id ? (
                                     <Loader2 className="animate-spin" size={14} />
@@ -684,7 +694,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={MessageSquare}
                           title="Aucune demande de projet perso"
                           description="Les demandes personnalisées envoyées par vos clients apparaîtront ici."
-                          primaryAction={{ label: 'Optimiser mon profil', onClick: () => navigate('/dashboard/settings') }}
+                          primaryAction={{ label: 'Optimiser mon profil', onClick: () => router.push('/dashboard/settings') }}
                           secondaryAction={{ label: 'Partager mon lien', onClick: handleShareLink }}
                         />
                       ) : (
@@ -692,7 +702,7 @@ export const DashboardRequests: React.FC = () => {
                           icon={MessageSquare}
                           title="Aucun historique"
                           description="Les projets approuvés/refusés apparaîtront ici."
-                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => navigate('/dashboard/calendar') }}
+                          primaryAction={{ label: 'Voir mon calendrier', onClick: () => router.push('/dashboard/calendar') }}
                         />
                       )}
                     </motion.div>
@@ -703,19 +713,19 @@ export const DashboardRequests: React.FC = () => {
                         variants={fadeInUp}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        className="glass rounded-2xl p-4 md:p-5 hover:bg-white/10 transition-all cursor-pointer"
+                        className="rounded-2xl p-4 md:p-5 bg-card border border-border shadow-sm hover:shadow-md transition-all cursor-pointer"
                         onClick={() => openProject(project)}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-base font-semibold text-white">
+                              <h3 className="text-base font-semibold text-foreground">
                                 {project.body_part} • {project.style}
                               </h3>
                               {getStatusBadge(project.statut, 'project')}
                             </div>
-                            <p className="text-zinc-500 text-sm mb-3 line-clamp-2">{project.description}</p>
-                            <div className="flex flex-wrap gap-3 text-xs text-zinc-600">
+                            <p className="text-foreground-muted text-sm mb-3 line-clamp-2">{project.description}</p>
+                            <div className="flex flex-wrap gap-3 text-xs text-foreground-muted">
                               <span>Taille: {project.size_cm}cm</span>
                               {project.budget_max && (
                                 <span>Budget: {Math.round(project.budget_max / 100)}€</span>
@@ -726,18 +736,18 @@ export const DashboardRequests: React.FC = () => {
                         </div>
 
                         {project.ai_technical_notes && (
-                          <div className="bg-white/5 rounded-xl p-3 mb-3 border border-white/5">
-                            <p className="text-xs text-zinc-500">{project.ai_technical_notes}</p>
+                          <div className="bg-background/50 rounded-xl p-3 mb-3 border border-border">
+                            <p className="text-xs text-foreground-muted">{project.ai_technical_notes}</p>
                           </div>
                         )}
 
                         {['pending', 'inquiry'].includes(project.statut) && (
-                          <div className="flex gap-2 pt-3 border-t border-white/5">
+                          <div className="flex gap-2 pt-3 border-t border-border">
                             <motion.button
                               whileTap={{ scale: 0.95 }}
                               onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'approved'); }}
                               disabled={updating === project.id}
-                              className="flex-1 bg-emerald-500/10 text-emerald-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                              className="flex-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={14} />
@@ -752,7 +762,7 @@ export const DashboardRequests: React.FC = () => {
                               whileTap={{ scale: 0.95 }}
                               onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'quoted'); }}
                               disabled={updating === project.id}
-                              className="flex-1 bg-cyan-500/10 text-cyan-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-cyan-500/20 transition-all border border-cyan-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                              className="flex-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-sky-500/20 transition-all border border-sky-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={14} />
@@ -767,7 +777,7 @@ export const DashboardRequests: React.FC = () => {
                               whileTap={{ scale: 0.95 }}
                               onClick={(e) => { e.stopPropagation(); handleProjectStatusUpdate(project.id, 'rejected'); }}
                               disabled={updating === project.id}
-                              className="flex-1 bg-red-500/10 text-red-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                              className="flex-1 bg-red-500/10 text-red-600 dark:text-red-400 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                               {updating === project.id ? (
                                 <Loader2 className="animate-spin" size={14} />
@@ -798,7 +808,7 @@ export const DashboardRequests: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+              className="fixed inset-0 bg-foreground/60 backdrop-blur-sm z-[60]"
               onClick={() => setSelectedProject(null)}
             />
             <motion.div
@@ -808,50 +818,50 @@ export const DashboardRequests: React.FC = () => {
               transition={{ duration: 0.22 }}
               className="fixed left-0 right-0 bottom-0 z-[61] md:left-1/2 md:bottom-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-2xl"
             >
-              <div className="bg-[#0a0a0a]/95 border border-white/10 rounded-t-3xl md:rounded-3xl shadow-2xl p-5 md:p-6">
+              <div className="bg-card/95 border border-border rounded-t-3xl md:rounded-3xl shadow-2xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="min-w-0">
-                    <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">Project details</div>
-                    <div className="text-white font-semibold text-lg truncate">
+                    <div className="text-xs uppercase tracking-wider text-foreground-muted mb-1">Project details</div>
+                    <div className="text-foreground font-semibold text-lg truncate">
                       {selectedProject.body_part} • {selectedProject.style}
                     </div>
-                    <div className="text-zinc-500 text-sm mt-1 truncate">
+                    <div className="text-foreground-muted text-sm mt-1 truncate">
                       {selectedProject.client_name || 'Client'} • {selectedProject.client_email}
                     </div>
                   </div>
                   <button
                     onClick={() => setSelectedProject(null)}
-                    className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-background/50 border border-border hover:bg-background transition-colors"
                     aria-label="Close"
                   >
-                    <X size={18} className="text-zinc-300" />
+                    <X size={18} className="text-foreground-muted" />
                   </button>
                 </div>
 
-                <div className="glass rounded-2xl p-4 mb-4">
-                  <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Description</div>
-                  <div className="text-sm text-zinc-300 whitespace-pre-wrap">{selectedProject.description}</div>
+                <div className="rounded-2xl p-4 mb-4 bg-background/50 border border-border">
+                  <div className="text-xs uppercase tracking-wider text-foreground-muted mb-2">Description</div>
+                  <div className="text-sm text-foreground whitespace-pre-wrap">{selectedProject.description}</div>
                 </div>
 
-                <div className="glass rounded-2xl p-4">
+                <div className="rounded-2xl p-4 bg-background/50 border border-border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <FileText size={16} className="text-brand-yellow" />
-                      <div className="text-white font-semibold">Post‑Tattoo Care</div>
+                      <FileText size={16} className="text-primary" />
+                      <div className="text-foreground font-semibold">Post‑Tattoo Care</div>
                     </div>
                     {selectedProject.care_sent_at && (
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-foreground-muted">
                         Envoyé le {new Date(selectedProject.care_sent_at).toLocaleDateString('fr-FR')}
                       </div>
                     )}
                   </div>
 
-                  <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Template</label>
+                  <label className="block text-xs text-foreground-muted uppercase tracking-wider mb-2">Template</label>
                   <div className="flex items-center gap-2">
                     <select
                       value={careTemplateId || ''}
                       onChange={(e) => setCareTemplateId(e.target.value || null)}
-                      className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-white/30"
+                      className="flex-1 bg-card border border-border rounded-xl px-3 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="">— Aucun —</option>
                       {careTemplates.map((t) => (
@@ -863,24 +873,24 @@ export const DashboardRequests: React.FC = () => {
                     <button
                       onClick={() => {
                         const url = '/dashboard/settings/care-sheets';
-                        navigate(url);
+                        router.push(url);
                         sonnerToast('Ouverture', { description: 'Gérez vos templates dans les paramètres.' });
                       }}
-                      className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 text-sm"
+                      className="px-3 py-2.5 rounded-xl bg-background/50 border border-border text-foreground hover:bg-background text-sm"
                       title="Gérer mes templates"
                     >
                       Gérer
                     </button>
                   </div>
 
-                  <label className="block text-xs text-zinc-500 uppercase tracking-wider mt-4 mb-2">
+                  <label className="block text-xs text-foreground-muted uppercase tracking-wider mt-4 mb-2">
                     Notes personnalisées (override)
                   </label>
                   <textarea
                     rows={4}
                     value={customCare}
                     onChange={(e) => setCustomCare(e.target.value)}
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                    className="w-full bg-card border border-border rounded-xl px-3 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors resize-none"
                     placeholder={"Optionnel. Si rempli, ce texte remplace le template.\nEx:\n- Laver 2x/jour\n- Pas de piscine 2 semaines"}
                   />
 
@@ -889,7 +899,7 @@ export const DashboardRequests: React.FC = () => {
                       whileTap={{ scale: 0.98 }}
                       onClick={saveProjectCare}
                       disabled={savingCare}
-                      className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 disabled:opacity-50"
+                      className="flex-1 px-4 py-3 rounded-xl bg-background/50 border border-border text-foreground font-semibold hover:bg-background disabled:opacity-50"
                     >
                       {savingCare ? 'Sauvegarde…' : 'Enregistrer'}
                     </motion.button>
@@ -897,7 +907,7 @@ export const DashboardRequests: React.FC = () => {
                       whileTap={{ scale: 0.98 }}
                       onClick={sendCareInstructions}
                       disabled={sendingCare}
-                      className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {sendingCare ? (
                         <>
@@ -926,10 +936,10 @@ export const DashboardRequests: React.FC = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl flex items-center gap-3 ${
+            className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl flex items-center gap-3 bg-card border border-border shadow-lg ${
               toast.type === 'success'
-                ? 'glass text-emerald-400'
-                : 'glass text-red-400'
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-red-600 dark:text-red-400'
             }`}
           >
             {toast.type === 'success' ? (
@@ -937,8 +947,8 @@ export const DashboardRequests: React.FC = () => {
             ) : (
               <XCircle size={16} />
             )}
-            <span className="font-medium text-sm text-white">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="text-zinc-500 hover:text-white transition-colors">
+            <span className="font-medium text-sm text-foreground">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-foreground-muted hover:text-foreground transition-colors">
               <X size={14} />
             </button>
           </motion.div>

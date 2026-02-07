@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { Plus, Edit2, Trash2, Upload, X, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -126,10 +127,14 @@ export const FlashManagement: React.FC = () => {
 
         const { error: updateError } = await supabase
           .from('flashs')
+          // @ts-expect-error - Supabase builder Update type can resolve to never with some type versions
           .update(updateData)
           .eq('id', editingFlash.id);
 
         if (updateError) throw updateError;
+        resetForm();
+        setIsModalOpen(false);
+        fetchFlashs();
       } else {
         const insertData: FlashInsert = {
           artist_id: user.id,
@@ -143,16 +148,32 @@ export const FlashManagement: React.FC = () => {
           statut: 'available',
         };
 
-        const { error: insertError } = await supabase
+        const tempId = `temp-${Date.now()}`;
+        const optimisticFlash: Flash = {
+          ...insertData,
+          id: tempId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as Flash;
+
+        setFlashs((prev) => [optimisticFlash, ...prev]);
+        resetForm();
+        setIsModalOpen(false);
+
+        const { data: inserted, error: insertError } = await supabase
           .from('flashs')
-          .insert(insertData);
+          // @ts-expect-error - Supabase builder Insert type can resolve to never with some type versions
+          .insert(insertData)
+          .select()
+          .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          setFlashs((prev) => prev.filter((f) => f.id !== tempId));
+          throw insertError;
+        }
+        setFlashs((prev) => prev.map((f) => (f.id === tempId ? (inserted as Flash) : f)));
+        toast.success('Flash créé !');
       }
-
-      resetForm();
-      setIsModalOpen(false);
-      fetchFlashs();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
       setError(errorMessage);
@@ -163,6 +184,9 @@ export const FlashManagement: React.FC = () => {
   const handleDelete = async (flashId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce flash ?')) return;
 
+    const removed = flashs.find((f) => f.id === flashId);
+    setFlashs((prev) => prev.filter((f) => f.id !== flashId));
+
     try {
       const { error } = await supabase
         .from('flashs')
@@ -170,10 +194,12 @@ export const FlashManagement: React.FC = () => {
         .eq('id', flashId);
 
       if (error) throw error;
-      fetchFlashs();
+      toast.success('Flash supprimé');
     } catch (err) {
+      if (removed) setFlashs((prev) => [removed, ...prev]);
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
       setError(errorMessage);
+      toast.error(errorMessage);
       console.error('Error deleting flash:', err);
     }
   };
@@ -234,7 +260,7 @@ export const FlashManagement: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="glass rounded-2xl overflow-hidden">
+            <div key={i} className="rounded-2xl overflow-hidden border border-border bg-card">
               <Skeleton className="aspect-square w-full rounded-none" />
               <div className="p-4 space-y-3">
                 <Skeleton className="h-5 w-2/3" />
@@ -259,15 +285,15 @@ export const FlashManagement: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-display font-bold text-white">Mes Flashs</h2>
-          <p className="text-zinc-500 text-sm mt-1">Gérez vos designs disponibles</p>
+          <h2 className="text-2xl font-display font-bold text-foreground">Mes Flashs</h2>
+          <p className="text-foreground-muted text-sm mt-1">Gérez vos designs disponibles</p>
         </div>
         <button
           onClick={() => {
             resetForm();
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl font-semibold hover:bg-zinc-200 transition-colors"
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-colors"
         >
           <Plus size={18} /> Nouveau Flash
         </button>
@@ -278,12 +304,12 @@ export const FlashManagement: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-brand-pink/10 border border-brand-pink/20 rounded-xl flex items-center gap-3"
+          className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3"
         >
-          <AlertCircle className="text-brand-pink shrink-0" size={20} />
-          <p className="text-brand-pink text-sm flex-1">{error}</p>
+          <AlertCircle className="text-rose-600 dark:text-rose-400 shrink-0" size={20} />
+          <p className="text-rose-600 dark:text-rose-400 text-sm flex-1">{error}</p>
           <button onClick={() => setError(null)}>
-            <X size={18} className="text-brand-pink/60 hover:text-brand-pink" />
+            <X size={18} className="text-rose-500/60 hover:text-rose-600 dark:hover:text-rose-400" />
           </button>
         </motion.div>
       )}
@@ -312,9 +338,9 @@ export const FlashManagement: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="glass rounded-2xl overflow-hidden hover:bg-white/5 transition-colors group"
+              className="rounded-2xl overflow-hidden border border-border bg-card hover:shadow-card-hover transition-all duration-300 group"
             >
-              <div className="aspect-square relative overflow-hidden bg-[#050505]">
+              <div className="aspect-square relative overflow-hidden bg-slate-100 dark:bg-white/5">
                 <ImageSkeleton
                   src={flash.image_url}
                   alt={`Tatouage ${flash.title} - Design de flash`}
@@ -326,10 +352,10 @@ export const FlashManagement: React.FC = () => {
                   <span
                     className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                       flash.statut === 'available'
-                        ? 'bg-brand-mint/10 text-brand-mint border-brand-mint/20'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                         : flash.statut === 'reserved'
-                        ? 'bg-brand-yellow/10 text-brand-yellow border-brand-yellow/20'
-                        : 'bg-brand-pink/10 text-brand-pink border-brand-pink/20'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                     }`}
                   >
                     {flash.statut === 'available' ? 'Disponible' : flash.statut === 'reserved' ? 'Réservé' : 'Vendu'}
@@ -337,21 +363,21 @@ export const FlashManagement: React.FC = () => {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-white mb-2">{flash.title}</h3>
-                <div className="flex items-center justify-between text-sm text-zinc-500 mb-4">
-                  <span className="text-white font-bold">{flash.prix / 100}€</span>
+                <h3 className="font-semibold text-foreground mb-2">{flash.title}</h3>
+                <div className="flex items-center justify-between text-sm text-foreground-muted mb-4">
+                  <span className="text-foreground font-bold">{flash.prix / 100}€</span>
                   <span>{flash.duree_minutes} min</span>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(flash)}
-                    className="flex-1 flex items-center justify-center gap-2 glass text-zinc-300 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+                    className="flex-1 flex items-center justify-center gap-2 bg-slate-100 dark:bg-white/5 text-foreground-muted px-3 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 transition-colors text-sm font-medium border border-border"
                   >
                     <Edit2 size={16} /> Modifier
                   </button>
                   <button
                     onClick={() => handleDelete(flash.id)}
-                    className="flex items-center justify-center gap-2 bg-brand-pink/10 text-brand-pink px-3 py-2 rounded-xl hover:bg-brand-pink/20 transition-colors text-sm font-medium"
+                    className="flex items-center justify-center gap-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 px-3 py-2 rounded-xl hover:bg-rose-500/20 transition-colors text-sm font-medium"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -374,7 +400,7 @@ export const FlashManagement: React.FC = () => {
                 setIsModalOpen(false);
                 resetForm();
               }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -382,9 +408,9 @@ export const FlashManagement: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                  <h3 className="text-xl font-display font-bold text-white">
+              <div className="bg-card border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+                <div className="p-6 border-b border-border flex items-center justify-between">
+                  <h3 className="text-xl font-display font-bold text-foreground">
                     {editingFlash ? 'Modifier le Flash' : 'Nouveau Flash'}
                   </h3>
                   <button
@@ -392,7 +418,7 @@ export const FlashManagement: React.FC = () => {
                       setIsModalOpen(false);
                       resetForm();
                     }}
-                    className="text-zinc-500 hover:text-white transition-colors"
+                    className="text-foreground-muted hover:text-foreground transition-colors"
                   >
                     <X size={24} />
                   </button>
@@ -401,21 +427,21 @@ export const FlashManagement: React.FC = () => {
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                   {/* Image Upload */}
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">
-                      Image du Flash <span className="text-brand-pink">*</span>
+                    <label className="block text-sm font-medium text-foreground-muted mb-2">
+                      Image du Flash <span className="text-rose-500">*</span>
                     </label>
                     {formData.imageUrl && !formData.imageFile && (
                       <div className="mb-4 relative">
                         <ImageSkeleton
                           src={formData.imageUrl}
                           alt="Aperçu du design de flash"
-                          className="w-full h-64 rounded-xl border border-white/10"
+                          className="w-full h-64 rounded-xl border border-border"
                           aspectRatio=""
                         />
                         <button
                           type="button"
                           onClick={() => setFormData({ ...formData, imageUrl: '' })}
-                          className="absolute top-2 right-2 bg-brand-pink text-white p-2 rounded-full hover:bg-brand-pink/80"
+                          className="absolute top-2 right-2 bg-rose-500 text-white p-2 rounded-full hover:bg-rose-600"
                         >
                           <X size={16} />
                         </button>
@@ -426,24 +452,24 @@ export const FlashManagement: React.FC = () => {
                         <img
                           src={URL.createObjectURL(formData.imageFile)}
                           alt="Aperçu du design de flash sélectionné"
-                          className="w-full h-64 object-cover rounded-xl border border-white/10"
+                          className="w-full h-64 object-cover rounded-xl border border-border"
                         />
                         <button
                           type="button"
                           onClick={() => setFormData({ ...formData, imageFile: null })}
-                          className="absolute top-2 right-2 bg-brand-pink text-white p-2 rounded-full hover:bg-brand-pink/80"
+                          className="absolute top-2 right-2 bg-rose-500 text-white p-2 rounded-full hover:bg-rose-600"
                         >
                           <X size={16} />
                         </button>
                       </div>
                     )}
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:border-white/30 transition-colors bg-[#050505]">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 transition-colors bg-background">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="text-zinc-500 mb-2" size={24} />
-                        <p className="text-sm text-zinc-500">
-                          <span className="font-semibold text-zinc-300">Cliquez pour uploader</span> ou glissez-déposez
+                        <Upload className="text-foreground-muted mb-2" size={24} />
+                        <p className="text-sm text-foreground-muted">
+                          <span className="font-semibold text-foreground">Cliquez pour uploader</span> ou glissez-déposez
                         </p>
-                        <p className="text-xs text-zinc-600 mt-1">PNG, JPG jusqu'à 5MB</p>
+                        <p className="text-xs text-foreground-muted mt-1">PNG, JPG jusqu'à 5MB</p>
                       </div>
                       <input
                         type="file"
@@ -455,7 +481,7 @@ export const FlashManagement: React.FC = () => {
                     </label>
                     {uploading && (
                       <div className="mt-2">
-                        <div className="flex items-center gap-2 text-sm text-white">
+                        <div className="flex items-center gap-2 text-sm text-foreground">
                           <Loader2 className="animate-spin" size={16} />
                           <span>Upload en cours... {uploadProgress}%</span>
                         </div>
@@ -465,15 +491,15 @@ export const FlashManagement: React.FC = () => {
 
                   {/* Titre */}
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">
-                      Titre <span className="text-brand-pink">*</span>
+                    <label className="block text-sm font-medium text-foreground-muted mb-2">
+                      Titre <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       required
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                       placeholder="Ex: Serpent Floral"
                     />
                   </div>
@@ -481,8 +507,8 @@ export const FlashManagement: React.FC = () => {
                   {/* Prix et Durée */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">
-                        Prix (€) <span className="text-brand-pink">*</span>
+                      <label className="block text-sm font-medium text-foreground-muted mb-2">
+                        Prix (€) <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="number"
@@ -490,20 +516,20 @@ export const FlashManagement: React.FC = () => {
                         value={formData.prix}
                         onChange={(e) => setFormData({ ...formData, prix: e.target.value })}
                         required
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                         placeholder="150"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">
-                        Durée (min) <span className="text-brand-pink">*</span>
+                      <label className="block text-sm font-medium text-foreground-muted mb-2">
+                        Durée (min) <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="number"
                         value={formData.duree_minutes}
                         onChange={(e) => setFormData({ ...formData, duree_minutes: e.target.value })}
                         required
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                         placeholder="120"
                       />
                     </div>
@@ -512,22 +538,22 @@ export const FlashManagement: React.FC = () => {
                   {/* Taille et Style */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">Taille (cm)</label>
+                      <label className="block text-sm font-medium text-foreground-muted mb-2">Taille (cm)</label>
                       <input
                         type="text"
                         value={formData.taille_cm}
                         onChange={(e) => setFormData({ ...formData, taille_cm: e.target.value })}
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                         placeholder="10x5"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">Style</label>
+                      <label className="block text-sm font-medium text-foreground-muted mb-2">Style</label>
                       <input
                         type="text"
                         value={formData.style}
                         onChange={(e) => setFormData({ ...formData, style: e.target.value })}
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                         placeholder="Fine Line"
                       />
                     </div>
@@ -558,14 +584,14 @@ export const FlashManagement: React.FC = () => {
                         setIsModalOpen(false);
                         resetForm();
                       }}
-                      className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors"
+                      className="flex-1 bg-slate-100 dark:bg-white/10 text-foreground font-medium py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-white/20 transition-colors border border-border"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
                       disabled={uploading}
-                      className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 bg-primary text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {uploading ? 'Upload...' : editingFlash ? 'Modifier' : 'Créer'}
                     </button>

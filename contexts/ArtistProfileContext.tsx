@@ -1,5 +1,7 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../services/supabase';
+import { createClient } from '../lib/supabase/client';
 import { useAuth } from '../hooks/useAuth';
 import type { Artist } from '../types/supabase';
 
@@ -31,8 +33,19 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Créer le client Supabase
+  const supabase = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return createClient();
+    } catch (err) {
+      console.warn('⚠️ ArtistProfileProvider: Impossible de créer le client Supabase:', err);
+      return null;
+    }
+  }, []);
+
   const fetchProfile = async () => {
-    if (!user) {
+    if (!user || !supabase) {
       setProfile(null);
       setLoading(false);
       return;
@@ -41,16 +54,6 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
     try {
       setLoading(true);
       setError(null);
-
-      // Vérifier si Supabase est configuré
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
 
       const { data, error: fetchError } = await supabase
         .from('artists')
@@ -85,8 +88,8 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
   };
 
   const updateProfile = async (updates: Partial<Artist>) => {
-    if (!user) {
-      throw new Error('User not authenticated');
+    if (!user || !supabase) {
+      throw new Error('User not authenticated or Supabase not configured');
     }
 
     try {
@@ -94,6 +97,7 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
 
       const { data, error: updateError } = await supabase
         .from('artists')
+        // @ts-expect-error - Supabase builder Update type can resolve to never with some type versions
         .update(updates)
         .eq('id', user.id)
         .select()
@@ -112,14 +116,14 @@ export const ArtistProfileProvider: React.FC<ArtistProfileProviderProps> = ({ ch
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && supabase) {
       fetchProfile();
     } else {
       setProfile(null);
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, supabase]);
 
   return (
     <ArtistProfileContext.Provider

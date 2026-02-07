@@ -1,9 +1,14 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, Lock, AlertCircle, ArrowLeft, Sparkles, WifiOff } from 'lucide-react';
+import { toast } from 'sonner';
+// PageSEO retiré - Next.js gère le SEO via metadata dans les Server Components
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { isSupabaseConfigured, getConfigErrors } from '../services/supabase';
+import { LoginFormErrorBoundary } from './auth/LoginFormErrorBoundary';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,35 +16,61 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
-  const { signIn, signInWithOAuth, authError } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, signInWithOAuth, authError, isConfigured } = useAuth();
+  const router = useRouter();
   
   // Vérification de la configuration Supabase
-  const isConfigured = isSupabaseConfigured();
-  const configErrors = getConfigErrors();
+  const configErrors = isConfigured ? [] : [
+    'NEXT_PUBLIC_SUPABASE_URL est manquant dans .env.local',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY est manquant dans .env.local'
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      // Timeout de sécurité pour éviter que le bouton reste bloqué indéfiniment
+      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
+        setTimeout(() => {
+          resolve({ error: { message: 'Timeout: La connexion prend trop de temps. Vérifiez votre connexion internet.' } });
+        }, 30000); // 30 secondes
+      });
 
-    if (error) {
-      let errorMessage = error.message;
-      
-      if (error.message.includes('Invalid login credentials') || error.message.includes('Invalid credentials')) {
-        errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, cliquez sur "S\'inscrire" ci-dessous.';
-      } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.';
-      } else if (error.message.includes('User not found')) {
-        errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte en cliquant sur "S\'inscrire".';
+      const signInPromise = signIn(email, password);
+      const result = await Promise.race([signInPromise, timeoutPromise]);
+
+      if (result.error) {
+        const msg = result.error.message;
+        let errorMessage = msg;
+        const isNetworkError = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Impossible de se connecter') || msg.includes('Timeout');
+
+        if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials')) {
+          errorMessage = 'Email ou mot de passe incorrect. Si vous n\'avez pas encore de compte, cliquez sur "S\'inscrire" ci-dessous.';
+        } else if (msg.includes('Email not confirmed')) {
+          errorMessage = 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.';
+        } else if (msg.includes('User not found')) {
+          errorMessage = 'Aucun compte trouvé avec cet email. Créez un compte en cliquant sur "S\'inscrire".';
+        } else if (isNetworkError) {
+          toast.error('Erreur réseau', {
+            description: 'Vérifiez votre connexion internet et réessayez.',
+          });
+        }
+
+        setError(errorMessage);
+        setLoading(false);
+      } else {
+        // Succès - redirection vers le dashboard
+        router.push('/dashboard');
+        // Note: setLoading(false) n'est pas nécessaire ici car on navigue vers une autre page
       }
-      
+    } catch (err) {
+      // Gestion des erreurs non capturées
+      console.error('🚨 Erreur inattendue lors de la connexion:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite';
       setError(errorMessage);
       setLoading(false);
-    } else {
-      navigate('/dashboard');
     }
   };
 
@@ -50,7 +81,12 @@ export const LoginPage: React.FC = () => {
     const { error } = await signInWithOAuth(provider);
 
     if (error) {
-      setError(error.message || `Erreur lors de la connexion avec ${provider === 'google' ? 'Google' : 'Apple'}`);
+      const raw = error.message || `Erreur lors de la connexion avec ${provider === 'google' ? 'Google' : 'Apple'}`;
+      const isNetworkError = raw.includes('Failed to fetch') || raw.includes('NetworkError') || raw.includes('Impossible de se connecter');
+      if (isNetworkError) {
+        toast.error('Erreur réseau', { description: 'Vérifiez votre connexion et réessayez.' });
+      }
+      setError(raw);
       setOauthLoading(null);
     }
     // Note: On ne fait pas de navigate() ici car Supabase redirige automatiquement
@@ -65,7 +101,7 @@ export const LoginPage: React.FC = () => {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <main id="main-content" className="w-full max-w-md relative z-10" role="main">
         {/* Bouton Retour */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -73,7 +109,7 @@ export const LoginPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <Link
-            to="/"
+            href="/"
             className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-8 group"
           >
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -90,14 +126,15 @@ export const LoginPage: React.FC = () => {
         >
           <div className="inline-flex items-center gap-2 mb-6">
             <span className="text-4xl font-display font-bold tracking-tight text-white">
-              INK<span className="text-zinc-500">FLOW</span>
+              INK<span className="text-zinc-400">FLOW</span>
             </span>
           </div>
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Connexion</h1>
-          <p className="text-zinc-500">Accédez à votre espace tatoueur</p>
+          <p className="text-zinc-400">Accédez à votre espace tatoueur</p>
         </motion.div>
 
-        {/* Formulaire */}
+        {/* Formulaire — Error Boundary pour résilience vérification de sécurité */}
+        <LoginFormErrorBoundary onReset={() => setError(null)}>
         <motion.form 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -131,10 +168,21 @@ export const LoginPage: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3"
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="text-red-400 shrink-0" size={20} />
-              <p className="text-red-300 text-sm">{error || authError}</p>
+              <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-red-300 text-sm">{error || authError}</p>
+                {(error || authError) && (
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="mt-3 text-sm font-medium text-red-300 hover:text-red-200 underline focus:outline-none focus:ring-2 focus:ring-red-500/50 rounded"
+                  >
+                    Réessayer
+                  </button>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -181,7 +229,7 @@ export const LoginPage: React.FC = () => {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading || oauthLoading !== null}
-              className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-bold py-4 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-400/20"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold py-4 rounded-xl border border-blue-700 hover:from-blue-700 hover:to-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -254,12 +302,13 @@ export const LoginPage: React.FC = () => {
           <div className="mt-8 text-center">
             <p className="text-zinc-500 text-sm">
               Pas encore de compte ?{' '}
-              <Link to="/register" className="text-white hover:text-zinc-300 font-semibold transition-colors">
+              <Link href="/register" className="text-white hover:text-zinc-300 font-semibold transition-colors">
                 S'inscrire
               </Link>
             </p>
           </div>
         </motion.form>
+        </LoginFormErrorBoundary>
 
         {/* Footer */}
         <motion.p 
@@ -270,7 +319,7 @@ export const LoginPage: React.FC = () => {
         >
           © 2025 InkFlow. Tous droits réservés.
         </motion.p>
-      </div>
+      </main>
     </div>
   );
 };

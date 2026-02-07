@@ -1,0 +1,10 @@
+# InkFlow — ink-flow.me
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /onboarding
+Disallow: /payment/
+
+Sitemap: https://ink-flow.me/sitemap.xml

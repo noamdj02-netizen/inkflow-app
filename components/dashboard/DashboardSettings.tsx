@@ -1,22 +1,30 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
+import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink, Calendar, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useSubscription } from '../../hooks/useSubscription';
 import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
+import { SITE_URL } from '../../constants/seo';
+import { safeParseJson } from '../../lib/fetchJson';
+import { getPlanDisplayName } from '../../lib/subscription-utils';
 
 export const DashboardSettings: React.FC = () => {
-  const { profile, loading: profileLoading, updateProfile, error: profileError } = useArtistProfile();
+  const { profile, loading: profileLoading, updateProfile, refreshProfile, error: profileError } = useArtistProfile();
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingHeroBackground, setUploadingHeroBackground] = useState(false);
+  const [generatingCalendarToken, setGeneratingCalendarToken] = useState(false);
 
   const [formData, setFormData] = useState({
     nom_studio: '',
@@ -29,11 +37,22 @@ export const DashboardSettings: React.FC = () => {
     deposit_percentage: 30,
     avatarFile: null as File | null,
     avatarUrl: '',
+    ville: '',
+    rating: '' as string | number,
+    nb_avis: '' as string | number,
+    years_experience: '' as string | number,
+    vitrine_show_glow: true,
+    vitrine_hero_background_url: '',
+    heroBackgroundFile: null as File | null,
+    instagram_url: '',
+    tiktok_url: '',
+    facebook_url: '',
   });
   const [slugError, setSlugError] = useState<string | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
   // Check URL params for Stripe callback status
   useEffect(() => {
@@ -79,26 +98,61 @@ export const DashboardSettings: React.FC = () => {
         throw new Error('Session invalide');
       }
 
+      // Check if we're in development mode
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+      
       // Call the API route to create Stripe Connect account and get onboarding link
-      const response = await fetch('/api/stripe-connect-onboard', {
+      const apiUrl = isDevelopment 
+        ? `${window.location.origin}/api/stripe`
+        : '/api/stripe';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
+        body: JSON.stringify({
+          action: 'connect-onboard',
+          userId: user.id,
+        }),
       });
 
       // Check if response is ok and has content
       if (!response.ok) {
         let errorMessage = 'Erreur lors de la création du lien Stripe';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // If JSON parsing fails, use status text
-          errorMessage = response.statusText || `Erreur ${response.status}`;
+        let errorData: any = null;
+        
+        // Handle 404 specifically (route not found)
+        if (response.status === 404) {
+          const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+          if (isDevelopment) {
+            errorMessage = 'Les routes API ne fonctionnent qu\'en production sur Vercel. Déployez votre projet sur Vercel pour tester Stripe Connect.';
+            console.error('API routes are only available in production on Vercel. Deploy your project to test Stripe Connect.');
+          } else {
+            errorMessage = 'Route API non trouvée. Vérifiez que les fonctions serverless sont déployées sur Vercel.';
+            console.error('API route not found. Make sure the serverless function is deployed on Vercel.');
+          }
+        } else {
+          try {
+            const text = await response.text();
+            if (text && text.trim()) {
+              errorData = JSON.parse(text);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            }
+          } catch {
+            // If JSON parsing fails, use status text
+            const statusText = response.statusText || `Erreur ${response.status}`;
+            errorMessage = statusText === 'Not Found' 
+              ? 'Route API non trouvée. Vérifiez que les fonctions serverless sont déployées sur Vercel.'
+              : statusText;
+          }
         }
-        throw new Error(errorMessage);
+        
+        // Create error with data for specific handling
+        const error = new Error(errorMessage);
+        (error as any).data = errorData;
+        throw error;
       }
 
       // Parse JSON response
@@ -113,6 +167,13 @@ export const DashboardSettings: React.FC = () => {
         console.error('JSON parse error:', parseError);
         throw new Error('Réponse invalide du serveur. Vérifiez les variables d\'environnement dans Vercel.');
       }
+      
+      // Check for Stripe Connect configuration errors in response
+      if (data?.code === 'STRIPE_CONNECT_CONFIG_REQUIRED') {
+        const error = new Error(data.message || data.error);
+        (error as any).data = data;
+        throw error;
+      }
 
       if (data.url) {
         // Redirect to Stripe onboarding
@@ -122,28 +183,110 @@ export const DashboardSettings: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Stripe Connect error:', err);
-      const errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
+      
+      let errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
+      let helpUrl: string | undefined;
+      
+      // Handle specific Stripe Connect configuration errors
+      const errorData = err.data;
+      if (err.message?.includes('losses') || err.message?.includes('platform-profile') || 
+          err.message?.includes('Configuration Stripe Connect requise') ||
+          errorData?.code === 'STRIPE_CONNECT_CONFIG_REQUIRED') {
+        errorMessage = 'Configuration Stripe Connect requise. Veuillez configurer les responsabilités de gestion des pertes dans votre compte Stripe Dashboard.';
+        helpUrl = errorData?.helpUrl || 'https://dashboard.stripe.com/settings/connect/platform-profile';
+      }
+      
       setError(errorMessage);
+      
+      // Show more helpful error message
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+      const displayMessage = isDevelopment && errorMessage.includes('non trouvée')
+        ? 'Les routes API ne fonctionnent qu\'en production. Déployez sur Vercel pour tester.'
+        : errorMessage;
+      
       toast.error('Erreur Stripe Connect', {
-        description: errorMessage,
+        description: displayMessage + (helpUrl ? '\n\nCliquez sur "Ouvrir Stripe Dashboard" pour configurer.' : ''),
+        duration: 10000, // Show longer for important errors
+        action: helpUrl ? {
+          label: 'Ouvrir Stripe Dashboard',
+          onClick: () => window.open(helpUrl, '_blank'),
+        } : undefined,
       });
       setStripeConnecting(false);
     }
   };
 
+  const handleManageSubscription = async () => {
+    if (!user) {
+      toast.error('Vous devez être connecté');
+      return;
+    }
+
+    setLoadingPortal(true);
+    setError(null);
+
+    try {
+      const isDevelopment = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+      const apiUrl = isDevelopment 
+        ? `${window.location.origin}/api/stripe`
+        : '/api/stripe';
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'customer-portal',
+          userId: user.id,
+        }),
+      });
+
+      const data = await safeParseJson<{ url?: string; error?: string }>(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || `Erreur serveur (${response.status}). Réessayez.`);
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL du portail non reçue');
+      }
+    } catch (err: any) {
+      console.error('Error creating customer portal session:', err);
+      const errorMessage = err.message || 'Une erreur est survenue';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoadingPortal(false);
+    }
+  };
+
   useEffect(() => {
     if (profile) {
+      const p = profile as any;
       setFormData({
-        nom_studio: profile.nom_studio || '',
-        slug_profil: profile.slug_profil || '',
-        bio_instagram: profile.bio_instagram || '',
-        pre_tattoo_instructions: profile.pre_tattoo_instructions || '',
-        theme_color: profile.theme_color || profile.accent_color || 'amber',
-        theme_accent_hex: profile.theme_accent_hex || '',
-        theme_secondary_hex: profile.theme_secondary_hex || '',
-        deposit_percentage: profile.deposit_percentage || 30,
+        nom_studio: p.nom_studio || '',
+        slug_profil: p.slug_profil || '',
+        bio_instagram: p.bio_instagram || '',
+        pre_tattoo_instructions: p.pre_tattoo_instructions || '',
+        theme_color: p.theme_color || p.accent_color || 'amber',
+        theme_accent_hex: p.theme_accent_hex || '',
+        theme_secondary_hex: p.theme_secondary_hex || '',
+        deposit_percentage: p.deposit_percentage || 30,
         avatarFile: null,
-        avatarUrl: profile.avatar_url || '',
+        avatarUrl: p.avatar_url || '',
+        ville: (p.ville as string) || '',
+        rating: (p.rating as number) ?? '',
+        nb_avis: (p.nb_avis as number) ?? '',
+        years_experience: (p.years_experience as number) ?? '',
+        vitrine_show_glow: p.vitrine_show_glow !== undefined ? (p.vitrine_show_glow as boolean) !== false : true,
+        vitrine_hero_background_url: (p.vitrine_hero_background_url as string) || '',
+        heroBackgroundFile: null,
+        instagram_url: (p.instagram_url as string) || '',
+        tiktok_url: (p.tiktok_url as string) || '',
+        facebook_url: (p.facebook_url as string) || '',
       });
       setSlugError(null);
       setSlugAvailable(true);
@@ -284,6 +427,41 @@ export const DashboardSettings: React.FC = () => {
     }
   };
 
+  const uploadHeroBackground = async (file: File): Promise<string> => {
+    if (!user) throw new Error('User not authenticated');
+    const fileExt = file.name.split('.').pop();
+    const fileName = `hero-${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+    setUploadingHeroBackground(true);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
+      return `${urlData.publicUrl}?t=${Date.now()}`;
+    } finally {
+      setUploadingHeroBackground(false);
+    }
+  };
+
+  const handleHeroBackgroundChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        setError('L\'image de fond ne doit pas dépasser 3MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('Veuillez sélectionner une image');
+        return;
+      }
+      setFormData({ ...formData, heroBackgroundFile: file });
+    }
+    e.target.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -306,15 +484,16 @@ export const DashboardSettings: React.FC = () => {
 
       if (formData.avatarFile) {
         avatarUrl = await uploadAvatar(formData.avatarFile);
-        
-        setFormData(prev => ({
-          ...prev,
-          avatarUrl: avatarUrl,
-          avatarFile: null,
-        }));
+        setFormData(prev => ({ ...prev, avatarUrl, avatarFile: null }));
       }
 
-      await updateProfile({
+      let heroBackgroundUrl = formData.vitrine_hero_background_url?.trim() || null;
+      if (formData.heroBackgroundFile) {
+        heroBackgroundUrl = await uploadHeroBackground(formData.heroBackgroundFile);
+        setFormData(prev => ({ ...prev, vitrine_hero_background_url: heroBackgroundUrl || '', heroBackgroundFile: null }));
+      }
+
+      const updates: Record<string, unknown> = {
         nom_studio: formData.nom_studio,
         slug_profil: normalizedSlug,
         bio_instagram: formData.bio_instagram,
@@ -322,9 +501,26 @@ export const DashboardSettings: React.FC = () => {
         theme_color: formData.theme_color,
         theme_accent_hex: formData.theme_accent_hex?.trim() ? formData.theme_accent_hex.trim() : null,
         theme_secondary_hex: formData.theme_secondary_hex?.trim() ? formData.theme_secondary_hex.trim() : null,
+        vitrine_hero_background_url: heroBackgroundUrl,
         avatar_url: avatarUrl,
         deposit_percentage: formData.deposit_percentage,
-      });
+      };
+      if (formData.ville !== undefined) updates.ville = formData.ville.trim() || null;
+      if (formData.rating !== '' && formData.rating !== undefined) updates.rating = Number(formData.rating) || null;
+      if (formData.nb_avis !== '' && formData.nb_avis !== undefined) updates.nb_avis = Number(formData.nb_avis) ?? null;
+      if (formData.years_experience !== '' && formData.years_experience !== undefined) updates.years_experience = Number(formData.years_experience) ?? null;
+      // vitrine_show_glow : n'envoyer que si la colonne existe (migration vitrine appliquée)
+      const profileWithGlow = profile as Record<string, unknown> | undefined;
+      if (profileWithGlow && 'vitrine_show_glow' in profileWithGlow) {
+        (updates as Record<string, unknown>).vitrine_show_glow = formData.vitrine_show_glow;
+      }
+      if (profileWithGlow && 'instagram_url' in profileWithGlow) {
+        (updates as Record<string, unknown>).instagram_url = formData.instagram_url?.trim() || null;
+        (updates as Record<string, unknown>).tiktok_url = formData.tiktok_url?.trim() || null;
+        (updates as Record<string, unknown>).facebook_url = formData.facebook_url?.trim() || null;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await updateProfile(updates as any);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -346,10 +542,10 @@ export const DashboardSettings: React.FC = () => {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505]">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="animate-spin text-white mx-auto mb-4" size={40} />
-          <p className="text-zinc-500">Chargement du profil...</p>
+          <Loader2 className="animate-spin text-foreground mx-auto mb-4" size={40} />
+          <p className="text-foreground-muted">Chargement du profil...</p>
         </div>
       </div>
     );
@@ -357,13 +553,13 @@ export const DashboardSettings: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505]">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
           <AlertCircle className="text-brand-pink mx-auto mb-4" size={48} />
-          <p className="text-zinc-400 mb-4">Vous devez être connecté</p>
+          <p className="text-foreground-muted mb-4">Vous devez être connecté</p>
           <button
-            onClick={() => navigate('/login')}
-            className="bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-zinc-200"
+            onClick={() => router.push('/login')}
+            className="bg-primary text-white px-6 py-2 rounded-xl font-semibold hover:opacity-90"
           >
             Se connecter
           </button>
@@ -374,14 +570,14 @@ export const DashboardSettings: React.FC = () => {
 
   if (profileError) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505] p-4">
+      <div className="flex-1 flex items-center justify-center bg-background p-4">
         <div className="text-center max-w-md">
           <AlertCircle className="text-brand-pink mx-auto mb-4" size={48} />
-          <h2 className="text-xl font-display font-bold text-white mb-2">Erreur</h2>
-          <p className="text-zinc-400 mb-6">{profileError}</p>
+          <h2 className="text-xl font-display font-bold text-foreground mb-2">Erreur</h2>
+          <p className="text-foreground-muted mb-6">{profileError}</p>
           <button
-            onClick={() => navigate('/dashboard/overview')}
-            className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
+            onClick={() => router.push('/dashboard/overview')}
+            className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90"
           >
             Retour au dashboard
           </button>
@@ -392,16 +588,16 @@ export const DashboardSettings: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505] p-4">
+      <div className="flex-1 flex items-center justify-center bg-background p-4">
         <div className="text-center max-w-md">
           <AlertCircle className="text-brand-yellow mx-auto mb-4" size={48} />
-          <h2 className="text-xl font-display font-bold text-white mb-2">Profil non trouvé</h2>
-          <p className="text-zinc-400 mb-6">
+          <h2 className="text-xl font-display font-bold text-foreground mb-2">Profil non trouvé</h2>
+          <p className="text-foreground-muted mb-6">
             Vous devez d'abord compléter votre profil dans l'onboarding.
           </p>
           <button
-            onClick={() => navigate('/onboarding')}
-            className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
+            onClick={() => router.push('/onboarding')}
+            className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90"
           >
             Créer mon profil
           </button>
@@ -411,40 +607,40 @@ export const DashboardSettings: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#050505] min-h-0 overflow-x-hidden">
+    <div className="flex-1 flex flex-col bg-background min-h-0 overflow-x-hidden">
       {/* Header */}
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
+      <header className="bg-card/95 backdrop-blur-md border-b border-border shadow-sm px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
         <div className="max-w-4xl mx-auto w-full">
-          <h1 className="text-xl md:text-2xl font-display font-bold text-white flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 glass rounded-xl flex items-center justify-center shrink-0">
+          <h1 className="text-xl md:text-2xl font-display font-bold text-foreground flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shrink-0 bg-card border border-border">
               <Settings className="text-brand-purple" size={18} />
             </div>
             <span className="truncate">Paramètres du Compte</span>
           </h1>
-          <p className="text-zinc-500 text-xs md:text-sm mt-1">Gérez vos informations personnelles et préférences</p>
+          <p className="text-foreground-muted text-xs md:text-sm mt-1">Gérez vos informations personnelles et préférences</p>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 pb-24 md:pb-6">
         <div className="max-w-4xl mx-auto w-full">
           {/* Quick tools */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 glass rounded-2xl p-4 md:p-5 border border-white/5"
+            className="mb-6 rounded-2xl p-4 md:p-5 bg-card border border-border shadow-sm"
           >
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <div className="text-white font-semibold text-sm md:text-base">Outils</div>
-                <div className="text-zinc-500 text-xs md:text-sm">Care Sheets, liens rapides, etc.</div>
+                <div className="text-foreground font-semibold text-sm md:text-base">Outils</div>
+                <div className="text-foreground-muted text-xs md:text-sm">Care Sheets, liens rapides, etc.</div>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   type="button"
-                  onClick={() => navigate('/dashboard/settings/care-sheets')}
-                  className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 text-sm whitespace-nowrap"
+                  onClick={() => router.push('/dashboard/settings/care-sheets')}
+                  className="px-4 py-2 rounded-xl bg-primary text-white font-semibold hover:opacity-90 text-sm whitespace-nowrap"
                 >
                   Gérer mes Care Sheets
                 </motion.button>
@@ -460,7 +656,7 @@ export const DashboardSettings: React.FC = () => {
                       toast.error('Impossible de copier le lien');
                     }
                   }}
-                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 text-sm whitespace-nowrap"
+                  className="px-4 py-2 rounded-xl bg-background/50 border border-border text-foreground font-semibold hover:bg-background text-sm whitespace-nowrap"
                   title="Copier le lien public"
                 >
                   Copier lien public
@@ -498,19 +694,19 @@ export const DashboardSettings: React.FC = () => {
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
             {/* Section: Informations de Base */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="bg-card border border-border rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-cyan/10 flex items-center justify-center">
                   <User className="text-brand-cyan" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Informations de Base</h3>
-                  <p className="text-sm text-zinc-500">Vos informations publiques</p>
+                  <h3 className="text-lg font-semibold text-foreground">Informations de Base</h3>
+                  <p className="text-sm text-foreground-muted">Vos informations publiques</p>
                 </div>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Nom du Studio <span className="text-brand-pink">*</span>
                 </label>
                 <input
@@ -518,13 +714,13 @@ export const DashboardSettings: React.FC = () => {
                   value={formData.nom_studio}
                   onChange={(e) => setFormData({ ...formData, nom_studio: e.target.value })}
                   required
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
                   placeholder="Ex: Zonett Ink"
                 />
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   URL publique (slug) <span className="text-brand-pink">*</span>
                 </label>
                 <div className="relative">
@@ -535,12 +731,12 @@ export const DashboardSettings: React.FC = () => {
                       setFormData({ ...formData, slug_profil: normalizeSlug(e.target.value, '-') })
                     }
                     required
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors font-mono"
+                    className="w-full bg-card border border-border rounded-xl pl-4 pr-10 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors font-mono"
                     placeholder="nom-du-studio"
                   />
                   {checkingSlug && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 className="animate-spin text-white/70" size={18} />
+                      <Loader2 className="animate-spin text-foreground-muted" size={18} />
                     </div>
                   )}
                   {!checkingSlug && slugAvailable === true && (
@@ -554,10 +750,10 @@ export const DashboardSettings: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="text-xs text-zinc-600 mt-2 flex flex-wrap items-center gap-2">
+                <div className="text-xs text-foreground-muted mt-2 flex flex-wrap items-center gap-2">
                   <span className="break-all">
                     Votre vitrine:{' '}
-                    <span className="text-white font-mono break-all">
+                    <span className="text-foreground font-mono break-all">
                       {typeof window !== 'undefined'
                         ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
                         : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
@@ -574,15 +770,15 @@ export const DashboardSettings: React.FC = () => {
                         toast.error('Impossible de copier');
                       }
                     }}
-                    className="w-8 h-8 rounded-lg glass hover:bg-white/10 transition-colors flex items-center justify-center shrink-0"
+                    className="w-8 h-8 rounded-lg bg-background/50 border border-border hover:bg-background transition-colors flex items-center justify-center shrink-0"
                     title="Copier le lien"
                     aria-label="Copier le lien"
                   >
-                    <Copy size={14} className="text-zinc-300" />
+                    <Copy size={14} className="text-foreground-muted" />
                   </button>
-                  <span className="text-zinc-600 hidden sm:inline"> (l'ancien format </span>
-                  <span className="text-zinc-500 font-mono hidden sm:inline">/p/{formData.slug_profil || 'votre-slug'}</span>
-                  <span className="text-zinc-600 hidden sm:inline"> reste compatible)</span>
+                  <span className="text-foreground-muted hidden sm:inline"> (l'ancien format </span>
+                  <span className="text-foreground-muted font-mono hidden sm:inline">/p/{formData.slug_profil || 'votre-slug'}</span>
+                  <span className="text-foreground-muted hidden sm:inline"> reste compatible)</span>
                 </div>
                 {slugError && (
                   <p className="text-xs text-brand-pink mt-1 flex items-center gap-1">
@@ -592,41 +788,41 @@ export const DashboardSettings: React.FC = () => {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Bio Instagram
                 </label>
                 <textarea
                   rows={3}
                   value={formData.bio_instagram}
                   onChange={(e) => setFormData({ ...formData, bio_instagram: e.target.value })}
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors resize-none"
                   placeholder="Tatoueur Lyon • Fineline & Blackwork • Agenda Ouvert 👇"
                   maxLength={150}
                 />
-                <p className="text-xs text-zinc-600 mt-1">
+                <p className="text-xs text-foreground-muted mt-1">
                   {formData.bio_instagram.length}/150 caractères
                 </p>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Consignes avant tatouage (email J-2)
                 </label>
                 <textarea
                   rows={4}
                   value={formData.pre_tattoo_instructions}
                   onChange={(e) => setFormData({ ...formData, pre_tattoo_instructions: e.target.value })}
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors resize-none"
                   placeholder={"Ex:\n- Pas d'alcool 24h avant\n- Bien manger avant le RDV\n- Hydratez votre peau\n- Dormez bien la veille"}
                   maxLength={800}
                 />
-                <p className="text-xs text-zinc-600 mt-1">
+                <p className="text-xs text-foreground-muted mt-1">
                   {formData.pre_tattoo_instructions.length}/800 caractères — ces consignes seront incluses dans le mail automatique envoyé 48h avant le RDV.
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Photo de Profil (Avatar)
                 </label>
                 <div className="flex items-center gap-4">
@@ -635,7 +831,7 @@ export const DashboardSettings: React.FC = () => {
                       <img
                         src={URL.createObjectURL(formData.avatarFile)}
                         alt="Aperçu de l'avatar"
-                        className="w-20 h-20 rounded-full object-cover border-2 border-white"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-border"
                       />
                       <button
                         type="button"
@@ -646,25 +842,24 @@ export const DashboardSettings: React.FC = () => {
                       </button>
                     </div>
                   ) : formData.avatarUrl ? (
-                    <img
-                      src={formData.avatarUrl}
-                      alt="Avatar actuel"
-                      loading="lazy"
-                      className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border shrink-0">
+                      <Image
+                        src={formData.avatarUrl}
+                        alt="Avatar actuel"
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
-                    <div className="w-20 h-20 rounded-full glass border-2 border-dashed border-white/20 flex items-center justify-center">
-                      <ImageIcon className="text-zinc-600" size={24} />
+                    <div className="w-20 h-20 rounded-full bg-background/50 border-2 border-dashed border-border flex items-center justify-center">
+                      <ImageIcon className="text-foreground-muted" size={24} />
                     </div>
                   )}
                   <label className="flex-1">
-                    <div className="flex items-center gap-2 glass rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/10 transition-colors">
-                      <Upload size={18} className="text-zinc-400" />
-                      <span className="text-sm text-zinc-300">
+                    <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 cursor-pointer bg-background/50 border border-border hover:bg-background transition-colors">
+                      <Upload size={18} className="text-foreground-muted" />
+                      <span className="text-sm text-foreground-muted">
                         {uploadingAvatar ? 'Upload...' : formData.avatarFile ? 'Changer' : 'Choisir une image'}
                       </span>
                     </div>
@@ -677,24 +872,38 @@ export const DashboardSettings: React.FC = () => {
                     />
                   </label>
                 </div>
-                <p className="text-xs text-zinc-600 mt-2">PNG, JPG jusqu'à 2MB. Image carrée recommandée.</p>
+                <p className="text-xs text-foreground-muted mt-2">PNG, JPG jusqu'à 2MB. Image carrée recommandée.</p>
               </div>
             </div>
 
             {/* Section: Préférences */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="bg-card border border-border rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4 border-b border-border pb-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
                   <Palette className="text-brand-purple" size={20} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Préférences</h3>
-                  <p className="text-sm text-zinc-500">Personnalisez votre expérience</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-foreground">Préférences</h3>
+                  <p className="text-sm text-foreground-muted">Personnalisez votre vitrine comme vous le souhaitez</p>
                 </div>
+                {profile?.slug_profil && (
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => window.open(`${typeof window !== 'undefined' ? window.location.origin : ''}/${profile.slug_profil}`, '_blank')}
+                    className="shrink-0 px-4 py-2 rounded-xl bg-background/50 border border-border text-foreground text-sm font-medium hover:bg-background transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink size={16} />
+                    Voir l&apos;aperçu
+                  </motion.button>
+                )}
               </div>
+              <p className="text-zinc-400 text-sm mb-6">
+                Thème, couleurs et infos affichées sur votre page publique. Les visiteurs voient ces réglages en direct.
+              </p>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-3">
+                <label className="block text-sm font-medium text-foreground-muted mb-3">
                   Thème de couleur (Page publique)
                 </label>
                 <div className="flex gap-3 flex-wrap">
@@ -705,7 +914,7 @@ export const DashboardSettings: React.FC = () => {
                       onClick={() => setFormData({ ...formData, theme_color: theme.value })}
                       className={`w-12 h-12 rounded-full border-2 transition-all relative ${
                         formData.theme_color === theme.value
-                          ? 'border-white scale-110 shadow-lg'
+                          ? 'border-primary scale-110 shadow-lg'
                           : 'border-transparent opacity-70 hover:opacity-100 hover:scale-105'
                       }`}
                       style={{ backgroundColor: theme.hex }}
@@ -713,33 +922,33 @@ export const DashboardSettings: React.FC = () => {
                     >
                       {formData.theme_color === theme.value && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <CheckCircle className="text-white drop-shadow" size={18} />
+                          <CheckCircle className="text-primary drop-shadow" size={18} />
                         </div>
                       )}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-600 mt-2">
-                  Sélectionné: <span className="font-medium text-white">{themeOptions.find(t => t.value === formData.theme_color)?.name || 'Gold'}</span>
+                <p className="text-xs text-foreground-muted mt-2">
+                  Sélectionné: <span className="font-medium text-foreground">{themeOptions.find(t => t.value === formData.theme_color)?.name || 'Gold'}</span>
                 </p>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Couleurs personnalisées (optionnel)
                 </label>
-                <p className="text-xs text-zinc-600 mb-3">
+                <p className="text-xs text-foreground-muted mb-3">
                   Si renseignées, elles sont utilisées pour le glow/gradient de votre vitrine (style Landing).
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
+                  <div className="bg-background/50 border border-border rounded-xl md:rounded-2xl p-4 min-w-0">
                     <div className="flex items-center justify-between mb-2 gap-2">
-                      <span className="text-xs md:text-sm text-white font-medium">Accent</span>
+                      <span className="text-xs md:text-sm text-foreground font-medium">Accent</span>
                       <input
                         type="color"
                         value={formData.theme_accent_hex || '#fbbf24'}
                         onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-border shrink-0"
                         aria-label="Couleur accent"
                       />
                     </div>
@@ -747,26 +956,26 @@ export const DashboardSettings: React.FC = () => {
                       type="text"
                       value={formData.theme_accent_hex}
                       onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
+                      className="w-full bg-card border border-border rounded-xl px-3 py-2 text-foreground font-mono text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       placeholder="#FEE440"
                     />
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, theme_accent_hex: '' })}
-                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
+                      className="mt-2 text-xs text-foreground-muted hover:text-foreground transition-colors"
                     >
                       Réinitialiser
                     </button>
                   </div>
 
-                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
+                  <div className="bg-background/50 border border-border rounded-xl md:rounded-2xl p-4 min-w-0">
                     <div className="flex items-center justify-between mb-2 gap-2">
-                      <span className="text-xs md:text-sm text-white font-medium">Secondaire</span>
+                      <span className="text-xs md:text-sm text-foreground font-medium">Secondaire</span>
                       <input
                         type="color"
                         value={formData.theme_secondary_hex || '#9b5de5'}
                         onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-border shrink-0"
                         aria-label="Couleur secondaire"
                       />
                     </div>
@@ -774,13 +983,13 @@ export const DashboardSettings: React.FC = () => {
                       type="text"
                       value={formData.theme_secondary_hex}
                       onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
+                      className="w-full bg-card border border-border rounded-xl px-3 py-2 text-foreground font-mono text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       placeholder="#9B5DE5"
                     />
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, theme_secondary_hex: '' })}
-                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
+                      className="mt-2 text-xs text-foreground-muted hover:text-foreground transition-colors"
                     >
                       Réinitialiser
                     </button>
@@ -788,8 +997,320 @@ export const DashboardSettings: React.FC = () => {
                 </div>
               </div>
 
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
+                  Image de fond du hero (vitrine)
+                </label>
+                <p className="text-xs text-foreground-muted mb-3">
+                  Image affichée derrière votre nom et sous-titre sur la page publique. Choisissez un fichier ou collez une URL. Laissez vide pour un fond uni.
+                </p>
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  {(formData.heroBackgroundFile || formData.vitrine_hero_background_url) ? (
+                    <div className="relative rounded-xl overflow-hidden border border-border bg-background w-full sm:w-48 aspect-video shrink-0">
+                      {formData.heroBackgroundFile ? (
+                        <img
+                          src={URL.createObjectURL(formData.heroBackgroundFile)}
+                          alt="Aperçu fond hero"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="relative w-full h-full">
+                          <Image
+                            src={formData.vitrine_hero_background_url}
+                            alt="Fond hero actuel"
+                            fill
+                            sizes="(max-width: 640px) 100vw, 192px"
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, heroBackgroundFile: null, vitrine_hero_background_url: '' })}
+                        className="absolute top-2 right-2 bg-red-500/90 text-white rounded-full p-1.5 hover:bg-red-500 shadow-sm"
+                        aria-label="Supprimer l'image"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full sm:w-48 aspect-video rounded-xl bg-background/50 border-2 border-dashed border-border flex items-center justify-center shrink-0">
+                      <ImageIcon className="text-foreground-muted" size={32} />
+                    </div>
+                  )}
+                  <label className="flex-1 min-w-0 w-full">
+                    <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 cursor-pointer bg-background/50 border border-border hover:bg-background transition-colors w-full sm:w-auto">
+                      <Upload size={18} className="text-foreground-muted shrink-0" />
+                      <span className="text-sm text-foreground-muted">
+                        {uploadingHeroBackground ? 'Upload...' : formData.heroBackgroundFile ? 'Changer' : 'Choisir une image'}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleHeroBackgroundChange}
+                      disabled={uploadingHeroBackground}
+                    />
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  value={formData.vitrine_hero_background_url}
+                  onChange={(e) => setFormData({ ...formData, vitrine_hero_background_url: e.target.value, heroBackgroundFile: null })}
+                  className="mt-3 w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                  placeholder="Ou coller une URL d'image"
+                />
+                <p className="text-xs text-foreground-muted mt-1">PNG, JPG jusqu'à 3MB. Format paysage recommandé.</p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-foreground-muted mb-3">
+                  Vitrine — infos et apparence
+                </label>
+                <p className="text-xs text-foreground-muted mb-3">
+                  Ville, note, avis et années d&apos;expérience s&apos;affichent sur votre page publique. Tous les champs sont optionnels.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Ville / localisation</label>
+                    <input
+                      type="text"
+                      value={formData.ville}
+                      onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 text-sm"
+                      placeholder="Ex: Lyon"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">Note (ex: 4.9)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      value={formData.rating === '' ? '' : formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="4.9"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">Nombre d&apos;avis</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.nb_avis === '' ? '' : formData.nb_avis}
+                      onChange={(e) => setFormData({ ...formData, nb_avis: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="42"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">Années d&apos;expérience</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.years_experience === '' ? '' : formData.years_experience}
+                      onChange={(e) => setFormData({ ...formData, years_experience: e.target.value === '' ? '' : e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background/50 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Effets de lumière (ambiance)</p>
+                    <p className="text-xs text-foreground-muted">Halos colorés discrets sur la vitrine, selon votre thème</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.vitrine_show_glow}
+                    onClick={() => setFormData({ ...formData, vitrine_show_glow: !formData.vitrine_show_glow })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                      formData.vitrine_show_glow ? 'bg-amber-500/80' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                        formData.vitrine_show_glow ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                      style={{ marginTop: 2 }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-foreground-muted mb-3">Réseaux sociaux (vitrine)</h3>
+                <p className="text-xs text-foreground-muted mb-3">
+                  Liens affichés sous &quot;Réserver maintenant&quot; sur votre vitrine. Laissez vide pour masquer.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">Instagram (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.instagram_url}
+                      onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="https://instagram.com/votre_compte"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">TikTok (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.tiktok_url}
+                      onChange={(e) => setFormData({ ...formData, tiktok_url: e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="https://tiktok.com/@votre_compte"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-foreground-muted mb-1">Facebook (URL complète)</label>
+                    <input
+                      type="url"
+                      value={formData.facebook_url}
+                      onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm"
+                      placeholder="https://facebook.com/votre_page"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Synchronisation Calendrier (iCal) */}
+              <div className="mb-6 rounded-2xl border border-border bg-background/50 p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-background/50 border border-border flex items-center justify-center">
+                    <Calendar className="text-foreground-muted" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-foreground">Synchronisation Calendrier</h3>
+                    <p className="text-xs text-foreground-muted">Apple Calendar, Google Calendar, Outlook</p>
+                  </div>
+                </div>
+                <p className="text-xs text-foreground-muted mb-4">
+                  Abonnez votre calendrier mobile à vos rendez-vous Inkflow. L’URL est sécurisée par un token unique.
+                </p>
+                {(() => {
+                  const profileRecord = profile as Record<string, unknown> | undefined;
+                  const hasIcalColumn = profileRecord && 'ical_feed_token' in profileRecord;
+                  const token = (hasIcalColumn && profileRecord?.ical_feed_token) ? String(profileRecord.ical_feed_token) : null;
+                  // Domaine de production (VITE_SITE_URL en prod) pour lien sécurisé iOS et parsing Apple Calendar.
+                  const baseUrl = SITE_URL.replace(/\/$/, '');
+                  const feedUrl = token ? `${baseUrl}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  let webcalHost: string;
+                  try {
+                    webcalHost = new URL(baseUrl).host;
+                  } catch {
+                    webcalHost = 'ink-flow.me';
+                  }
+                  // webcal:// force iOS à ouvrir directement l'app Calendrier (évite "Connexion non sécurisée").
+                  const webcalUrl = token ? `webcal://${webcalHost}/api/calendar/feed?token=${encodeURIComponent(token)}` : null;
+                  const googleCalUrl = feedUrl ? `https://www.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}` : null;
+                  const isLocalhost = typeof window !== 'undefined' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baseUrl);
+
+                  const handleGenerateToken = async () => {
+                    if (!hasIcalColumn) {
+                      toast.error('Migration calendrier requise', { description: 'Exécutez la migration ical_feed_token dans Supabase.' });
+                      return;
+                    }
+                    setGeneratingCalendarToken(true);
+                    try {
+                      const newToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                        .map((b) => b.toString(16).padStart(2, '0'))
+                        .join('');
+                      await updateProfile({ ical_feed_token: newToken } as any);
+                      await refreshProfile();
+                      toast.success('Lien généré', { description: 'Vous pouvez copier l’URL et l’ajouter à votre calendrier.' });
+                    } catch (err) {
+                      toast.error('Erreur', { description: err instanceof Error ? err.message : 'Impossible de générer le lien.' });
+                    } finally {
+                      setGeneratingCalendarToken(false);
+                    }
+                  };
+
+                  const handleCopy = () => {
+                    if (!webcalUrl) return;
+                    navigator.clipboard.writeText(webcalUrl).then(
+                      () => toast.success('Lien copié dans le presse-papier'),
+                      () => toast.error('Copie impossible')
+                    );
+                  };
+
+                  return (
+                    <div className="space-y-4">
+                      {webcalUrl ? (
+                        <>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={webcalUrl}
+                              className="flex-1 bg-card border border-border rounded-xl px-4 py-2.5 text-foreground text-xs font-mono truncate"
+                              aria-label="Lien d'abonnement calendrier (webcal)"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCopy}
+                              className="shrink-0 px-4 py-2.5 rounded-xl bg-background/50 border border-border text-foreground text-sm font-medium hover:bg-background transition-colors flex items-center gap-2"
+                            >
+                              <Copy size={16} />
+                              Copier
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <a
+                              href={webcalUrl ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+                            >
+                              <Calendar size={16} />
+                              Apple Calendar
+                            </a>
+                            <a
+                              href={googleCalUrl ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+                            >
+                              <ExternalLink size={16} />
+                              Google Calendar
+                            </a>
+                          </div>
+                          {isLocalhost && (
+                            <p className="text-xs text-amber-400/90 mt-2">
+                              Sur iOS, Apple Calendar ne peut pas atteindre localhost. Déployez l&apos;app et ouvrez cette page depuis votre domaine (ex. https://ink-flow.me) pour que le lien fonctionne sur mobile.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleGenerateToken}
+                          disabled={generatingCalendarToken || !hasIcalColumn}
+                          className="px-4 py-2.5 rounded-xl bg-background/50 border border-border text-foreground text-sm font-medium hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {generatingCalendarToken ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
+                          {generatingCalendarToken ? 'Génération…' : 'Générer le lien'}
+                        </button>
+                      )}
+                      {!hasIcalColumn && (
+                        <p className="text-xs text-amber-500/80">
+                          Exécutez la migration <code className="bg-background px-1 rounded border border-border">migration-ical-feed-token.sql</code> dans Supabase pour activer le lien sécurisé.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                <label className="block text-sm font-medium text-foreground-muted mb-2">
                   Pourcentage d'acompte
                 </label>
                 <div className="flex items-center gap-4">
@@ -800,13 +1321,13 @@ export const DashboardSettings: React.FC = () => {
                     step="10"
                     value={formData.deposit_percentage}
                     onChange={(e) => setFormData({ ...formData, deposit_percentage: parseInt(e.target.value) })}
-                    className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
+                    className="flex-1 h-2 bg-background rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <span className="text-xl md:text-2xl font-display font-bold text-white w-12 md:w-16 text-right shrink-0">
+                  <span className="text-xl md:text-2xl font-display font-bold text-foreground w-12 md:w-16 text-right shrink-0">
                     {formData.deposit_percentage}%
                   </span>
                 </div>
-                <div className="flex justify-between text-xs text-zinc-600 mt-2 flex-wrap gap-1">
+                <div className="flex justify-between text-xs text-foreground-muted mt-2 flex-wrap gap-1">
                   <span className="shrink-0">0%</span>
                   <span className="shrink-0 hidden sm:inline">30% (Standard)</span>
                   <span className="shrink-0 sm:hidden">30%</span>
@@ -816,15 +1337,94 @@ export const DashboardSettings: React.FC = () => {
               </div>
             </div>
 
+            {/* Section: Abonnement */}
+            <div className="bg-card border border-border rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Crown className="text-purple-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Abonnement</h3>
+                  <p className="text-sm text-foreground-muted">Gérez votre abonnement et votre facturation</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {subscriptionLoading ? (
+                  <div className="p-4 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-foreground-muted" size={20} />
+                  </div>
+                ) : subscription?.status === 'active' || subscription?.status === 'trialing' ? (
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <CheckCircle className="text-purple-400 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-purple-400 font-semibold text-sm mb-1">
+                          Abonnement actif - {getPlanDisplayName(subscription.plan)}
+                        </p>
+                        <p className="text-foreground-muted text-xs">
+                          {subscription.subscriptionCurrentPeriodEnd
+                            ? `Renouvellement le ${new Date(subscription.subscriptionCurrentPeriodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                            : 'Abonnement actif'}
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={handleManageSubscription}
+                      disabled={loadingPortal}
+                      className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loadingPortal ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Chargement...
+                        </>
+                      ) : (
+                        <>
+                          <Settings size={18} />
+                          Gérer mon abonnement
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <div className="flex items-start gap-3 mb-4">
+                      <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="text-amber-400 font-semibold text-sm mb-1">Aucun abonnement actif</p>
+                        <p className="text-foreground-muted text-xs">
+                          Abonnez-vous pour accéder à toutes les fonctionnalités d'InkFlow.
+                        </p>
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => {}}
+                      className="w-full bg-background/50 text-foreground-muted font-semibold py-3 rounded-xl cursor-default flex items-center justify-center gap-2"
+                    >
+                      <Crown size={18} />
+                      Accès inclus avec votre essai
+                    </motion.button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Section: Paiements Stripe */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+            <div className="bg-card border border-border rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
                   <CreditCard className="text-amber-400" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Paiements Stripe</h3>
-                  <p className="text-sm text-zinc-500">Configurez votre compte bancaire pour recevoir les acomptes</p>
+                  <h3 className="text-lg font-semibold text-foreground">Paiements Stripe</h3>
+                  <p className="text-sm text-foreground-muted">Configurez votre compte bancaire pour recevoir les acomptes</p>
                 </div>
               </div>
 
@@ -835,11 +1435,11 @@ export const DashboardSettings: React.FC = () => {
                       <CheckCircle className="text-brand-mint shrink-0 mt-0.5" size={20} />
                       <div className="flex-1">
                         <p className="text-brand-mint font-semibold text-sm mb-1">Compte Stripe actif</p>
-                        <p className="text-zinc-400 text-xs">
+                        <p className="text-foreground-muted text-xs">
                           Votre compte bancaire est configuré. Vous pouvez recevoir des paiements.
                         </p>
                         {profile.stripe_account_id && (
-                          <p className="text-zinc-600 text-xs mt-2 font-mono">
+                          <p className="text-foreground-muted text-xs mt-2 font-mono">
                             Compte: {profile.stripe_account_id.substring(0, 20)}...
                           </p>
                         )}
@@ -852,7 +1452,7 @@ export const DashboardSettings: React.FC = () => {
                       <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
                       <div className="flex-1">
                         <p className="text-amber-400 font-semibold text-sm mb-1">Configuration requise</p>
-                        <p className="text-zinc-400 text-xs">
+                        <p className="text-foreground-muted text-xs">
                           Connectez votre compte bancaire pour recevoir les acomptes de vos clients.
                         </p>
                       </div>
@@ -883,29 +1483,29 @@ export const DashboardSettings: React.FC = () => {
             </div>
 
             {/* Section: Informations de Compte */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6 border-b border-white/5 pb-3 md:pb-4">
+            <div className="bg-card border border-border rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6 border-b border-border pb-3 md:pb-4">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-mint/10 flex items-center justify-center shrink-0">
                   <Link2 className="text-brand-mint" size={18} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base md:text-lg font-semibold text-white">Informations de Compte</h3>
-                  <p className="text-xs md:text-sm text-zinc-500">Informations de connexion</p>
+                  <h3 className="text-base md:text-lg font-semibold text-foreground">Informations de Compte</h3>
+                  <p className="text-xs md:text-sm text-foreground-muted">Informations de connexion</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Email</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 text-xs md:text-sm break-all">
+                  <label className="block text-xs md:text-sm font-medium text-foreground-muted mb-1">Email</label>
+                  <div className="bg-background/50 border border-border rounded-xl px-3 md:px-4 py-2 md:py-3 text-foreground-muted text-xs md:text-sm break-all">
                     {user?.email}
                   </div>
-                  <p className="text-xs text-zinc-600 mt-1">L'email ne peut pas être modifié ici</p>
+                  <p className="text-xs text-foreground-muted mt-1">L'email ne peut pas être modifié ici</p>
                 </div>
 
                 <div>
-                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Lien de votre profil</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 font-mono text-xs md:text-sm break-all">
+                  <label className="block text-xs md:text-sm font-medium text-foreground-muted mb-1">Lien de votre profil</label>
+                  <div className="bg-background/50 border border-border rounded-xl px-3 md:px-4 py-2 md:py-3 text-foreground-muted font-mono text-xs md:text-sm break-all">
                     {typeof window !== 'undefined' ? `${window.location.origin}/${profile.slug_profil}` : `inkflow.app/${profile.slug_profil}`}
                   </div>
                 </div>
@@ -916,15 +1516,15 @@ export const DashboardSettings: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard/overview')}
-                className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base"
+                onClick={() => router.push('/dashboard/overview')}
+                className="flex-1 bg-background/50 border border-border text-foreground-muted font-medium py-3 rounded-xl hover:bg-background transition-colors text-sm md:text-base"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={saving || uploadingAvatar}
-                className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {saving ? (
                   <>

@@ -1,10 +1,6 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-// Recharts lazy loaded for code splitting
-const AreaChart = lazy(() => import('recharts').then(m => ({ default: m.AreaChart })));
-const Area = lazy(() => import('recharts').then(m => ({ default: m.Area })));
-const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
 import { 
   Calendar, DollarSign, Users, MessageSquare, 
   FileSignature, PieChart, LayoutGrid, Settings, 
@@ -17,26 +13,25 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { prefetchDashboard } from '../../hooks/useDashboardSWR';
+import { DashboardAppearanceProvider, useDashboardAppearance } from '../../contexts/DashboardAppearanceContext';
 import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
 import { Skeleton } from '../common/Skeleton';
+import { WidgetStation } from './station/WidgetStation';
+import { DashboardContentFallback } from './DashboardContentFallback';
 
-// Mock Data for Revenue Sparkline
-const REVENUE_DATA = [
-  { name: 'Lun', value: 1200 },
-  { name: 'Mar', value: 2100 },
-  { name: 'Mer', value: 1800 },
-  { name: 'Jeu', value: 2400 },
-  { name: 'Ven', value: 3200 },
-  { name: 'Sam', value: 4250 },
-  { name: 'Dim', value: 4250 },
-];
-
-export const DashboardLayout: React.FC = () => {
+const DashboardLayoutInner: React.FC = () => {
   const { signOut, user } = useAuth();
   const { profile } = useArtistProfile();
   const navigate = useNavigate();
   const { loading: dataLoading, stats, recentBookings, pendingProjects } = useDashboardData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { appearance } = useDashboardAppearance();
+
+  // Prefetch des données critiques au montage (cache SWR, revalidation en arrière-plan)
+  React.useEffect(() => {
+    if (user?.id) prefetchDashboard(user.id);
+  }, [user?.id]);
 
   // Prevent body scroll when drawer is open
   React.useEffect(() => {
@@ -63,7 +58,7 @@ export const DashboardLayout: React.FC = () => {
         `w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${
           isActive
           ? 'bg-white/10 text-white border-l-2 border-white font-semibold' 
-          : 'text-zinc-500 hover:text-white hover:bg-white/5'
+          : 'text-zinc-400 hover:text-white hover:bg-white/5'
         }`
       }
       onClick={() => setIsMobileMenuOpen(false)}
@@ -81,12 +76,39 @@ export const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#02040a] text-white font-sans overflow-hidden relative">
+      {/* Background immersif — intensité et couleurs pilotées par Widget Store > Apparence */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div className="absolute inset-0 bg-[#02040a] hero-bg-grid" />
+        <div
+          className="absolute w-[520px] h-[520px] rounded-full blur-[150px] transition-opacity duration-300"
+          style={{
+            top: '-15%',
+            left: '-10%',
+            background: appearance.glowLeftColor,
+            opacity: appearance.glowIntensity,
+          }}
+        />
+        <div
+          className="absolute w-[480px] h-[480px] rounded-full blur-[150px] transition-opacity duration-300"
+          style={{
+            bottom: '-12%',
+            right: '-8%',
+            background: appearance.glowRightColor,
+            opacity: appearance.glowIntensity,
+          }}
+        />
+        <div
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{ background: `rgba(0,0,0,${appearance.overlayOpacity})` }}
+        />
+      </div>
+
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
       
-      {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5">
+      {/* Mobile Header — safe area top pour barre de statut / encoche (PWA standalone) */}
+      <header className="fixed top-0 left-0 right-0 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5 header-safe">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(true)}
@@ -97,7 +119,7 @@ export const DashboardLayout: React.FC = () => {
         </motion.button>
         <div className="flex items-center gap-2">
           <span className="text-lg font-display font-bold tracking-tight text-white">
-            INK<span className="text-zinc-500">FLOW</span>
+            INK<span className="text-zinc-400">FLOW</span>
           </span>
         </div>
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0">
@@ -129,12 +151,12 @@ export const DashboardLayout: React.FC = () => {
                 stiffness: 300,
                 mass: 0.8
               }}
-              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
+              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl safe-area-top"
             >
               {/* Drawer Header */}
               <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
                 <span className="text-lg md:text-xl font-display font-bold tracking-tight text-white">
-                  INK<span className="text-zinc-500">FLOW</span>
+                  INK<span className="text-zinc-400">FLOW</span>
                 </span>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
@@ -257,7 +279,7 @@ export const DashboardLayout: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.55 }}
                   >
-                    <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
+                    <PWAInstallButton variant="prominent" onClose={() => setIsMobileMenuOpen(false)} />
                   </motion.div>
                   <motion.button
                     initial={{ opacity: 0, x: -20 }}
@@ -299,10 +321,10 @@ export const DashboardLayout: React.FC = () => {
       </AnimatePresence>
       
       {/* COLUMN 1: Left Navigation Sidebar */}
-      <aside className="w-64 bg-[#0a0a0a] border-r border-white/5 hidden md:flex flex-col flex-shrink-0 z-20">
+      <aside className="relative z-10 w-64 bg-[#0a0a0a]/80 backdrop-blur-sm border-r border-white/5 hidden md:flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-white/5">
           <span className="text-xl font-display font-bold tracking-tight text-white">
-            INK<span className="text-zinc-500">FLOW</span>
+            INK<span className="text-zinc-400">FLOW</span>
           </span>
         </div>
 
@@ -318,6 +340,7 @@ export const DashboardLayout: React.FC = () => {
         <div className="p-4 border-t border-white/5">
           <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
           <div className="mt-4 space-y-3">
+            <PWAInstallButton variant="prominent" />
             <div className="flex items-center gap-3 px-4 glass p-3 rounded-xl">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
                 {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
@@ -329,7 +352,7 @@ export const DashboardLayout: React.FC = () => {
             </div>
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
             >
               <LogOut size={18} />
               <span>Déconnexion</span>
@@ -338,173 +361,26 @@ export const DashboardLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* CENTER & RIGHT CONTENT WRAPPER */}
-      <main className="flex-1 flex overflow-hidden overflow-x-hidden relative pb-16 md:pb-0 pt-16 md:pt-0">
-        
-        {/* COLUMN 2: Central Main View (Dynamic Content via Outlet) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#050505] overflow-x-hidden">
-          <Outlet />
+      {/* Zone 2 (Centre) + Zone 3 (Droite) : flex pour partager l'espace */}
+      {/* Main — L inversé : pas d'espace au-dessus du contenu. Mobile: main-below-header pousse sous le header fixe; desktop: pt-0. Les pages enfants ne doivent pas ajouter de pt/mt en haut. */}
+      <main
+        id="main-content"
+        className="relative z-10 flex-1 flex min-w-0 overflow-hidden main-below-header md:pt-0 pb-[calc(4rem+max(1rem,env(safe-area-inset-bottom,0px)))] md:pb-0"
+        role="main"
+      >
+        {/* Zone 2 : Contenu principal — pas de padding-top pour coller au header */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-transparent overflow-hidden pt-0">
+          <Suspense fallback={<DashboardContentFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
 
-        {/* COLUMN 3: Right Sidebar (Actionable Widgets) */}
-        <aside className="w-80 bg-[#0a0a0a] border-l border-white/5 flex flex-col overflow-y-auto flex-shrink-0 hidden xl:flex">
-          {/* Widget 1: Financial Performance */}
-          <div className="p-6 border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Performance</h3>
-              <button className="text-zinc-600 hover:text-white transition-colors"><MoreVertical size={16}/></button>
-            </div>
-            <div className="glass rounded-2xl p-5 relative overflow-hidden">
-              <div className="flex justify-between items-end mb-2 relative z-10">
-                <div>
-                  <div className="text-3xl font-display font-bold text-white">
-                    {dataLoading ? '...' : `${stats.totalRevenue.toFixed(0)}€`}
-                  </div>
-                  <div className="text-xs text-emerald-400 font-medium flex items-center gap-1 mt-1">
-                    <ArrowUpRight size={12}/> Revenus totaux
-                  </div>
-                </div>
-                <div className="p-3 bg-white/5 rounded-xl">
-                  <DollarSign size={20} className="text-zinc-400"/>
-                </div>
-              </div>
-              <div className="h-16 -mx-5 -mb-5 opacity-40">
-                <Suspense fallback={<div className="h-full w-full bg-white/5 rounded animate-pulse" />}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={REVENUE_DATA}>
-                      <defs>
-                        <linearGradient id="colorRevenueSmall" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="value" stroke="#ffffff" strokeWidth={1.5} fill="url(#colorRevenueSmall)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </Suspense>
-              </div>
-              <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span className="text-xs text-zinc-500">
-                  {stats.upcomingBookings} RDV à venir • {stats.totalFlashs} Flashs
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Widget 2: Urgent Tasks */}
-          <div className="p-6 border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                À Faire 
-                {pendingProjects.length > 0 && (
-                  <span className="bg-white text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {pendingProjects.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <div className="space-y-3">
-              {dataLoading ? (
-                <>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-xl glass">
-                      <Skeleton className="mt-0.5 w-4 h-4 rounded" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-2/3" />
-                        <Skeleton className="h-3 w-40" />
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : pendingProjects.length === 0 ? (
-                <div className="text-center py-4 text-zinc-600 text-sm">
-                  Aucun projet en attente
-                </div>
-              ) : (
-                pendingProjects.slice(0, 3).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex items-start gap-3 p-3 rounded-xl glass hover:bg-white/10 transition-colors group cursor-pointer"
-                  >
-                    <div className="mt-0.5 w-4 h-4 rounded border border-zinc-600 flex items-center justify-center group-hover:border-white transition-colors"></div>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        {project.body_part} • {project.style}
-                      </div>
-                      <div className="text-xs text-zinc-600">
-                        {project.client_email} • {new Date(project.created_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-                    
-              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <div className="flex items-start gap-3 mb-3">
-                  <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-semibold text-amber-400">2 Décharges Manquantes</div>
-                    <div className="text-xs text-amber-400/70">Pour les RDV de demain</div>
-                  </div>
-                </div>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => alert('Fonctionnalité bientôt disponible')}
-                  className="w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-semibold rounded-lg transition-colors"
-                >
-                  Renvoyer Rappel SMS
-                </motion.button>
-              </div>
-            </div>
-          </div>
-
-          {/* Widget 3: Activity Feed */}
-          <div className="p-6 flex-1">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Activité Récente</h3>
-            <div className="space-y-6 relative">
-              <div className="absolute top-2 left-2 bottom-0 w-px bg-white/5"></div>
-              
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-emerald-400"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">À l'instant</div>
-                <div className="text-sm text-zinc-400"><span className="font-semibold text-white">Julie M.</span> a réservé le Flash <span className="text-white">#42</span>.</div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-white"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">Il y a 15 min</div>
-                <div className="text-sm text-zinc-400">Virement Stripe de <span className="font-semibold text-white">350€</span> reçu.</div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-zinc-700"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">Il y a 2h</div>
-                <div className="text-sm text-zinc-400">Nouvelle demande de projet perso reçue.</div>
-              </motion.div>
-            </div>
-          </div>
-        </aside>
+        {/* Zone 3 : Widget Station (largeur fixe w-80) */}
+        <WidgetStation />
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 glass z-50 md:hidden">
+      {/* Mobile Bottom Navigation Bar — safe area bottom pour Home Indicator iOS */}
+      <nav className="fixed bottom-0 left-0 right-0 glass z-50 md:hidden footer-safe">
         <div className="grid grid-cols-5 h-16">
           {[
             { to: '/dashboard/overview', icon: LayoutGrid, label: 'Accueil' },
@@ -535,3 +411,9 @@ export const DashboardLayout: React.FC = () => {
     </div>
   );
 };
+
+export const DashboardLayout: React.FC = () => (
+  <DashboardAppearanceProvider>
+    <DashboardLayoutInner />
+  </DashboardAppearanceProvider>
+);
