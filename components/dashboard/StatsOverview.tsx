@@ -1,6 +1,7 @@
 'use client';
 
 import { Euro, Calendar, Clock } from 'lucide-react';
+import { addDays, isAfter, isBefore } from 'date-fns';
 
 interface StatsOverviewProps {
   bookings: Array<{
@@ -13,7 +14,7 @@ interface StatsOverviewProps {
 
 export function StatsOverview({ bookings }: StatsOverviewProps) {
   const now = new Date();
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const sevenDaysFromNow = addDays(now, 7);
 
   // Revenus du mois (acomptes payés)
   const monthlyRevenue = bookings
@@ -23,7 +24,9 @@ export function StatsOverview({ bookings }: StatsOverviewProps) {
   // RDV à venir (7 jours)
   const upcomingBookings = bookings.filter((b) => {
     const scheduledAt = new Date(b.scheduled_at);
-    return scheduledAt >= now && scheduledAt <= sevenDaysFromNow && b.status === 'confirmed';
+    return (isAfter(scheduledAt, now) || scheduledAt.getTime() === now.getTime()) && 
+           (isBefore(scheduledAt, sevenDaysFromNow) || scheduledAt.getTime() === sevenDaysFromNow.getTime()) && 
+           b.status === 'confirmed';
   }).length;
 
   // Réservations en attente

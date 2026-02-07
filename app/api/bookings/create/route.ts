@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
-import { createBooking } from '@/lib/calcom';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -101,34 +100,7 @@ export async function POST(request: NextRequest) {
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq('id', bookingData.id);
 
-    // 6. Créer le booking Cal.com (si configuré)
-    let calComBookingId = null;
-    if (artistData.cal_com_username && artistData.cal_com_event_type_id) {
-      try {
-        const calComBooking = await createBooking(
-          artistData.cal_com_username,
-          artistData.cal_com_event_type_id,
-          body.scheduled_at,
-          {
-            name: body.client_name,
-            email: body.client_email,
-            phone: body.client_phone,
-          }
-        );
-        calComBookingId = calComBooking.id;
-        
-        // Mettre à jour le booking avec l'ID Cal.com
-        await (supabase
-          .from('bookings') as any)
-          .update({ cal_com_booking_id: calComBookingId })
-          .eq('id', bookingData.id);
-      } catch (calComError) {
-        console.error('Error creating Cal.com booking:', calComError);
-        // Continue même si Cal.com échoue - le booking Supabase est créé
-      }
-    }
-
-    // 7. Envoyer notification email au tatoueur (si Resend configuré)
+    // 6. Envoyer notification email au tatoueur (si Resend configuré)
     if (process.env.RESEND_API_KEY) {
       try {
         await fetch('https://api.resend.com/emails', {

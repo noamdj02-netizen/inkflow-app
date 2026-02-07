@@ -1,7 +1,21 @@
 'use client';
 
-import { DashboardFlashs } from '@/components/dashboard/DashboardFlashs';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { DashboardFlashsSkeleton } from '@/components/dashboard/DashboardPageSkeletons';
+
+const DashboardFlashs = dynamic(
+  () =>
+    import('@/components/dashboard/DashboardFlashs').then((m) => ({
+      default: m.DashboardFlashs,
+    })),
+  { ssr: true }
+);
 
 export default function DashboardFlashsPage() {
-  return <DashboardFlashs />;
+  return (
+    <Suspense fallback={<DashboardFlashsSkeleton />}>
+      <DashboardFlashs />
+    </Suspense>
+  );
 }

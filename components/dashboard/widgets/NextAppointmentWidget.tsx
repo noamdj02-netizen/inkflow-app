@@ -5,8 +5,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useNextBookingSWR } from '../../../hooks/useDashboardSWR';
 import { WidgetErrorFallback } from './WidgetSkeleton';
+import { ClientOnly, DatePlaceholder } from '../../ClientDate';
 
 export const NextAppointmentWidget: React.FC = () => {
   const { nextBooking, loading, error, refresh } = useNextBookingSWR();
@@ -64,7 +67,7 @@ export const NextAppointmentWidget: React.FC = () => {
   }
 
   const formatTime = (dateString: string) =>
-    new Date(dateString).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    format(new Date(dateString), 'HH:mm', { locale: fr });
   const title = nextBooking.flash_id
     ? nextBooking.flashs?.title || 'Flash'
     : `${nextBooking.projects?.body_part || 'Projet'} • ${nextBooking.projects?.style || ''}`;
@@ -93,12 +96,10 @@ export const NextAppointmentWidget: React.FC = () => {
         </div>
         <p className="text-sm text-zinc-400">{title}</p>
         <p className="text-xs text-zinc-500">
-          {new Date(nextBooking.date_debut).toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}{' '}
-          à {formatTime(nextBooking.date_debut)}
+          <ClientOnly fallback={<DatePlaceholder />}>
+            {format(new Date(nextBooking.date_debut), 'EEEE d MMMM', { locale: fr })}{' '}
+            à {formatTime(nextBooking.date_debut)}
+          </ClientOnly>
         </p>
       </div>
     </motion.div>

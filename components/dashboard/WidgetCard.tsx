@@ -7,7 +7,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 
-export type WidgetCardIcon = React.ComponentType<{ size?: number; className?: string }>;
+export type WidgetCardIcon = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 
 type Props = {
   icon: WidgetCardIcon;
@@ -47,37 +47,37 @@ export const WidgetCard: React.FC<Props> = ({
           onToggle();
         }
       }}
-      className={`relative rounded-xl border p-4 transition-all cursor-pointer select-none ${
+      className={`relative rounded-3xl border p-4 transition-all cursor-pointer select-none ${
         active
-          ? 'bg-white/5 border-emerald-500/50 shadow-[0_0_0_1px_rgba(16,185,129,0.2)]'
-          : 'bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/5'
+          ? 'bg-indigo-50 dark:bg-indigo-500/20 border-dash-primary/30 shadow-sm'
+          : 'bg-white dark:bg-[#121212] border-slate-100 dark:border-[#262626] hover:border-slate-200 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-800 shadow-sm'
       }`}
     >
       {active && (
-        <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+        <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-dash-primary flex items-center justify-center">
           <Check size={12} className="text-white" strokeWidth={3} />
         </div>
       )}
       <div className="flex items-start gap-3">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-            active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-zinc-400'
+            active ? 'bg-indigo-100 dark:bg-indigo-500/30 text-dash-primary' : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400'
           }`}
         >
-          <Icon size={20} />
+          <Icon size={20} strokeWidth={1.8} />
         </div>
         <div className="flex-1 min-w-0 pr-6">
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
-          <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{description}</p>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-white">{title}</h3>
+          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5 line-clamp-2">{description}</p>
         </div>
       </div>
-      <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-        <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-[#262626] flex items-center justify-between">
+        <span className="text-[11px] font-medium text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
           {active ? labelActive : labelInactive}
         </span>
         <div
           className={`relative w-9 h-5 rounded-full transition-colors ${
-            active ? 'bg-emerald-500' : 'bg-white/20'
+            active ? 'bg-dash-primary' : 'bg-slate-200 dark:bg-neutral-700'
           }`}
           aria-hidden
         >

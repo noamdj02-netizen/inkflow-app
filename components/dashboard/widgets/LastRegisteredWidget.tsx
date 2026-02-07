@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { ClientOnly, DatePlaceholder } from '../../ClientDate';
 import { motion } from 'framer-motion';
 import { UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -55,12 +56,16 @@ export const LastRegisteredWidget: React.FC = () => {
                   {b.client_name ?? 'Client'}
                 </div>
                 <div className="text-xs text-zinc-500">
-                  {b.date_debut
-                    ? new Date(b.date_debut).toLocaleDateString('fr-FR', {
+                  {b.date_debut ? (
+                    <ClientOnly fallback={<DatePlaceholder />}>
+                      {new Date(b.date_debut).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'short',
-                      })
-                    : '—'}
+                      })}
+                    </ClientOnly>
+                  ) : (
+                    '—'
+                  )}
                 </div>
               </div>
             </li>

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Mail, Phone, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { format, isFuture } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
 import { BookingCard } from './BookingCard';
@@ -21,44 +22,66 @@ export const DashboardCalendar: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    loadBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
-
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          flashs (
-            title,
-            image_url,
-            prix
-          )
-        `)
-        .eq('artist_id', user.id)
-        .gte('scheduled_at', selectedDate.toISOString().split('T')[0])
-        .order('scheduled_at', { ascending: true });
+      const dateFilter = format(selectedDate, 'yyyy-MM-dd');
+      const selectQuery = `
+        *,
+        flashs (
+          title,
+          image_url,
+          prix
+        )
+      `;
 
-      if (error) throw error;
-      setBookings(data || []);
+      // Exécuter les deux requêtes en parallèle pour améliorer les performances
+      const [confirmedResult, pendingResult] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select(selectQuery)
+          .eq('artist_id', user.id)
+          .eq('status', 'CONFIRMED')
+          .eq('deposit_paid', true)
+          .gte('scheduled_at', dateFilter)
+          .order('scheduled_at', { ascending: true }),
+        supabase
+          .from('bookings')
+          .select(selectQuery)
+          .eq('artist_id', user.id)
+          .eq('status', 'PENDING_PAYMENT')
+          .gte('scheduled_at', dateFilter)
+          .order('scheduled_at', { ascending: true })
+      ]);
+
+      if (confirmedResult.error) throw confirmedResult.error;
+      if (pendingResult.error) {
+        console.warn('Error loading pending bookings:', pendingResult.error);
+      }
+
+      // Combiner les deux listes
+      setBookings([
+        ...(confirmedResult.data || []),
+        ...(pendingResult.data || [])
+      ]);
     } catch (error) {
       console.error('Error loading bookings:', error);
       toast.error('Erreur lors du chargement des réservations');
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, selectedDate]);
 
-  const handleConfirm = async (bookingId: string) => {
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
+  const handleConfirm = useCallback(async (bookingId: string) => {
     try {
       const updateData: any = { 
         status: 'confirmed',
@@ -77,9 +100,9 @@ export const DashboardCalendar: React.FC = () => {
       console.error('Error confirming booking:', error);
       toast.error('Erreur lors de la confirmation');
     }
-  };
+  }, [supabase, loadBookings]);
 
-  const handleCancel = async (bookingId: string) => {
+  const handleCancel = useCallback(async (bookingId: string) => {
     try {
       const updateData: any = { 
         status: 'cancelled',
@@ -97,15 +120,21 @@ export const DashboardCalendar: React.FC = () => {
       console.error('Error cancelling booking:', error);
       toast.error('Erreur lors de l\'annulation');
     }
-  };
+  }, [supabase, loadBookings]);
 
-  const upcomingBookings = bookings.filter(b => {
+  // Filtrer les bookings confirmés (avec acompte payé) pour les dates futures
+  const upcomingBookings = useMemo(() => bookings.filter(b => {
     const booking = b as any;
-    const bookingDate = new Date(booking.scheduled_at);
-    return bookingDate >= new Date() && booking.status === 'confirmed';
-  });
+    const bookingDate = new Date(booking.scheduled_at || booking.startTime);
+    return isFuture(bookingDate) && booking.status === 'CONFIRMED' && booking.deposit_paid === true;
+  }), [bookings]);
 
-  const pendingBookings = bookings.filter(b => (b as any).status === 'pending');
+  // Filtrer les bookings en attente de paiement
+  const pendingBookings = useMemo(() => bookings.filter(b => {
+    const booking = b as any;
+    const bookingDate = new Date(booking.scheduled_at || booking.startTime);
+    return isFuture(bookingDate) && booking.status === 'PENDING_PAYMENT';
+  }), [bookings]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-slate-50 p-4 md:p-8">
@@ -142,8 +171,12 @@ export const DashboardCalendar: React.FC = () => {
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <AlertCircle className="text-amber-400" size={20} />
-                  En attente de confirmation ({pendingBookings.length})
+                  En attente de paiement ({pendingBookings.length})
                 </h2>
+                <p className="text-sm text-slate-400 mb-4">
+                  Ces réservations sont en attente de paiement de l'acompte.
+                  Elles apparaîtront dans "Prochains rendez-vous" une fois l'acompte payé.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendingBookings.map((booking) => (
                     <BookingCard

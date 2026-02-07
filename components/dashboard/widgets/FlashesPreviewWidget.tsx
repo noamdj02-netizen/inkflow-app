@@ -17,34 +17,34 @@ export const FlashesPreviewWidget: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl p-6 border border-white/10"
+      className="p-6 h-full min-h-0 flex flex-col"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-white/5">
-            <Clock size={18} className="text-zinc-300" />
+          <div className="p-2 rounded-xl bg-dash-primary/10">
+            <Clock size={18} className="text-dash-primary" strokeWidth={1.8} />
           </div>
-          <h3 className="text-sm font-semibold text-white">Mes Flashes</h3>
+          <h3 className="text-sm font-semibold text-foreground">Mes Flashes</h3>
         </div>
-        <span className="text-xs text-zinc-400">Galerie rapide</span>
+        <span className="text-xs text-foreground-muted">Galerie rapide</span>
       </div>
       <div className="flex items-end justify-between gap-4">
         <div>
           {loading ? (
-            <div className="h-8 w-16 bg-white/10 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-slate-200 dark:bg-neutral-800 rounded animate-pulse" />
           ) : (
-            <p className="text-2xl font-display font-bold text-white">{count}</p>
+            <p className="text-2xl font-bold text-foreground">{count}</p>
           )}
-          <p className="text-xs text-zinc-400 mt-0.5">flashs disponibles</p>
+          <p className="text-xs text-foreground-muted mt-0.5">flashs disponibles</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => router.push('/dashboard/flashs')}
-          className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium text-dash-primary hover:opacity-90 transition-colors"
         >
           Voir la galerie
-          <ChevronRight size={16} />
+          <ChevronRight size={16} strokeWidth={1.8} />
         </motion.button>
       </div>
     </motion.div>

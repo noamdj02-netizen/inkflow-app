@@ -143,11 +143,11 @@ function SortableWidgetItem({
       className={`col-span-12 ${colSpanClass} min-w-0 ${isDragging ? 'opacity-80 z-50 shadow-xl' : ''}`}
     >
       <div
-        className="relative group rounded-2xl border border-transparent hover:border-white/10 transition-colors min-h-0"
+        className="relative group rounded-3xl border border-border bg-card shadow-soft-light dark:shadow-soft-dark hover:shadow-soft-light transition-shadow min-h-0 overflow-hidden"
         {...attributes}
         {...listeners}
       >
-        <div className="absolute left-2 top-2 z-10 p-1.5 rounded-md text-neutral-500 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute left-2 top-2 z-10 p-1.5 rounded-md text-foreground-muted pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical size={18} aria-hidden />
         </div>
         <Suspense fallback={Fallback}>
@@ -284,7 +284,7 @@ export const DashboardOverview: React.FC = () => {
           height: isHeaderVisible ? (typeof headerHeight === 'number' ? `${headerHeight}px` : 'auto') : '0px',
         }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="sticky top-0 flex flex-col gap-2 py-2 px-4 md:flex-row md:gap-0 md:h-14 md:items-center md:justify-between md:py-0 md:px-6 border-b border-white/5 bg-[#0a0a0a] z-10 flex-shrink-0"
+        className="sticky top-0 flex flex-col gap-2 py-2 px-4 md:flex-row md:gap-0 md:h-14 md:items-center md:justify-between md:py-0 md:px-6 border-b border-border bg-card shadow-soft-light dark:shadow-soft-dark z-10 flex-shrink-0"
         style={{ 
           pointerEvents: isHeaderVisible ? 'auto' : 'none',
           overflow: 'hidden',
@@ -294,37 +294,37 @@ export const DashboardOverview: React.FC = () => {
           <motion.h2
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-lg font-display font-bold text-white"
+            className="text-lg font-bold text-slate-800 dark:text-white"
           >
             Tableau de Bord
           </motion.h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-xs text-foreground-muted mt-0.5">
             Maintenez appuyé sur un widget pour le déplacer.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <motion.button
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setWidgetModalOpen(true)}
-            className="flex items-center gap-2 glass text-zinc-300 px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-medium hover:text-white transition-all touch-manipulation"
+            className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 transition-all touch-manipulation border border-slate-100 dark:border-[#262626] active:scale-95"
             aria-label="Personnaliser le tableau de bord"
           >
             <LayoutDashboard size={16} /> Personnaliser
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleShare}
-            className="flex items-center gap-2 glass text-zinc-300 px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-medium hover:text-white transition-all touch-manipulation"
+            className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 transition-all touch-manipulation border border-slate-100 dark:border-[#262626] active:scale-95"
           >
             <Share2 size={16} /> Partager
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/dashboard/flashs')}
-            className="flex items-center gap-2 bg-white text-black px-3 py-2 min-h-[44px] md:min-h-0 rounded-md text-sm font-semibold hover:bg-zinc-100 transition-all touch-manipulation"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 min-h-[44px] md:min-h-0 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity touch-manipulation shadow-soft-light active:scale-95"
           >
             <Plus size={16} /> Nouveau Flash
           </motion.button>
@@ -342,7 +342,7 @@ export const DashboardOverview: React.FC = () => {
 
       <div 
         ref={scrollContainerRef} 
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 pb-20 md:pb-6"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 pt-2 md:pt-3 pb-24 md:pb-6"
       >
         <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
           <SortableContext items={widgetIds} strategy={verticalListSortingStrategy}>
@@ -375,14 +375,14 @@ export const DashboardOverview: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-[#121212] border border-neutral-800 rounded-md p-6 md:p-8 text-center"
+            className="bg-card border border-border rounded-3xl p-6 md:p-8 text-center shadow-soft-light dark:shadow-soft-dark"
           >
-            <p className="text-neutral-400 mb-4">Aucun widget affiché.</p>
+            <p className="text-foreground-muted mb-4">Aucun widget affiché.</p>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setWidgetModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity shadow-soft-light"
             >
               <LayoutDashboard size={16} /> Choisir des widgets
             </motion.button>
@@ -396,13 +396,13 @@ export const DashboardOverview: React.FC = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-md bg-[#121212] border border-neutral-800 text-white flex items-center gap-3 text-sm font-medium shadow-sm shadow-black/50"
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-card border border-border text-foreground flex items-center gap-3 text-sm font-medium shadow-soft-light dark:shadow-soft-dark"
           >
             <CheckCircle size={16} className="text-emerald-400" />
             <span>{toast}</span>
             <button
               onClick={() => setToast(null)}
-              className="ml-1 text-zinc-500 hover:text-white transition-colors"
+              className="ml-1 text-foreground-muted hover:text-foreground transition-colors"
               aria-label="Fermer"
             >
               <X size={14} />

@@ -79,6 +79,8 @@ export default async function SlugPage({
                 src={artistWithFlashs.avatar_url}
                 alt={artistWithFlashs.nom_studio || artistWithFlashs.slug_profil}
                 fill
+                priority
+                sizes="(max-width: 640px) 128px, 192px"
                 className="object-cover"
               />
             </div>

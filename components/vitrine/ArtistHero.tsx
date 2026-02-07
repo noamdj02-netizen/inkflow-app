@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook } from 'lucide-react';
 import type { ArtistVitrine } from '../../hooks/usePublicArtist';
@@ -95,14 +96,13 @@ export function ArtistHero({ artist, slug }: ArtistHeroProps) {
         />
         <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-full border-4 border-[#0a0a0a] overflow-hidden shadow-2xl bg-[var(--color-ink-card)]">
           {artist.avatar_url ? (
-            <img
+            <Image
               src={artist.avatar_url}
               alt={`Photo de profil de ${artist.nom_studio}, tatoueur${artist.ville ? ` à ${artist.ville}` : ''}`}
-              className="w-full h-full object-cover"
-              width={192}
-              height={192}
-              loading="eager"
-              decoding="async"
+              fill
+              priority
+              sizes="(max-width: 640px) 128px, 192px"
+              className="object-cover"
             />
           ) : (
             <span className="flex items-center justify-center w-full h-full text-4xl sm:text-5xl font-bold text-white">

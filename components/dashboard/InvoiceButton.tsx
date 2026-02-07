@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import type { Database } from '../../types/supabase';
 
 type Booking = Database['public']['Tables']['bookings']['Row'] & {
@@ -104,13 +106,7 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ booking, artist })
     doc.setFontSize(10);
     
     const bookingDate = new Date(booking.date_debut);
-    const dateStr = bookingDate.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const dateStr = format(bookingDate, 'd MMMM yyyy à HH:mm', { locale: fr });
 
     yPos += 6;
     doc.text(`Date: ${dateStr}`, 20, yPos);
@@ -169,7 +165,7 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ booking, artist })
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...lightText);
     doc.text('Payé via Stripe', 20, yPos);
-    doc.text(`Date d'émission: ${new Date().toLocaleDateString('fr-FR')}`, 20, yPos + 5);
+    doc.text(`Date d'émission: ${format(new Date(), 'd MMMM yyyy', { locale: fr })}`, 20, yPos + 5);
     doc.text('InkFlow SaaS - Reçu généré automatiquement', pageWidth - 20, yPos + 5, { align: 'right' });
 
       // Ouvrir le PDF dans un nouvel onglet

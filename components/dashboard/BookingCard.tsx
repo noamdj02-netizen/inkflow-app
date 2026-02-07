@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, User, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -16,16 +17,18 @@ interface BookingCardProps {
     acompte_amount: number;
     acompte_paid: boolean;
     status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-    cal_com_booking_id: string | null;
     flashs?: { title: string } | null;
   };
   onConfirm?: (id: string) => void;
   onCancel?: (id: string) => void;
 }
 
-export function BookingCard({ booking, onConfirm, onCancel }: BookingCardProps) {
-  const scheduledAt = new Date(booking.scheduled_at);
+export const BookingCard = React.memo(function BookingCard({ booking, onConfirm, onCancel }: BookingCardProps) {
+  const scheduledAt = useMemo(() => new Date(booking.scheduled_at), [booking.scheduled_at]);
   const isPending = booking.status === 'pending';
+  
+  const formattedDate = useMemo(() => format(scheduledAt, 'EEEE d MMMM yyyy', { locale: fr }), [scheduledAt]);
+  const formattedTime = useMemo(() => format(scheduledAt, 'HH:mm', { locale: fr }), [scheduledAt]);
 
   return (
     <motion.div
@@ -62,17 +65,6 @@ export function BookingCard({ booking, onConfirm, onCancel }: BookingCardProps) 
               : 'Projet personnalisé'}
           </h3>
         </div>
-        
-        {booking.cal_com_booking_id && (
-          <a
-            href={`https://cal.com/bookings/${booking.cal_com_booking_id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-zinc-400 hover:text-white underline"
-          >
-            Voir sur Cal.com
-          </a>
-        )}
       </div>
 
       <div className="space-y-2 mb-4">
@@ -86,14 +78,14 @@ export function BookingCard({ booking, onConfirm, onCancel }: BookingCardProps) 
         <div className="flex items-center gap-3 text-sm">
           <Calendar className="text-zinc-500" size={16} />
           <span className="text-zinc-300">
-            {format(scheduledAt, 'EEEE d MMMM yyyy', { locale: fr })}
+            {formattedDate}
           </span>
         </div>
         
         <div className="flex items-center gap-3 text-sm">
           <Clock className="text-zinc-500" size={16} />
           <span className="text-zinc-300">
-            {format(scheduledAt, 'HH:mm', { locale: fr })} ({booking.duration_minutes} min)
+            {formattedTime} ({booking.duration_minutes} min)
           </span>
         </div>
         
@@ -129,4 +121,4 @@ export function BookingCard({ booking, onConfirm, onCancel }: BookingCardProps) 
       )}
     </motion.div>
   );
-}
+});

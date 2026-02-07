@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { CalComEmbed } from './CalComEmbed';
-import { createClient } from '@/lib/supabase/client';
+import { X, Calendar } from 'lucide-react';
 
 interface BookingModalProps {
   type: 'flash' | 'project';
@@ -20,45 +18,6 @@ interface BookingModalProps {
 
 export function BookingModal({ type, flash, artistSlug, trigger }: BookingModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [calcomUsername, setCalcomUsername] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Récupérer le calcom_username de l'artiste
-  useEffect(() => {
-    if (isOpen && artistSlug) {
-      fetchArtistCalcom();
-    }
-  }, [isOpen, artistSlug]);
-
-  const fetchArtistCalcom = async () => {
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('artists')
-        .select('calcom_username')
-        .eq('slug_profil', artistSlug)
-        .single();
-
-      if (error || !data) {
-        console.error('Error fetching artist:', error);
-        setCalcomUsername(null);
-      } else {
-        const artistData = data as any;
-        setCalcomUsername(artistData.calcom_username || null);
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      setCalcomUsername(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBookingSuccess = () => {
-    // Cal.com gère la réservation, on peut juste fermer le modal
-    setIsOpen(false);
-  };
 
   return (
     <>
@@ -83,7 +42,7 @@ export function BookingModal({ type, flash, artistSlug, trigger }: BookingModalP
             >
               <div 
                 onClick={(e) => e.stopPropagation()}
-                className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-2xl w-full overflow-hidden flex flex-col"
               >
                 {/* Header */}
                 <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
@@ -92,7 +51,7 @@ export function BookingModal({ type, flash, artistSlug, trigger }: BookingModalP
                       {type === 'flash' ? flash?.title : 'Réserver un créneau'}
                     </h2>
                     <p className="text-zinc-400 text-sm mt-1">
-                      Choisissez votre créneau disponible
+                      Réservation en ligne
                     </p>
                   </div>
                   <button
@@ -104,21 +63,21 @@ export function BookingModal({ type, flash, artistSlug, trigger }: BookingModalP
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 min-h-[600px]">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                <div className="flex-1 overflow-y-auto p-12 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-6">
+                    <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <Calendar className="text-zinc-400" size={40} />
                     </div>
-                  ) : (
-                    <CalComEmbed
-                      calLink={calcomUsername || ''}
-                      config={{
-                        theme: 'dark',
-                        layout: 'month_view',
-                      }}
-                      onBookingSuccess={handleBookingSuccess}
-                    />
-                  )}
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">
+                        Prochainement : Réservation en ligne
+                      </h3>
+                      <p className="text-zinc-400">
+                        Le système de réservation natif sera bientôt disponible.
+                        Vous pourrez réserver directement depuis cette page.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

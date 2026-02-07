@@ -1,4 +1,100 @@
 {
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/AlertsWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/AlertsWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_AlertsWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/AverageCartWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/AverageCartWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_AverageCartWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/DayViewWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/DayViewWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_DayViewWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/FlashesPreviewWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/FlashesPreviewWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_FlashesPreviewWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/KPIWidgets": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/KPIWidgets",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_KPIWidgets_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/LastRegisteredWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/LastRegisteredWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_LastRegisteredWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/MonthlyGoalWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/MonthlyGoalWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_MonthlyGoalWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/NewVsRegularWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/NewVsRegularWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_NewVsRegularWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/NextAppointmentWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/NextAppointmentWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_NextAppointmentWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/PendingRequestsWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/PendingRequestsWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_PendingRequestsWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/RecentActivityWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/RecentActivityWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_RecentActivityWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/RevenueChartWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/RevenueChartWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_RevenueChartWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/StatsWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/StatsWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_StatsWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/StockWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/StockWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_StockWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/TopFlashsWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/TopFlashsWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_TopFlashsWidget_tsx.js"
+    ]
+  },
+  "components\\dashboard\\DashboardOverview.tsx -> ./widgets/UpcomingBookingsWidget": {
+    "id": "components\\dashboard\\DashboardOverview.tsx -> ./widgets/UpcomingBookingsWidget",
+    "files": [
+      "static/chunks/_app-pages-browser_components_dashboard_widgets_UpcomingBookingsWidget_tsx.js"
+    ]
+  },
   "components\\dashboard\\station\\RevenueStationWidget.tsx -> recharts": {
     "id": "components\\dashboard\\station\\RevenueStationWidget.tsx -> recharts",
     "files": [

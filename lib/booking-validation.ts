@@ -10,8 +10,10 @@ export const schemaReservation = z.object({
   clientId: z.string().uuid('ID client invalide'),
   tatoueurId: z.string().uuid('ID tatoueur invalide'),
   dateDebut: z.date({
-    required_error: 'La date de début est requise',
-    invalid_type_error: 'La date de début doit être une date valide',
+    error: (issue) =>
+      issue.input === undefined
+        ? 'La date de début est requise'
+        : 'La date de début doit être une date valide',
   }).refine(
     (date) => date >= new Date(),
     {
@@ -19,24 +21,27 @@ export const schemaReservation = z.object({
     }
   ),
   duree: z.number({
-    required_error: 'La durée est requise',
-    invalid_type_error: 'La durée doit être un nombre',
+    error: (issue) =>
+      issue.input === undefined
+        ? 'La durée est requise'
+        : 'La durée doit être un nombre',
   })
     .int('La durée doit être un nombre entier')
     .min(30, 'La durée minimum est de 30 minutes')
     .max(480, 'La durée maximum est de 8 heures (480 minutes)'),
   type: z.enum(['consultation', 'session', 'retouche'], {
-    errorMap: () => ({ message: 'Type de réservation invalide' }),
+    error: () => 'Type de réservation invalide',
   }),
   prix: z.number({
-    required_error: 'Le prix est requis',
-    invalid_type_error: 'Le prix doit être un nombre',
+    error: (issue) =>
+      issue.input === undefined
+        ? 'Le prix est requis'
+        : 'Le prix doit être un nombre',
   })
     .positive('Le prix doit être positif')
     .max(10000, 'Le prix maximum est de 10000€'),
   acompte: z.number()
     .positive('L\'acompte doit être positif')
-    .max(z.number(), 'L\'acompte ne peut pas dépasser le prix total')
     .optional(),
   projetDescription: z.string()
     .max(2000, 'La description ne peut pas dépasser 2000 caractères')

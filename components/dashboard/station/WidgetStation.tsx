@@ -29,24 +29,24 @@ export const WidgetStation: React.FC = () => {
   const { activeWidgets, isActive, toggleWidget, resetToDefault } = useWidgetStation();
 
   return (
-    <aside className="w-80 flex-shrink-0 hidden xl:flex flex-col h-full min-h-0 bg-[#0a0a0a]/80 backdrop-blur-sm border-l border-white/5 overflow-hidden">
+    <aside className="w-80 flex-shrink-0 hidden xl:flex flex-col h-full min-h-0 bg-white dark:bg-[#121212] border-l border-slate-100 dark:border-[#262626] overflow-hidden shadow-sm">
       {/* Header : titre section + Personnaliser */}
-      <div className="p-4 border-b border-white/5 flex-shrink-0">
+      <div className="p-4 border-b border-slate-100 dark:border-[#262626] flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-display font-bold text-white tracking-tight">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white tracking-tight">
             Top Performances
           </h2>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors"
             aria-label="Personnaliser / Ajouter un widget"
           >
             <LayoutGrid size={14} /> Personnaliser
           </motion.button>
         </div>
-        <p className="text-xs text-zinc-500 mt-1">Meilleurs clients</p>
+        <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">Meilleurs clients</p>
       </div>
 
       {/* Contenu : leaderboard + widgets actifs (scrollable) */}
@@ -60,7 +60,7 @@ export const WidgetStation: React.FC = () => {
               <Suspense
                 key={id}
                 fallback={
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 h-32 animate-pulse" />
+                  <div className="rounded-3xl border border-slate-100 dark:border-[#262626] bg-[#eff6f3] dark:bg-[#050505] p-4 h-32 animate-pulse" />
                 }
               >
                 <Widget />

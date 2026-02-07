@@ -35,6 +35,7 @@ import { supabase } from '../../services/supabase';
 import type { ClientInsert, ClientPhoto } from '../../types/supabase';
 import { Skeleton } from '../common/Skeleton';
 import { EmptyState } from '../common/EmptyState';
+import { ThemeToggle } from '../ThemeToggle';
 
 const TAGS_OPTIONS = ['VIP', 'Nouveau', 'Fidèle', 'Projet perso', 'Flash'];
 
@@ -128,17 +129,17 @@ function ClientForm({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="bg-[#121212] border border-neutral-800 rounded-md w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-sm shadow-black/50"
+        className="bg-card border border-border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-lg font-display font-bold text-white">
+        <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border px-6 py-4 flex justify-between items-center rounded-t-2xl">
+          <h2 className="text-lg font-display font-bold text-foreground">
             {client ? 'Modifier le client' : 'Nouveau client'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-neutral-400 hover:text-white rounded-md hover:bg-white/5 transition-colors"
+            className="p-2 text-foreground-muted hover:text-foreground rounded-md hover:bg-background transition-colors"
           >
             <X size={20} />
           </button>
@@ -147,75 +148,75 @@ function ClientForm({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-zinc-500 mb-1">Nom</label>
+              <label className="block text-xs text-foreground-muted mb-1">Nom</label>
               <input
                 type="text"
                 required
                 value={form.nom}
                 onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder="Dupont"
               />
             </div>
             <div>
-              <label className="block text-xs text-zinc-500 mb-1">Prénom</label>
+              <label className="block text-xs text-foreground-muted mb-1">Prénom</label>
               <input
                 type="text"
                 required
                 value={form.prenom}
                 onChange={(e) => setForm((f) => ({ ...f, prenom: e.target.value }))}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder="Marie"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Email</label>
+            <label className="block text-xs text-foreground-muted mb-1">Email</label>
             <input
               type="email"
               required
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="marie@email.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Téléphone</label>
+            <label className="block text-xs text-foreground-muted mb-1">Téléphone</label>
             <input
               type="tel"
               value={form.telephone}
               onChange={(e) => setForm((f) => ({ ...f, telephone: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="06 12 34 56 78"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Date de naissance</label>
+            <label className="block text-xs text-foreground-muted mb-1">Date de naissance</label>
             <input
               type="date"
               value={form.date_naissance}
               onChange={(e) => setForm((f) => ({ ...f, date_naissance: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Allergies (séparées par des virgules)</label>
+            <label className="block text-xs text-foreground-muted mb-1">Allergies (séparées par des virgules)</label>
             <input
               type="text"
               value={form.allergies}
               onChange={(e) => setForm((f) => ({ ...f, allergies: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="Métaux, Latex, ..."
             />
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-2">Tags</label>
+            <label className="block text-xs text-foreground-muted mb-2">Tags</label>
             <div className="flex flex-wrap gap-2">
               {TAGS_OPTIONS.map((tag) => (
                 <button
@@ -224,8 +225,8 @@ function ClientForm({
                   onClick={() => toggleTag(tag)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     form.tags.includes(tag)
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                      : 'bg-white/5 text-zinc-400 border border-white/10 hover:border-white/20'
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
+                      : 'bg-background text-foreground-muted border border-border hover:border-primary/30'
                   }`}
                 >
                   {tag}
@@ -235,12 +236,12 @@ function ClientForm({
           </div>
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Notes</label>
+            <label className="block text-xs text-foreground-muted mb-1">Notes</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 resize-none"
+              className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               placeholder="Notes personnelles..."
             />
           </div>
@@ -250,24 +251,24 @@ function ClientForm({
               type="checkbox"
               checked={form.consentement_signe}
               onChange={(e) => setForm((f) => ({ ...f, consentement_signe: e.target.checked }))}
-              className="rounded border-white/20 bg-white/5 text-amber-500 focus:ring-amber-500"
+              className="rounded border-border bg-background text-amber-500 focus:ring-amber-500"
             />
-            <span className="text-sm text-zinc-300">Consentement signé</span>
-            <FileSignature size={14} className="text-zinc-500" />
+            <span className="text-sm text-foreground-muted">Consentement signé</span>
+            <FileSignature size={14} className="text-foreground-muted" />
           </label>
 
           <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-3 py-2.5 rounded-md border border-neutral-700 text-neutral-400 hover:bg-white/5 transition-colors"
+              className="flex-1 px-3 py-2.5 rounded-xl border border-border text-foreground-muted hover:bg-background transition-colors"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : null}
               {client ? 'Enregistrer' : 'Créer'}
@@ -377,16 +378,16 @@ function ClientDetailPanel({
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#0a0a0a] border-l border-white/10 shadow-2xl flex flex-col"
+      className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-card border-l border-border shadow-2xl flex flex-col"
     >
-      <div className="flex-shrink-0 px-6 py-4 border-b border-white/5 flex justify-between items-center">
-        <h2 className="text-lg font-display font-bold text-white">
+      <div className="flex-shrink-0 px-6 py-4 border-b border-border flex justify-between items-center">
+        <h2 className="text-lg font-display font-bold text-foreground">
           {c.prenom} {c.nom}
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={onEdit}
-            className="p-2 text-neutral-400 hover:text-white rounded-md hover:bg-white/5 transition-colors"
+            className="p-2 text-foreground-muted hover:text-foreground rounded-md hover:bg-background transition-colors"
           >
             <Edit2 size={18} />
           </button>
@@ -399,7 +400,7 @@ function ClientDetailPanel({
           </button>
           <button
             onClick={onClose}
-            className="p-2 text-neutral-400 hover:text-white rounded-md hover:bg-white/5 transition-colors"
+            className="p-2 text-foreground-muted hover:text-foreground rounded-md hover:bg-background transition-colors"
           >
             <X size={20} />
           </button>
@@ -410,7 +411,7 @@ function ClientDetailPanel({
         <div className="flex items-center gap-3">
           <a
             href={`mailto:${c.email}`}
-            className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
           >
             <Mail size={16} />
             <span className="text-sm">{c.email}</span>
@@ -420,7 +421,7 @@ function ClientDetailPanel({
           <div className="flex items-center gap-3">
             <a
               href={`tel:${c.telephone}`}
-              className="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
             >
               <Phone size={16} />
               <span className="text-sm">{c.telephone}</span>
@@ -429,12 +430,12 @@ function ClientDetailPanel({
         )}
 
         {c.consentement_signe ? (
-          <div className="flex items-center gap-2 text-emerald-400 text-sm">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm">
             <FileSignature size={16} />
             Consentement signé
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-amber-400 text-sm">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
             <AlertTriangle size={16} />
             Consentement non signé
           </div>
@@ -445,7 +446,7 @@ function ClientDetailPanel({
             {c.tags.map((t) => (
               <span
                 key={t}
-                className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-medium"
+                className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium"
               >
                 {t}
               </span>
@@ -455,28 +456,28 @@ function ClientDetailPanel({
 
         {c.allergies && c.allergies.length > 0 && (
           <div>
-            <h4 className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Allergies</h4>
-            <p className="text-sm text-zinc-300">{c.allergies.join(', ')}</p>
+            <h4 className="text-xs text-foreground-muted uppercase tracking-wider mb-1">Allergies</h4>
+            <p className="text-sm text-foreground">{c.allergies.join(', ')}</p>
           </div>
         )}
 
         {c.notes && (
           <div>
-            <h4 className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Notes</h4>
-            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{c.notes}</p>
+            <h4 className="text-xs text-foreground-muted uppercase tracking-wider mb-1">Notes</h4>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{c.notes}</p>
           </div>
         )}
 
         {/* Historique RDV (bookings par email) */}
         {bookings.length > 0 && (
           <div>
-            <h4 className="text-xs text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <h4 className="text-xs text-foreground-muted uppercase tracking-wider mb-2 flex items-center gap-1">
               <Calendar size={12} />
               Historique RDV
             </h4>
             <ul className="space-y-1">
               {bookings.map((b) => (
-                <li key={b.id} className="text-sm text-zinc-400">
+                <li key={b.id} className="text-sm text-foreground-muted">
                   {new Date(b.date_debut).toLocaleDateString('fr-FR', {
                     day: 'numeric',
                     month: 'short',
@@ -491,7 +492,7 @@ function ClientDetailPanel({
 
         {/* Photos */}
         <div>
-          <h4 className="text-xs text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h4 className="text-xs text-foreground-muted uppercase tracking-wider mb-2 flex items-center gap-1">
             <Tag size={12} />
             Photos
           </h4>
@@ -501,9 +502,9 @@ function ClientDetailPanel({
                 <img
                   src={p.url}
                   alt={p.caption || p.type}
-                  className="w-full aspect-square object-cover rounded-xl border border-white/10"
+                  className="w-full aspect-square object-cover rounded-xl border border-border"
                 />
-                <span className="absolute bottom-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-zinc-300">
+                <span className="absolute bottom-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white">
                   {p.type === 'reference' ? 'Référence' : 'Réalisation'}
                 </span>
                 <button
@@ -515,13 +516,13 @@ function ClientDetailPanel({
               </div>
             ))}
             {uploading && (
-              <div className="aspect-square rounded-xl border border-dashed border-white/20 flex items-center justify-center">
-                <Loader2 size={24} className="animate-spin text-zinc-500" />
+              <div className="aspect-square rounded-xl border border-dashed border-border flex items-center justify-center">
+                <Loader2 size={24} className="animate-spin text-foreground-muted" />
               </div>
             )}
-            <label className="aspect-square rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:border-white/40 transition-colors">
-              <ImagePlus size={24} className="text-zinc-500 mb-1" />
-              <span className="text-xs text-zinc-500">Référence</span>
+            <label className="aspect-square rounded-xl border border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+              <ImagePlus size={24} className="text-foreground-muted mb-1" />
+              <span className="text-xs text-foreground-muted">Référence</span>
               <input
                 type="file"
                 accept="image/*"
@@ -529,9 +530,9 @@ function ClientDetailPanel({
                 onChange={(e) => handlePhotoInput(e, 'reference')}
               />
             </label>
-            <label className="aspect-square rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:border-white/40 transition-colors">
-              <ImagePlus size={24} className="text-zinc-500 mb-1" />
-              <span className="text-xs text-zinc-500">Réalisation</span>
+            <label className="aspect-square rounded-xl border border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+              <ImagePlus size={24} className="text-foreground-muted mb-1" />
+              <span className="text-xs text-foreground-muted">Réalisation</span>
               <input
                 type="file"
                 accept="image/*"
@@ -574,27 +575,30 @@ export const DashboardClients: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#050505] min-h-0">
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-3 sm:py-4 flex-shrink-0">
+    <div className="flex-1 flex flex-col bg-background min-h-0 transition-colors duration-300">
+      <header className="bg-card/80 backdrop-blur-md border-b border-border px-4 md:px-6 py-3 sm:py-4 flex-shrink-0 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
-                <Users className="text-brand-cyan" size={20} />
-              </div>
-              Clients & Documents
-            </h1>
-            <p className="text-zinc-500 text-sm mt-1">Fiches clients, historique, photos et consentements</p>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 dark:bg-primary/20 border border-border">
+                  <Users className="text-primary" size={20} />
+                </div>
+                Clients & Documents
+              </h1>
+              <ThemeToggle size="md" variant="outline" />
+            </div>
+            <p className="text-foreground-muted text-sm mt-1">Fiches clients, historique, photos et consentements</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" size={16} />
               <input
                 type="text"
                 placeholder="Nom, email, téléphone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#0a0a0a] border border-white/10 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 transition-colors w-full sm:w-64"
+                className="pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors w-full sm:w-64"
               />
             </div>
             <button
@@ -602,7 +606,7 @@ export const DashboardClients: React.FC = () => {
                 setEditingClient(null);
                 setShowForm(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-semibold hover:bg-zinc-200 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-colors"
             >
               <UserPlus size={16} />
               Ajouter
@@ -618,8 +622,8 @@ export const DashboardClients: React.FC = () => {
               onClick={() => handleTagFilter(tag)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 tagFilter.includes(tag)
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                  : 'bg-white/5 text-zinc-400 border border-white/10 hover:border-white/20'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
+                  : 'bg-background text-foreground-muted border border-border hover:border-primary/30'
               }`}
             >
               {tag}
@@ -628,7 +632,7 @@ export const DashboardClients: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-2 md:pt-3 pb-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-2 md:pt-3 pb-24 md:pb-6">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -636,11 +640,11 @@ export const DashboardClients: React.FC = () => {
             ))}
           </div>
         ) : error ? (
-          <div className="glass rounded-xl p-8 text-center">
-            <p className="text-red-400">{error.message}</p>
+          <div className="rounded-xl p-8 text-center border border-border bg-card">
+            <p className="text-red-600 dark:text-red-400">{error.message}</p>
             <button
               onClick={() => refresh()}
-              className="mt-4 px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20"
+              className="mt-4 px-4 py-2 rounded-xl bg-primary text-white hover:opacity-90"
             >
               Réessayer
             </button>
@@ -673,20 +677,20 @@ export const DashboardClients: React.FC = () => {
                   key={c.id}
                   variants={fadeInUp}
                   layout
-                  className="glass rounded-xl p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={() => setSelectedClient(c)}
+                  className="rounded-xl p-4 flex items-center justify-between gap-4 cursor-pointer border border-border bg-card hover:shadow-card-hover transition-all duration-300"
+                onClick={() => setSelectedClient(c)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white truncate">
+                    <p className="font-medium text-foreground truncate">
                       {c.prenom} {c.nom}
                     </p>
-                    <p className="text-sm text-zinc-500 truncate">{c.email}</p>
+                    <p className="text-sm text-foreground-muted truncate">{c.email}</p>
                     {c.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {c.tags.map((t) => (
                           <span
                             key={t}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           >
                             {t}
                           </span>
@@ -696,9 +700,9 @@ export const DashboardClients: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!c.consentement_signe && (
-                      <AlertTriangle size={16} className="text-amber-400" />
+                      <AlertTriangle size={16} className="text-amber-500 dark:text-amber-400" />
                     )}
-                    <ChevronRight size={18} className="text-zinc-500" />
+                    <ChevronRight size={18} className="text-foreground-muted" />
                   </div>
                 </motion.li>
               ))}

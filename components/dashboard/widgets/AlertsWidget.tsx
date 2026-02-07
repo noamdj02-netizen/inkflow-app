@@ -2,9 +2,10 @@
  * Widget Alertes - Affiche les alertes importantes (acomptes non réglés, confirmations en attente)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, CreditCard, Clock, CheckCircle } from 'lucide-react';
+import { format, startOfDay, addDays } from 'date-fns';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../services/supabase';
 import useSWR from 'swr';
@@ -29,7 +30,7 @@ async function fetchAlerts(artistId: string): Promise<Alert[]> {
     .eq('artist_id', artistId)
     .eq('statut_paiement', 'pending')
     .eq('statut_booking', 'pending')
-    .gte('date_debut', new Date().toISOString())
+    .gte('date_debut', format(new Date(), 'yyyy-MM-dd'))
     .order('date_debut', { ascending: true });
 
   if (!depositsError && pendingDeposits && pendingDeposits.length > 0) {
@@ -50,7 +51,7 @@ async function fetchAlerts(artistId: string): Promise<Alert[]> {
     .select('id')
     .eq('artist_id', artistId)
     .eq('statut_booking', 'pending')
-    .gte('date_debut', new Date().toISOString())
+    .gte('date_debut', format(new Date(), 'yyyy-MM-dd'))
     .limit(1);
 
   if (!confirmationsError && pendingConfirmations && pendingConfirmations.length > 0) {
@@ -66,18 +67,16 @@ async function fetchAlerts(artistId: string): Promise<Alert[]> {
   }
 
   // Prochains RDV aujourd'hui (rappel)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1);
 
   const { data: todayBookings, error: todayError } = await supabase
     .from('bookings')
     .select('id, client_name, date_debut')
     .eq('artist_id', artistId)
     .eq('statut_booking', 'confirmed')
-    .gte('date_debut', today.toISOString())
-    .lt('date_debut', tomorrow.toISOString());
+    .gte('date_debut', format(today, 'yyyy-MM-dd'))
+    .lt('date_debut', format(tomorrow, 'yyyy-MM-dd'));
 
   if (!todayError && todayBookings && todayBookings.length > 0) {
     alerts.push({
@@ -106,16 +105,16 @@ export const AlertsWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className="bg-card border border-border rounded-3xl p-6 shadow-soft-light dark:shadow-soft-dark">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
             <AlertTriangle size={20} />
           </div>
-          <h3 className="text-lg font-semibold text-white">Alertes</h3>
+          <h3 className="text-lg font-semibold text-foreground">Alertes</h3>
         </div>
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-14 bg-[#1a1a1a] border border-neutral-800 rounded-md animate-pulse" />
+            <div key={i} className="h-14 bg-border/50 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -124,22 +123,22 @@ export const AlertsWidget: React.FC = () => {
 
   if (error || alerts.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+      <div className="bg-card border border-border rounded-3xl p-6 shadow-soft-light dark:shadow-soft-dark">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
             <AlertTriangle size={20} />
           </div>
-          <h3 className="text-lg font-semibold text-white">Alertes</h3>
+          <h3 className="text-lg font-semibold text-foreground">Alertes</h3>
         </div>
         <div className="text-center py-8">
           <CheckCircle className="text-emerald-400 mx-auto mb-2" size={32} />
-          <p className="text-neutral-400 text-sm">Aucune alerte</p>
+          <p className="text-foreground-muted text-sm">Aucune alerte</p>
         </div>
       </div>
     );
   }
 
-  const getIcon = (type: Alert['type']) => {
+  const getIcon = useMemo(() => (type: Alert['type']) => {
     switch (type) {
       case 'deposit_pending':
         return <CreditCard size={18} />;
@@ -150,9 +149,9 @@ export const AlertsWidget: React.FC = () => {
       default:
         return <AlertTriangle size={18} />;
     }
-  };
+  }, []);
 
-  const getColor = (priority: Alert['priority']) => {
+  const getColor = useMemo(() => (priority: Alert['priority']) => {
     switch (priority) {
       case 'high':
         return 'text-red-400 bg-red-500/10 border-red-500/20';
@@ -161,10 +160,10 @@ export const AlertsWidget: React.FC = () => {
       case 'low':
         return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
     }
-  };
+  }, []);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+    <div className="bg-card border border-border rounded-3xl p-6 shadow-soft-light dark:shadow-soft-dark">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
           <AlertTriangle size={20} />
@@ -178,7 +177,7 @@ export const AlertsWidget: React.FC = () => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             className={`
-              p-3 rounded-xl border transition-all cursor-pointer hover:bg-white/5
+              p-3 rounded-xl border border-border transition-all cursor-pointer hover:bg-foreground/5
               ${getColor(alert.priority)}
             `}
             onClick={() => alert.link && (window.location.href = alert.link)}
@@ -192,7 +191,7 @@ export const AlertsWidget: React.FC = () => {
                 </div>
               </div>
               {alert.count > 0 && (
-                <span className="px-2 py-0.5 rounded-md bg-[#1a1a1a] border border-neutral-800 text-xs font-semibold">
+                <span className="px-2 py-0.5 rounded-md bg-background/80 border border-border text-xs font-semibold text-foreground">
                   {alert.count}
                 </span>
               )}

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       debut,
       fin,
       duree,
-      type
+      type as 'SESSION' | 'CONSULTATION' | 'RETOUCHE'
     );
 
     // Formater les créneaux pour la réponse
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           tatoueurId,
           slot.startTime,
           duree,
-          type
+          type as 'SESSION' | 'CONSULTATION' | 'RETOUCHE'
         );
 
         return {

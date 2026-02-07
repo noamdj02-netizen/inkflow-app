@@ -5,13 +5,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, Clock } from 'lucide-react';
+import { format, isToday } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useNextBookingSWR } from '../../../hooks/useDashboardSWR';
+import { ClientOnly, DatePlaceholder } from '../../ClientDate';
 
 export const DayViewWidget: React.FC = () => {
   const { nextBooking, loading } = useNextBookingSWR();
-  const today = new Date().toDateString();
-  const isToday = nextBooking?.date_debut
-    ? new Date(nextBooking.date_debut).toDateString() === today
+  const bookingIsToday = nextBooking?.date_debut
+    ? isToday(new Date(nextBooking.date_debut))
     : false;
 
   return (
@@ -31,17 +33,16 @@ export const DayViewWidget: React.FC = () => {
               <div key={i} className="h-12 bg-white/10 rounded-xl" />
             ))}
           </div>
-        ) : nextBooking && isToday ? (
+        ) : nextBooking && bookingIsToday ? (
           <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
               <Clock size={18} className="text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-white">
-                {new Date(nextBooking.date_debut).toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                <ClientOnly fallback={<DatePlaceholder />}>
+                  {format(new Date(nextBooking.date_debut), 'HH:mm', { locale: fr })}
+                </ClientOnly>
               </div>
               <div className="text-xs text-zinc-400 truncate">
                 {nextBooking.client_name ?? 'Client'} • Prochain RDV
