@@ -1,947 +1,416 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Upload, X, Loader2, AlertCircle, CheckCircle, Palette, Mail, User, Image as ImageIcon, Settings, Shield, Link2, Copy, CreditCard, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
-import { useArtistProfile } from '../../contexts/ArtistProfileContext';
-import { supabase } from '../../services/supabase';
-import { useAuth } from '../../hooks/useAuth';
-import { normalizeSlug, validatePublicSlug } from '../../utils/slug';
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Camera,
+  Save,
+  Bell,
+  Lock,
+  Palette,
+  Globe,
+  DollarSign,
+  Shield,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import { useDashboardTheme } from '../../contexts/DashboardThemeContext';
 
 export const DashboardSettings: React.FC = () => {
-  const { profile, loading: profileLoading, updateProfile, error: profileError } = useArtistProfile();
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const { theme, toggleTheme } = useDashboardTheme();
+  const isDark = theme === 'dark';
 
-  const [formData, setFormData] = useState({
-    nom_studio: '',
-    slug_profil: '',
-    bio_instagram: '',
-    pre_tattoo_instructions: '',
-    theme_color: 'amber',
-    theme_accent_hex: '',
-    theme_secondary_hex: '',
-    deposit_percentage: 30,
-    avatarFile: null as File | null,
-    avatarUrl: '',
-  });
-  const [slugError, setSlugError] = useState<string | null>(null);
-  const [checkingSlug, setCheckingSlug] = useState(false);
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
-  const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security' | 'billing'>('profile');
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Check URL params for Stripe callback status
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('stripe_success') === 'true') {
-      toast.success('Compte Stripe connecté avec succès !', {
-        description: 'Vous pouvez maintenant recevoir des paiements.',
-      });
-      // Refresh profile to get updated Stripe status
-      if (profile) {
-        updateProfile({}).then(() => {
-          window.location.search = '';
-        });
-      } else {
-        window.location.search = '';
-      }
-    } else if (params.get('stripe_incomplete') === 'true') {
-      toast.warning('Configuration Stripe incomplète', {
-        description: 'Veuillez compléter toutes les étapes de configuration.',
-      });
-      window.location.search = '';
-    } else if (params.get('stripe_refresh') === 'true') {
-      toast.info('Configuration Stripe requise', {
-        description: 'Veuillez compléter la configuration de votre compte bancaire.',
-      });
-      window.location.search = '';
-    }
-  }, [profile]);
-
-  const handleStripeConnect = async () => {
-    if (!user) {
-      toast.error('Vous devez être connecté');
-      return;
-    }
-
-    setStripeConnecting(true);
-    setError(null);
-
-    try {
-      // Get the session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Session invalide');
-      }
-
-      // Call the API route to create Stripe Connect account and get onboarding link
-      const response = await fetch('/api/stripe-connect-onboard', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-
-      // Check if response is ok and has content
-      if (!response.ok) {
-        let errorMessage = 'Erreur lors de la création du lien Stripe';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // If JSON parsing fails, use status text
-          errorMessage = response.statusText || `Erreur ${response.status}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      // Parse JSON response
-      let data;
-      try {
-        const text = await response.text();
-        if (!text || text.trim() === '') {
-          throw new Error('Réponse vide du serveur');
-        }
-        data = JSON.parse(text);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        throw new Error('Réponse invalide du serveur. Vérifiez les variables d\'environnement dans Vercel.');
-      }
-
-      if (data.url) {
-        // Redirect to Stripe onboarding
-        window.location.href = data.url;
-      } else {
-        throw new Error('URL de redirection Stripe manquante dans la réponse');
-      }
-    } catch (err: any) {
-      console.error('Stripe Connect error:', err);
-      const errorMessage = err.message || 'Erreur lors de la connexion à Stripe';
-      setError(errorMessage);
-      toast.error('Erreur Stripe Connect', {
-        description: errorMessage,
-      });
-      setStripeConnecting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        nom_studio: profile.nom_studio || '',
-        slug_profil: profile.slug_profil || '',
-        bio_instagram: profile.bio_instagram || '',
-        pre_tattoo_instructions: profile.pre_tattoo_instructions || '',
-        theme_color: profile.theme_color || profile.accent_color || 'amber',
-        theme_accent_hex: profile.theme_accent_hex || '',
-        theme_secondary_hex: profile.theme_secondary_hex || '',
-        deposit_percentage: profile.deposit_percentage || 30,
-        avatarFile: null,
-        avatarUrl: profile.avatar_url || '',
-      });
-      setSlugError(null);
-      setSlugAvailable(true);
-    }
-  }, [profile]);
-
-  const checkSlugAvailability = async (slugToCheck: string): Promise<{ available: boolean; message?: string }> => {
-    if (!user) return { available: false, message: 'User not authenticated' };
-
-    const normalized = slugToCheck.trim().toLowerCase();
-    const validationError = validatePublicSlug(normalized);
-    if (validationError) {
-      setSlugAvailable(false);
-      setSlugError(validationError);
-      return { available: false, message: validationError };
-    }
-
-    // Si c'est le slug actuel, c'est OK.
-    if (profile?.slug_profil && normalized === profile.slug_profil) {
-      setSlugAvailable(true);
-      setSlugError(null);
-      return { available: true };
-    }
-
-    setCheckingSlug(true);
-    setSlugError(null);
-
-    const { data, error: checkError } = await supabase
-      .from('artists')
-      .select('id')
-      .eq('slug_profil', normalized)
-      .neq('id', user.id)
-      .single();
-
-    if (checkError && checkError.code === 'PGRST116') {
-      // Aucun résultat = disponible
-      setSlugAvailable(true);
-      setSlugError(null);
-      setCheckingSlug(false);
-      return { available: true };
-    } else if (data) {
-      setSlugAvailable(false);
-      const msg = 'Ce slug est déjà pris. Choisissez-en un autre.';
-      setSlugError(msg);
-      setCheckingSlug(false);
-      return { available: false, message: msg };
-    } else {
-      setSlugAvailable(false);
-      const msg = 'Erreur lors de la vérification du slug.';
-      setSlugError(msg);
-      setCheckingSlug(false);
-      return { available: false, message: msg };
-    }
-  };
-
-  // Vérifier le slug quand il change (debounce) - uniquement si différent du slug actuel
-  useEffect(() => {
-    if (!user) return;
-    if (!formData.slug_profil) return;
-    if (profile?.slug_profil && formData.slug_profil === profile.slug_profil) {
-      setSlugAvailable(true);
-      setSlugError(null);
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      checkSlugAvailability(formData.slug_profil);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.slug_profil, user?.id, profile?.slug_profil]);
-
-  const uploadAvatar = async (file: File): Promise<string> => {
-    if (!user) throw new Error('User not authenticated');
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${user.id}/${fileName}`;
-
-    setUploadingAvatar(true);
-
-    try {
-      const { data: existingFiles } = await supabase.storage
-        .from('avatars')
-        .list(`${user.id}/`, {
-          search: `${user.id}-`,
-        });
-
-      if (existingFiles && existingFiles.length > 0) {
-        const filesToDelete = existingFiles
-          .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-          .slice(3)
-          .map(f => `${user.id}/${f.name}`);
-        
-        if (filesToDelete.length > 0) {
-          await supabase.storage
-            .from('avatars')
-            .remove(filesToDelete);
-        }
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
-
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-      return publicUrl;
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setError('L\'image ne doit pas dépasser 2MB');
-        return;
-      }
-      if (!file.type.startsWith('image/')) {
-        setError('Veuillez sélectionner une image');
-        return;
-      }
-      setFormData({ ...formData, avatarFile: file });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(false);
-    setSaving(true);
-
-    try {
-      // 1) Validation slug + disponibilité
-      const normalizedSlug = formData.slug_profil.trim().toLowerCase();
-      const validationError = validatePublicSlug(normalizedSlug);
-      if (validationError) throw new Error(validationError);
-
-      // On attend le résultat du check asynchrone si l'utilisateur vient de modifier
-      if (profile?.slug_profil && normalizedSlug !== profile.slug_profil) {
-        const check = await checkSlugAvailability(normalizedSlug);
-        if (check && check.available === false) throw new Error(check.message || 'Ce slug est déjà pris. Choisissez-en un autre.');
-      }
-
-      let avatarUrl = formData.avatarUrl;
-
-      if (formData.avatarFile) {
-        avatarUrl = await uploadAvatar(formData.avatarFile);
-        
-        setFormData(prev => ({
-          ...prev,
-          avatarUrl: avatarUrl,
-          avatarFile: null,
-        }));
-      }
-
-      await updateProfile({
-        nom_studio: formData.nom_studio,
-        slug_profil: normalizedSlug,
-        bio_instagram: formData.bio_instagram,
-        pre_tattoo_instructions: formData.pre_tattoo_instructions || null,
-        theme_color: formData.theme_color,
-        theme_accent_hex: formData.theme_accent_hex?.trim() ? formData.theme_accent_hex.trim() : null,
-        theme_secondary_hex: formData.theme_secondary_hex?.trim() ? formData.theme_secondary_hex.trim() : null,
-        avatar_url: avatarUrl,
-        deposit_percentage: formData.deposit_percentage,
-      });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
-      setError(errorMessage);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const themeOptions = [
-    { name: 'Gold', value: 'amber', hex: '#fbbf24', tailwind: 'amber' },
-    { name: 'Blood', value: 'red', hex: '#ef4444', tailwind: 'red' },
-    { name: 'Ocean', value: 'blue', hex: '#3b82f6', tailwind: 'blue' },
-    { name: 'Nature', value: 'emerald', hex: '#10b981', tailwind: 'emerald' },
-    { name: 'Lavender', value: 'violet', hex: '#8b5cf6', tailwind: 'violet' },
+  const tabs = [
+    { id: 'profile', label: 'Profil', icon: User },
+    { id: 'preferences', label: 'Préférences', icon: Palette },
+    { id: 'security', label: 'Sécurité', icon: Shield },
+    { id: 'billing', label: 'Facturation', icon: DollarSign },
   ];
 
-  if (authLoading || profileLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505]">
-        <div className="text-center">
-          <Loader2 className="animate-spin text-white mx-auto mb-4" size={40} />
-          <p className="text-zinc-500">Chargement du profil...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505]">
-        <div className="text-center">
-          <AlertCircle className="text-brand-pink mx-auto mb-4" size={48} />
-          <p className="text-zinc-400 mb-4">Vous devez être connecté</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-white text-black px-6 py-2 rounded-xl font-semibold hover:bg-zinc-200"
-          >
-            Se connecter
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (profileError) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505] p-4">
-        <div className="text-center max-w-md">
-          <AlertCircle className="text-brand-pink mx-auto mb-4" size={48} />
-          <h2 className="text-xl font-display font-bold text-white mb-2">Erreur</h2>
-          <p className="text-zinc-400 mb-6">{profileError}</p>
-          <button
-            onClick={() => navigate('/dashboard/overview')}
-            className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
-          >
-            Retour au dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#050505] p-4">
-        <div className="text-center max-w-md">
-          <AlertCircle className="text-brand-yellow mx-auto mb-4" size={48} />
-          <h2 className="text-xl font-display font-bold text-white mb-2">Profil non trouvé</h2>
-          <p className="text-zinc-400 mb-6">
-            Vous devez d'abord compléter votre profil dans l'onboarding.
-          </p>
-          <button
-            onClick={() => navigate('/onboarding')}
-            className="bg-white text-black px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200"
-          >
-            Créer mon profil
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 flex flex-col bg-[#050505] min-h-0 overflow-x-hidden">
-      {/* Header */}
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-4 md:px-6 py-4 md:py-5 flex-shrink-0">
-        <div className="max-w-4xl mx-auto w-full">
-          <h1 className="text-xl md:text-2xl font-display font-bold text-white flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 glass rounded-xl flex items-center justify-center shrink-0">
-              <Settings className="text-brand-purple" size={18} />
-            </div>
-            <span className="truncate">Paramètres du Compte</span>
-          </h1>
-          <p className="text-zinc-500 text-xs md:text-sm mt-1">Gérez vos informations personnelles et préférences</p>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <div>
+        <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          Paramètres
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Gérez votre compte et vos préférences
+        </p>
+      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
-        <div className="max-w-4xl mx-auto w-full">
-          {/* Quick tools */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 glass rounded-2xl p-4 md:p-5 border border-white/5"
-          >
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="text-white font-semibold text-sm md:text-base">Outils</div>
-                <div className="text-zinc-500 text-xs md:text-sm">Care Sheets, liens rapides, etc.</div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => navigate('/dashboard/settings/care-sheets')}
-                  className="px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 text-sm whitespace-nowrap"
-                >
-                  Gérer mes Care Sheets
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const url = `${window.location.origin}/${profile.slug_profil}`;
-                      await navigator.clipboard.writeText(url);
-                      toast.success('Lien copié', { description: url });
-                    } catch {
-                      toast.error('Impossible de copier le lien');
-                    }
-                  }}
-                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 text-sm whitespace-nowrap"
-                  title="Copier le lien public"
-                >
-                  Copier lien public
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Messages */}
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-3 md:p-4 bg-brand-pink/10 border border-brand-pink/20 rounded-xl flex items-start gap-3"
+      <div className={`flex items-center gap-2 p-2 rounded-xl overflow-x-auto ${
+        isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+      }`}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg'
+                  : isDark
+                    ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
             >
-              <AlertCircle className="text-brand-pink shrink-0 mt-0.5" size={18} />
-              <p className="text-brand-pink text-xs md:text-sm flex-1 break-words">{error}</p>
-              <button onClick={() => setError(null)} className="text-brand-pink/60 hover:text-brand-pink shrink-0">
-                <X size={16} />
-              </button>
-            </motion.div>
-          )}
+              <Icon size={18} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-          {success && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-3 md:p-4 bg-brand-mint/10 border border-brand-mint/20 rounded-xl flex items-center gap-3"
-            >
-              <CheckCircle className="text-brand-mint shrink-0" size={18} />
-              <p className="text-brand-mint text-xs md:text-sm">Profil mis à jour avec succès !</p>
-            </motion.div>
-          )}
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {activeTab === 'profile' && (
+          <div className="space-y-6">
+            <div className={`rounded-2xl p-6 ${
+              isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Informations personnelles
+              </h3>
 
-          {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-            {/* Section: Informations de Base */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-brand-cyan/10 flex items-center justify-center">
-                  <User className="text-brand-cyan" size={20} />
+              <div className="flex items-center gap-6 mb-8">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                    JD
+                  </div>
+                  <button className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera size={24} className="text-white" />
+                  </button>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Informations de Base</h3>
-                  <p className="text-sm text-zinc-500">Vos informations publiques</p>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Nom du Studio <span className="text-brand-pink">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.nom_studio}
-                  onChange={(e) => setFormData({ ...formData, nom_studio: e.target.value })}
-                  required
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
-                  placeholder="Ex: Zonett Ink"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  URL publique (slug) <span className="text-brand-pink">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.slug_profil}
-                    onChange={(e) =>
-                      setFormData({ ...formData, slug_profil: normalizeSlug(e.target.value, '-') })
-                    }
-                    required
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors font-mono"
-                    placeholder="nom-du-studio"
-                  />
-                  {checkingSlug && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 className="animate-spin text-white/70" size={18} />
-                    </div>
-                  )}
-                  {!checkingSlug && slugAvailable === true && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <CheckCircle className="text-brand-mint" size={18} />
-                    </div>
-                  )}
-                  {!checkingSlug && slugAvailable === false && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <AlertCircle className="text-brand-pink" size={18} />
-                    </div>
-                  )}
-                </div>
-                <div className="text-xs text-zinc-600 mt-2 flex flex-wrap items-center gap-2">
-                  <span className="break-all">
-                    Votre vitrine:{' '}
-                    <span className="text-white font-mono break-all">
-                      {typeof window !== 'undefined'
-                        ? `${window.location.origin}/${formData.slug_profil || 'votre-slug'}`
-                        : `inkflow.app/${formData.slug_profil || 'votre-slug'}`}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const url = `${window.location.origin}/${formData.slug_profil || ''}`;
-                        await navigator.clipboard.writeText(url);
-                        toast.success('Copié !', { description: url });
-                      } catch {
-                        toast.error('Impossible de copier');
-                      }
-                    }}
-                    className="w-8 h-8 rounded-lg glass hover:bg-white/10 transition-colors flex items-center justify-center shrink-0"
-                    title="Copier le lien"
-                    aria-label="Copier le lien"
-                  >
-                    <Copy size={14} className="text-zinc-300" />
+                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    John Doe
+                  </h4>
+                  <p className="text-gray-500">Tatoueur professionnel</p>
+                  <button className="mt-2 text-sm text-violet-500 hover:text-violet-400 font-medium">
+                    Modifier la photo
                   </button>
-                  <span className="text-zinc-600 hidden sm:inline"> (l'ancien format </span>
-                  <span className="text-zinc-500 font-mono hidden sm:inline">/p/{formData.slug_profil || 'votre-slug'}</span>
-                  <span className="text-zinc-600 hidden sm:inline"> reste compatible)</span>
                 </div>
-                {slugError && (
-                  <p className="text-xs text-brand-pink mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} /> {slugError}
-                  </p>
-                )}
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Bio Instagram
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.bio_instagram}
-                  onChange={(e) => setFormData({ ...formData, bio_instagram: e.target.value })}
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
-                  placeholder="Tatoueur Lyon • Fineline & Blackwork • Agenda Ouvert 👇"
-                  maxLength={150}
-                />
-                <p className="text-xs text-zinc-600 mt-1">
-                  {formData.bio_instagram.length}/150 caractères
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Nom complet</label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <User size={18} className="text-gray-500" />
+                    <input
+                      type="text"
+                      defaultValue="John Doe"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Email</label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <Mail size={18} className="text-gray-500" />
+                    <input
+                      type="email"
+                      defaultValue="john@studio.com"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Téléphone</label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <Phone size={18} className="text-gray-500" />
+                    <input
+                      type="tel"
+                      defaultValue="+33 6 12 34 56 78"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Localisation</label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <MapPin size={18} className="text-gray-500" />
+                    <input
+                      type="text"
+                      defaultValue="Paris, France"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Consignes avant tatouage (email J-2)
-                </label>
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-500 mb-2">Bio</label>
                 <textarea
                   rows={4}
-                  value={formData.pre_tattoo_instructions}
-                  onChange={(e) => setFormData({ ...formData, pre_tattoo_instructions: e.target.value })}
-                  className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/30 transition-colors resize-none"
-                  placeholder={"Ex:\n- Pas d'alcool 24h avant\n- Bien manger avant le RDV\n- Hydratez votre peau\n- Dormez bien la veille"}
-                  maxLength={800}
+                  defaultValue="Tatoueur professionnel spécialisé dans le japonais traditionnel et le réalisme. +10 ans d'expérience."
+                  className={`w-full px-4 py-3 rounded-xl resize-none ${
+                    isDark
+                      ? 'bg-white/5 text-white placeholder-gray-500'
+                      : 'bg-gray-100 text-gray-900 placeholder-gray-400'
+                  } outline-none`}
                 />
-                <p className="text-xs text-zinc-600 mt-1">
-                  {formData.pre_tattoo_instructions.length}/800 caractères — ces consignes seront incluses dans le mail automatique envoyé 48h avant le RDV.
-                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Photo de Profil (Avatar)
-                </label>
-                <div className="flex items-center gap-4">
-                  {formData.avatarFile ? (
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(formData.avatarFile)}
-                        alt="Aperçu de l'avatar"
-                        className="w-20 h-20 rounded-full object-cover border-2 border-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, avatarFile: null })}
-                        className="absolute -top-2 -right-2 bg-brand-pink text-white rounded-full p-1 hover:bg-brand-pink/80 shadow-sm"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : formData.avatarUrl ? (
-                    <img
-                      src={formData.avatarUrl}
-                      alt="Avatar actuel"
-                      loading="lazy"
-                      className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full glass border-2 border-dashed border-white/20 flex items-center justify-center">
-                      <ImageIcon className="text-zinc-600" size={24} />
-                    </div>
-                  )}
-                  <label className="flex-1">
-                    <div className="flex items-center gap-2 glass rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/10 transition-colors">
-                      <Upload size={18} className="text-zinc-400" />
-                      <span className="text-sm text-zinc-300">
-                        {uploadingAvatar ? 'Upload...' : formData.avatarFile ? 'Changer' : 'Choisir une image'}
-                      </span>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      disabled={uploadingAvatar}
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-zinc-600 mt-2">PNG, JPG jusqu'à 2MB. Image carrée recommandée.</p>
+              <div className="mt-6 flex justify-end">
+                <button className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all flex items-center gap-2">
+                  <Save size={18} />
+                  Enregistrer les modifications
+                </button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Section: Préférences */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
-                  <Palette className="text-brand-purple" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Préférences</h3>
-                  <p className="text-sm text-zinc-500">Personnalisez votre expérience</p>
-                </div>
-              </div>
+        {activeTab === 'preferences' && (
+          <div className="space-y-6">
+            <div className={`rounded-2xl p-6 ${
+              isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Apparence
+              </h3>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-3">
-                  Thème de couleur (Page publique)
-                </label>
-                <div className="flex gap-3 flex-wrap">
-                  {themeOptions.map((theme) => (
-                    <button
-                      key={theme.value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, theme_color: theme.value })}
-                      className={`w-12 h-12 rounded-full border-2 transition-all relative ${
-                        formData.theme_color === theme.value
-                          ? 'border-white scale-110 shadow-lg'
-                          : 'border-transparent opacity-70 hover:opacity-100 hover:scale-105'
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Palette size={20} className="text-gray-500" />
+                    <div>
+                      <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        Thème sombre
+                      </p>
+                      <p className="text-sm text-gray-500">Activer le mode sombre</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={toggleTheme}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${
+                      isDark ? 'bg-violet-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <div
+                      className={`absolute w-6 h-6 bg-white rounded-full top-1 transition-transform ${
+                        isDark ? 'translate-x-7' : 'translate-x-1'
                       }`}
-                      style={{ backgroundColor: theme.hex }}
-                      title={theme.name}
-                    >
-                      {formData.theme_color === theme.value && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <CheckCircle className="text-white drop-shadow" size={18} />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                    />
+                  </button>
                 </div>
-                <p className="text-xs text-zinc-600 mt-2">
-                  Sélectionné: <span className="font-medium text-white">{themeOptions.find(t => t.value === formData.theme_color)?.name || 'Gold'}</span>
-                </p>
-              </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Couleurs personnalisées (optionnel)
-                </label>
-                <p className="text-xs text-zinc-600 mb-3">
-                  Si renseignées, elles sont utilisées pour le glow/gradient de votre vitrine (style Landing).
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <span className="text-xs md:text-sm text-white font-medium">Accent</span>
-                      <input
-                        type="color"
-                        value={formData.theme_accent_hex || '#fbbf24'}
-                        onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
-                        aria-label="Couleur accent"
-                      />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Globe size={20} className="text-gray-500" />
+                    <div>
+                      <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        Langue
+                      </p>
+                      <p className="text-sm text-gray-500">Français</p>
                     </div>
-                    <input
-                      type="text"
-                      value={formData.theme_accent_hex}
-                      onChange={(e) => setFormData({ ...formData, theme_accent_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
-                      placeholder="#FEE440"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, theme_accent_hex: '' })}
-                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
-                    >
-                      Réinitialiser
-                    </button>
                   </div>
-
-                  <div className="bg-[#050505] border border-white/10 rounded-xl md:rounded-2xl p-4 min-w-0">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <span className="text-xs md:text-sm text-white font-medium">Secondaire</span>
-                      <input
-                        type="color"
-                        value={formData.theme_secondary_hex || '#9b5de5'}
-                        onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-transparent border border-white/10 shrink-0"
-                        aria-label="Couleur secondaire"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={formData.theme_secondary_hex}
-                      onChange={(e) => setFormData({ ...formData, theme_secondary_hex: e.target.value })}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs md:text-sm focus:outline-none focus:border-white/30"
-                      placeholder="#9B5DE5"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, theme_secondary_hex: '' })}
-                      className="mt-2 text-xs text-zinc-500 hover:text-white transition-colors"
-                    >
-                      Réinitialiser
-                    </button>
-                  </div>
+                  <select className={`px-4 py-2 rounded-lg ${
+                    isDark ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}>
+                    <option>Français</option>
+                    <option>English</option>
+                    <option>Español</option>
+                  </select>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Pourcentage d'acompte
-                </label>
-                <div className="flex items-center gap-4">
+            <div className={`rounded-2xl p-6 ${
+              isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Notifications
+              </h3>
+
+              <div className="space-y-4">
+                {[
+                  { label: 'Nouvelles demandes', desc: 'Recevoir une notification pour chaque nouvelle demande' },
+                  { label: 'Rappels de RDV', desc: 'Recevoir des rappels 24h avant chaque rendez-vous' },
+                  { label: 'Paiements', desc: 'Notifications pour les paiements reçus' },
+                  { label: 'Messages clients', desc: 'Alertes pour les nouveaux messages' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Bell size={20} className="text-gray-500" />
+                      <div>
+                        <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {item.label}
+                        </p>
+                        <p className="text-sm text-gray-500">{item.desc}</p>
+                      </div>
+                    </div>
+                    <button className="relative w-14 h-8 rounded-full bg-violet-500">
+                      <div className="absolute w-6 h-6 bg-white rounded-full top-1 translate-x-7" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'security' && (
+          <div className="space-y-6">
+            <div className={`rounded-2xl p-6 ${
+              isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Changer le mot de passe
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Mot de passe actuel
+                  </label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <Lock size={18} className="text-gray-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                    <button onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff size={18} className="text-gray-500" /> : <Eye size={18} className="text-gray-500" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Nouveau mot de passe
+                  </label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <Lock size={18} className="text-gray-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Confirmer le mot de passe
+                  </label>
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                    isDark ? 'bg-white/5' : 'bg-gray-100'
+                  }`}>
+                    <Lock size={18} className="text-gray-500" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className={`bg-transparent outline-none w-full ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all">
+                  Mettre à jour le mot de passe
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'billing' && (
+          <div className="space-y-6">
+            <div className={`rounded-2xl p-6 ${
+              isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Informations de facturation
+              </h3>
+
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl ${
+                  isDark ? 'bg-violet-500/10 border border-violet-500/20' : 'bg-violet-50 border border-violet-200'
+                }`}>
+                  <p className={`text-sm ${isDark ? 'text-violet-400' : 'text-violet-600'}`}>
+                    Compte Stripe connecté ✓
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Les paiements sont traités via Stripe
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Nom de l'entreprise
+                  </label>
                   <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="10"
-                    value={formData.deposit_percentage}
-                    onChange={(e) => setFormData({ ...formData, deposit_percentage: parseInt(e.target.value) })}
-                    className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
+                    type="text"
+                    defaultValue="Studio Ink"
+                    className={`w-full px-4 py-3 rounded-xl ${
+                      isDark ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'
+                    } outline-none`}
                   />
-                  <span className="text-xl md:text-2xl font-display font-bold text-white w-12 md:w-16 text-right shrink-0">
-                    {formData.deposit_percentage}%
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs text-zinc-600 mt-2 flex-wrap gap-1">
-                  <span className="shrink-0">0%</span>
-                  <span className="shrink-0 hidden sm:inline">30% (Standard)</span>
-                  <span className="shrink-0 sm:hidden">30%</span>
-                  <span className="shrink-0">50%</span>
-                  <span className="shrink-0">100%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Section: Paiements Stripe */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <CreditCard className="text-amber-400" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Paiements Stripe</h3>
-                  <p className="text-sm text-zinc-500">Configurez votre compte bancaire pour recevoir les acomptes</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {profile?.stripe_onboarding_complete ? (
-                  <div className="p-4 bg-brand-mint/10 border border-brand-mint/20 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="text-brand-mint shrink-0 mt-0.5" size={20} />
-                      <div className="flex-1">
-                        <p className="text-brand-mint font-semibold text-sm mb-1">Compte Stripe actif</p>
-                        <p className="text-zinc-400 text-xs">
-                          Votre compte bancaire est configuré. Vous pouvez recevoir des paiements.
-                        </p>
-                        {profile.stripe_account_id && (
-                          <p className="text-zinc-600 text-xs mt-2 font-mono">
-                            Compte: {profile.stripe_account_id.substring(0, 20)}...
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                    <div className="flex items-start gap-3 mb-4">
-                      <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={20} />
-                      <div className="flex-1">
-                        <p className="text-amber-400 font-semibold text-sm mb-1">Configuration requise</p>
-                        <p className="text-zinc-400 text-xs">
-                          Connectez votre compte bancaire pour recevoir les acomptes de vos clients.
-                        </p>
-                      </div>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      type="button"
-                      onClick={handleStripeConnect}
-                      disabled={stripeConnecting}
-                      className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-white font-semibold py-3 rounded-xl hover:from-amber-500 hover:to-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {stripeConnecting ? (
-                        <>
-                          <Loader2 className="animate-spin" size={18} />
-                          Configuration en cours...
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink size={18} />
-                          Configurer les virements
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Section: Informations de Compte */}
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-xl md:rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6 border-b border-white/5 pb-3 md:pb-4">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-mint/10 flex items-center justify-center shrink-0">
-                  <Link2 className="text-brand-mint" size={18} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-base md:text-lg font-semibold text-white">Informations de Compte</h3>
-                  <p className="text-xs md:text-sm text-zinc-500">Informations de connexion</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Email</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 text-xs md:text-sm break-all">
-                    {user?.email}
-                  </div>
-                  <p className="text-xs text-zinc-600 mt-1">L'email ne peut pas être modifié ici</p>
                 </div>
 
                 <div>
-                  <label className="block text-xs md:text-sm font-medium text-zinc-500 mb-1">Lien de votre profil</label>
-                  <div className="bg-[#050505] border border-white/10 rounded-xl px-3 md:px-4 py-2 md:py-3 text-zinc-400 font-mono text-xs md:text-sm break-all">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/${profile.slug_profil}` : `inkflow.app/${profile.slug_profil}`}
-                  </div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    SIRET
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue="123 456 789 00012"
+                    className={`w-full px-4 py-3 rounded-xl ${
+                      isDark ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'
+                    } outline-none`}
+                  />
                 </div>
+
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all flex items-center justify-center gap-2">
+                  <Save size={18} />
+                  Enregistrer
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard/overview')}
-                className="flex-1 glass text-zinc-300 font-medium py-3 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={saving || uploadingAvatar}
-                className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} />
-                    Sauvegarde...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Sauvegarder
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 };
