@@ -1,537 +1,304 @@
-import React, { useState, lazy, Suspense } from 'react';
-import { Outlet, useNavigate, NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-// Recharts lazy loaded for code splitting
-const AreaChart = lazy(() => import('recharts').then(m => ({ default: m.AreaChart })));
-const Area = lazy(() => import('recharts').then(m => ({ default: m.Area })));
-const ResponsiveContainer = lazy(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })));
-import { 
-  Calendar, DollarSign, Users, MessageSquare, 
-  FileSignature, PieChart, LayoutGrid, Settings, 
-  Search, Bell, MoreVertical, CheckCircle, XCircle, 
-  Megaphone, Clock, MapPin, ChevronRight, FileText,
-  AlertTriangle, ArrowUpRight, Instagram, Plus,
-  Save, Palette, CreditCard, Smartphone, Shield, Mail, LogOut,
-  Menu, X, Share2, Sparkles
+import {
+  LayoutDashboard,
+  Calendar,
+  MessageSquare,
+  Image,
+  Users,
+  Wallet,
+  Settings,
+  Bell,
+  Search,
+  Moon,
+  Sun,
+  ChevronDown,
+  LogOut,
+  Zap,
+  X,
+  Menu,
 } from 'lucide-react';
+import { useDashboardTheme } from '../../contexts/DashboardThemeContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useArtistProfile } from '../../contexts/ArtistProfileContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
-import { PWAInstallPrompt, PWAInstallButton } from '../PWAInstallPrompt';
-import { Skeleton } from '../common/Skeleton';
+import { PWAInstallPrompt } from '../PWAInstallPrompt';
 
-// Mock Data for Revenue Sparkline
-const REVENUE_DATA = [
-  { name: 'Lun', value: 1200 },
-  { name: 'Mar', value: 2100 },
-  { name: 'Mer', value: 1800 },
-  { name: 'Jeu', value: 2400 },
-  { name: 'Ven', value: 3200 },
-  { name: 'Sam', value: 4250 },
-  { name: 'Dim', value: 4250 },
+const navItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard/overview', gradient: 'from-violet-500 to-purple-500' },
+  { icon: Calendar, label: 'Calendrier', path: '/dashboard/calendar', gradient: 'from-blue-500 to-cyan-500' },
+  { icon: MessageSquare, label: 'Demandes', path: '/dashboard/requests', gradient: 'from-pink-500 to-rose-500', badgeKey: 'pending' },
+  { icon: Image, label: 'Flashs', path: '/dashboard/flashs', gradient: 'from-emerald-500 to-teal-500' },
+  { icon: Users, label: 'Clients', path: '/dashboard/clients', gradient: 'from-orange-500 to-amber-500' },
+  { icon: Wallet, label: 'Finance', path: '/dashboard/finance', gradient: 'from-green-500 to-emerald-500' },
+  { icon: Settings, label: 'Paramètres', path: '/dashboard/settings', gradient: 'from-slate-500 to-gray-500' },
 ];
 
 export const DashboardLayout: React.FC = () => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useDashboardTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { signOut, user } = useAuth();
   const { profile } = useArtistProfile();
-  const navigate = useNavigate();
-  const { loading: dataLoading, stats, recentBookings, pendingProjects } = useDashboardData();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { pendingProjects } = useDashboardData();
 
-  // Prevent body scroll when drawer is open
-  React.useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isMobileMenuOpen]);
+  const isDark = theme === 'dark';
 
-  const handleSignOut = async () => {
+  useEffect(() => {
+    if (mobileMenuOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
+
+  const handleLogout = async () => {
     await signOut();
     navigate('/login');
   };
 
-  // Sidebar Item with elegant styling
-  const SidebarItem = ({ to, icon: Icon, label, count }: { to: string, icon: any, label: string, count?: number }) => (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-          isActive
-          ? 'bg-white/10 text-white border-l-2 border-white font-semibold' 
-          : 'text-zinc-500 hover:text-white hover:bg-white/5'
-        }`
-      }
-      onClick={() => setIsMobileMenuOpen(false)}
-    >
-      <div className="flex items-center gap-3">
-        <Icon size={18} />
-        <span>{label}</span>
-      </div>
-      {count && count > 0 && (
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-black">
-          {count}
-        </span>
-      )}
-    </NavLink>
-  );
+  const displayName = profile?.nom_studio || user?.email?.split('@')[0] || 'Pro';
+  const displayEmail = user?.email || '';
+  const initial = (profile?.nom_studio?.[0] || user?.email?.[0] || 'P').toUpperCase();
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white font-sans overflow-hidden">
-      {/* PWA Install Prompt */}
+    <div className={`min-h-screen ${isDark ? 'bg-[#0f0f23]' : 'bg-gray-50'} transition-colors duration-300`}>
       <PWAInstallPrompt />
-      
-      {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 glass z-50 md:hidden flex items-center justify-between px-4 border-b border-white/5">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
-          aria-label="Ouvrir le menu"
-        >
-          <Menu size={24} />
-        </motion.button>
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-display font-bold tracking-tight text-white">
-            INK<span className="text-zinc-500">FLOW</span>
-          </span>
-        </div>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0">
-          {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
-        </div>
-      </header>
 
-      {/* Mobile Drawer */}
-      <AnimatePresence mode="wait">
-        {isMobileMenuOpen && (
+      {/* Sidebar Desktop */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? '80px' : '280px' }}
+        className={`fixed left-0 top-0 bottom-0 ${
+          isDark ? 'bg-[#1a1a2e] border-white/5' : 'bg-white border-gray-200'
+        } border-r hidden lg:flex flex-col transition-colors duration-300 z-50`}
+      >
+        <div className={`h-20 flex items-center justify-between px-6 border-b ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
+          <motion.div animate={{ opacity: sidebarCollapsed ? 0 : 1 }} className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Zap size={20} className="text-white" />
+            </div>
+            {!sidebarCollapsed && (
+              <div>
+                <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>InkFlow</h1>
+                <p className="text-xs text-gray-500">Studio Pro</p>
+              </div>
+            )}
+          </motion.div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`p-2 rounded-lg ${isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+          >
+            <Menu size={18} />
+          </button>
+        </div>
+
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const badge = item.badgeKey === 'pending' ? pendingProjects.length : undefined;
+            return (
+              <NavLink key={item.path} to={item.path} className="block">
+                <motion.div
+                  whileHover={{ x: 4 }}
+                  className={`relative flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? isDark
+                        ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 text-violet-400'
+                        : 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-600'
+                      : isDark
+                        ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-gradient-to-b ${item.gradient}`}
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <div className={`shrink-0 ${isActive ? 'scale-110' : ''} transition-transform`}>
+                    <item.icon size={20} />
+                  </div>
+                  {!sidebarCollapsed && (
+                    <span className="font-medium text-sm flex-1">{item.label}</span>
+                  )}
+                  {!sidebarCollapsed && badge !== undefined && badge > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full">
+                      {badge}
+                    </span>
+                  )}
+                </motion.div>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className={`p-4 border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
+          <div className={`flex items-center gap-3 p-3 rounded-xl ${
+            isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100'
+          } transition-colors cursor-pointer`}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold shrink-0">
+              {initial}
+            </div>
+            {!sidebarCollapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+                </div>
+                <ChevronDown size={16} className="text-gray-400 shrink-0" />
+              </>
+            )}
+          </div>
+        </div>
+      </motion.aside>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-md z-[60] md:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
             />
-            {/* Drawer */}
             <motion.aside
-              initial={{ x: '-100%' }}
+              initial={{ x: -300 }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ 
-                type: 'spring', 
-                damping: 30, 
-                stiffness: 300,
-                mass: 0.8
-              }}
-              className="fixed top-0 left-0 bottom-0 w-[85vw] max-w-sm bg-[#0a0a0a] border-r border-white/10 z-[70] md:hidden flex flex-col shadow-2xl"
+              exit={{ x: -300 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className={`fixed left-0 top-0 bottom-0 w-80 ${isDark ? 'bg-[#1a1a2e]' : 'bg-white'} z-50 lg:hidden overflow-y-auto border-r ${isDark ? 'border-white/5' : 'border-gray-200'}`}
             >
-              {/* Drawer Header */}
-              <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-                <span className="text-lg md:text-xl font-display font-bold tracking-tight text-white">
-                  INK<span className="text-zinc-500">FLOW</span>
-                </span>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 -mr-2 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                  aria-label="Fermer le menu"
-                >
-                  <X size={20} />
-                </motion.button>
-              </div>
-
-              {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 scrollbar-hide">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={async () => {
-                      if (!profile?.slug_profil || typeof window === 'undefined') return;
-                      const url = `${window.location.origin}/${profile.slug_profil}`;
-                      try {
-                        if (typeof navigator !== 'undefined' && navigator.share) {
-                          await navigator.share({
-                            title: `${profile.nom_studio} - InkFlow`,
-                            text: `Découvrez mes flashs disponibles`,
-                            url: url,
-                          });
-                        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                          await navigator.clipboard.writeText(url);
-                          alert('Lien copié !');
-                        }
-                      } catch (err) {
-                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                          await navigator.clipboard.writeText(url);
-                          alert('Lien copié !');
-                        }
-                      }
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl text-zinc-300 font-medium hover:bg-white/10 transition-colors text-sm"
-                  >
-                    <Share2 size={18} />
-                    <span>Partager mon lien</span>
-                  </motion.button>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 }}
-                >
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      navigate('/dashboard/flashs');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-white text-black rounded-xl font-semibold hover:bg-zinc-100 transition-colors text-sm"
-                  >
-                    <Plus size={18} />
-                    <span>Nouveau Flash</span>
-                  </motion.button>
-                </motion.div>
-                <div className="pt-4 border-t border-white/5 space-y-1">
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <SidebarItem to="/dashboard/overview" icon={LayoutGrid} label="Dashboard" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.25 }}
-                  >
-                    <SidebarItem to="/dashboard/calendar" icon={Calendar} label="Calendrier" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <SidebarItem to="/dashboard/requests" icon={MessageSquare} label="Demandes" count={pendingProjects.length} />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.35 }}
-                  >
-                    <SidebarItem to="/dashboard/flashs" icon={Clock} label="Mes Flashs" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <SidebarItem to="/dashboard/clients" icon={Users} label="Clients & Docs" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.45 }}
-                  >
-                    <SidebarItem to="/dashboard/finance" icon={PieChart} label="Finance" />
-                  </motion.div>
-                </div>
-                <div className="pt-4 border-t border-white/5 space-y-2">
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.55 }}
-                  >
-                    <PWAInstallButton onClose={() => setIsMobileMenuOpen(false)} />
-                  </motion.div>
-                  <motion.button
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={async () => {
-                      await handleSignOut();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    <LogOut size={18} />
-                    <span>Déconnexion</span>
-                  </motion.button>
-                </div>
-              </div>
-
-              {/* Drawer Footer */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.65 }}
-                className="p-4 border-t border-white/5 shrink-0"
-              >
-                <div className="flex items-center gap-3 px-4 glass p-3 rounded-xl">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                    {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                      <Zap size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>InkFlow</h1>
+                      <p className="text-xs text-gray-500">Studio Pro</p>
+                    </div>
                   </div>
-                  <div className="text-sm overflow-hidden flex-1 min-w-0">
-                    <div className="font-semibold truncate">{profile?.nom_studio || user?.email || 'Artiste'}</div>
-                    <div className="text-xs text-emerald-400 flex items-center gap-1">● En ligne</div>
-                  </div>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`p-2 rounded-lg ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-              </motion.div>
+
+                <nav className="space-y-1">
+                  {navItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    const badge = item.badgeKey === 'pending' ? pendingProjects.length : undefined;
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all ${
+                          isActive
+                            ? isDark
+                              ? 'bg-gradient-to-r from-violet-500/10 to-purple-500/10 text-violet-400'
+                              : 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-600'
+                            : isDark
+                              ? 'text-gray-400 hover:bg-white/5'
+                              : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <item.icon size={20} />
+                        <span className="font-medium text-sm flex-1">{item.label}</span>
+                        {badge !== undefined && badge > 0 && (
+                          <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full">
+                            {badge}
+                          </span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </nav>
+              </div>
             </motion.aside>
           </>
         )}
       </AnimatePresence>
-      
-      {/* COLUMN 1: Left Navigation Sidebar */}
-      <aside className="w-64 bg-[#0a0a0a] border-r border-white/5 hidden md:flex flex-col flex-shrink-0 z-20">
-        <div className="p-6 border-b border-white/5">
-          <span className="text-xl font-display font-bold tracking-tight text-white">
-            INK<span className="text-zinc-500">FLOW</span>
-          </span>
-        </div>
 
-        <div className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <SidebarItem to="/dashboard/overview" icon={LayoutGrid} label="Dashboard" />
-          <SidebarItem to="/dashboard/calendar" icon={Calendar} label="Calendrier" />
-          <SidebarItem to="/dashboard/requests" icon={MessageSquare} label="Demandes" count={pendingProjects.length} />
-          <SidebarItem to="/dashboard/flashs" icon={Clock} label="Mes Flashs" />
-          <SidebarItem to="/dashboard/clients" icon={Users} label="Clients & Docs" />
-          <SidebarItem to="/dashboard/finance" icon={PieChart} label="Finance" />
-        </div>
+      {/* Main Content */}
+      <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[280px]'} transition-all duration-300`}>
+        <header className={`sticky top-0 z-30 h-20 ${
+          isDark ? 'bg-[#0f0f23]/80 border-white/5' : 'bg-white/80 border-gray-200'
+        } backdrop-blur-xl border-b`}>
+          <div className="h-full px-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className={`lg:hidden p-2 rounded-lg ${
+                  isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <Menu size={20} />
+              </button>
 
-        <div className="p-4 border-t border-white/5">
-          <SidebarItem to="/dashboard/settings" icon={Settings} label="Paramètres" />
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center gap-3 px-4 glass p-3 rounded-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-sm font-bold text-white">
-                {profile?.nom_studio?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
-              </div>
-              <div className="text-sm overflow-hidden flex-1">
-                <div className="font-semibold truncate">{profile?.nom_studio || user?.email || 'Artiste'}</div>
-                <div className="text-xs text-emerald-400 flex items-center gap-1">● En ligne</div>
+              <div className={`hidden md:flex items-center gap-3 px-4 py-2.5 rounded-xl ${
+                isDark ? 'bg-white/5' : 'bg-gray-100'
+              } w-80`}>
+                <Search size={18} className="text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Rechercher..."
+                  className={`bg-transparent outline-none w-full text-sm ${
+                    isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
+                  }`}
+                />
+                <kbd className={`px-2 py-1 text-xs rounded ${isDark ? 'bg-white/10 text-gray-400' : 'bg-white text-gray-500'}`}>
+                  ⌘K
+                </kbd>
               </div>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              <LogOut size={18} />
-              <span>Déconnexion</span>
-            </button>
-          </div>
-        </div>
-      </aside>
 
-      {/* CENTER & RIGHT CONTENT WRAPPER */}
-      <main className="flex-1 flex overflow-hidden overflow-x-hidden relative pb-16 md:pb-0 pt-16 md:pt-0">
-        
-        {/* COLUMN 2: Central Main View (Dynamic Content via Outlet) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#050505] overflow-x-hidden">
+            <div className="flex items-center gap-2">
+              <button className={`relative p-2.5 rounded-xl ${
+                isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+              } transition-colors`}>
+                <Bell size={20} />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#0f0f23]" />
+              </button>
+
+              <button
+                onClick={toggleTheme}
+                className={`p-2.5 rounded-xl ${
+                  isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                } transition-colors`}
+              >
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              <div className={`hidden sm:block w-px h-8 ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} />
+
+              <button
+                onClick={handleLogout}
+                className={`hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl ${
+                  isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-600'
+                } transition-colors`}
+              >
+                <LogOut size={18} />
+                <span className="text-sm font-medium">Déconnexion</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-6">
           <Outlet />
-        </div>
-
-        {/* COLUMN 3: Right Sidebar (Actionable Widgets) */}
-        <aside className="w-80 bg-[#0a0a0a] border-l border-white/5 flex flex-col overflow-y-auto flex-shrink-0 hidden xl:flex">
-          {/* Widget 1: Financial Performance */}
-          <div className="p-6 border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Performance</h3>
-              <button className="text-zinc-600 hover:text-white transition-colors"><MoreVertical size={16}/></button>
-            </div>
-            <div className="glass rounded-2xl p-5 relative overflow-hidden">
-              <div className="flex justify-between items-end mb-2 relative z-10">
-                <div>
-                  <div className="text-3xl font-display font-bold text-white">
-                    {dataLoading ? '...' : `${stats.totalRevenue.toFixed(0)}€`}
-                  </div>
-                  <div className="text-xs text-emerald-400 font-medium flex items-center gap-1 mt-1">
-                    <ArrowUpRight size={12}/> Revenus totaux
-                  </div>
-                </div>
-                <div className="p-3 bg-white/5 rounded-xl">
-                  <DollarSign size={20} className="text-zinc-400"/>
-                </div>
-              </div>
-              <div className="h-16 -mx-5 -mb-5 opacity-40">
-                <Suspense fallback={<div className="h-full w-full bg-white/5 rounded animate-pulse" />}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={REVENUE_DATA}>
-                      <defs>
-                        <linearGradient id="colorRevenueSmall" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="value" stroke="#ffffff" strokeWidth={1.5} fill="url(#colorRevenueSmall)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </Suspense>
-              </div>
-              <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span className="text-xs text-zinc-500">
-                  {stats.upcomingBookings} RDV à venir • {stats.totalFlashs} Flashs
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Widget 2: Urgent Tasks */}
-          <div className="p-6 border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                À Faire 
-                {pendingProjects.length > 0 && (
-                  <span className="bg-white text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {pendingProjects.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <div className="space-y-3">
-              {dataLoading ? (
-                <>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-xl glass">
-                      <Skeleton className="mt-0.5 w-4 h-4 rounded" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-2/3" />
-                        <Skeleton className="h-3 w-40" />
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : pendingProjects.length === 0 ? (
-                <div className="text-center py-4 text-zinc-600 text-sm">
-                  Aucun projet en attente
-                </div>
-              ) : (
-                pendingProjects.slice(0, 3).map((project) => (
-                  <motion.div
-                    key={project.id}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex items-start gap-3 p-3 rounded-xl glass hover:bg-white/10 transition-colors group cursor-pointer"
-                  >
-                    <div className="mt-0.5 w-4 h-4 rounded border border-zinc-600 flex items-center justify-center group-hover:border-white transition-colors"></div>
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        {project.body_part} • {project.style}
-                      </div>
-                      <div className="text-xs text-zinc-600">
-                        {project.client_email} • {new Date(project.created_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-                    
-              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <div className="flex items-start gap-3 mb-3">
-                  <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-semibold text-amber-400">2 Décharges Manquantes</div>
-                    <div className="text-xs text-amber-400/70">Pour les RDV de demain</div>
-                  </div>
-                </div>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => alert('Fonctionnalité bientôt disponible')}
-                  className="w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-semibold rounded-lg transition-colors"
-                >
-                  Renvoyer Rappel SMS
-                </motion.button>
-              </div>
-            </div>
-          </div>
-
-          {/* Widget 3: Activity Feed */}
-          <div className="p-6 flex-1">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Activité Récente</h3>
-            <div className="space-y-6 relative">
-              <div className="absolute top-2 left-2 bottom-0 w-px bg-white/5"></div>
-              
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-emerald-400"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">À l'instant</div>
-                <div className="text-sm text-zinc-400"><span className="font-semibold text-white">Julie M.</span> a réservé le Flash <span className="text-white">#42</span>.</div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-white"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">Il y a 15 min</div>
-                <div className="text-sm text-zinc-400">Virement Stripe de <span className="font-semibold text-white">350€</span> reçu.</div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="relative pl-6"
-              >
-                <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-[#0a0a0a] border-2 border-zinc-700"></div>
-                <div className="text-xs text-zinc-600 mb-0.5">Il y a 2h</div>
-                <div className="text-sm text-zinc-400">Nouvelle demande de projet perso reçue.</div>
-              </motion.div>
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 glass z-50 md:hidden">
-        <div className="grid grid-cols-5 h-16">
-          {[
-            { to: '/dashboard/overview', icon: LayoutGrid, label: 'Accueil' },
-            { to: '/dashboard/calendar', icon: Calendar, label: 'Agenda' },
-            { to: '/dashboard/requests', icon: MessageSquare, label: 'Demandes', badge: pendingProjects.length },
-            { to: '/dashboard/flashs', icon: Clock, label: 'Flashs' },
-            { to: '/dashboard/settings', icon: Settings, label: 'Profil' },
-          ].map((item) => (
-            <motion.div key={item.to} whileTap={{ scale: 0.9 }}>
-              <NavLink
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex flex-col items-center justify-center gap-1 h-full transition-colors relative ${
-                    isActive ? 'text-white' : 'text-zinc-600'
-                  }`
-                }
-              >
-                <item.icon size={20} />
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute top-2 right-1/2 translate-x-3 w-2 h-2 bg-white rounded-full"></span>
-                )}
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </NavLink>
-            </motion.div>
-          ))}
-        </div>
-      </nav>
+        </main>
+      </div>
     </div>
   );
 };

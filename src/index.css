@@ -14,16 +14,18 @@
   --font-family-display: 'Syne', system-ui, sans-serif;
   --font-family-serif: 'Cinzel', ui-serif, Georgia, serif;
   --font-family-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-playfair: 'Playfair Display', Georgia, serif;
 }
 
-/* Custom styles */
-html, body {
+/* Custom styles - évite l'écran blanc si le JS charge en retard */
+html, body, #root {
   background-color: #050505;
   color: #fafafa;
   font-family: 'Space Grotesk', system-ui, sans-serif;
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  min-height: 100vh;
 }
 
 .glass {

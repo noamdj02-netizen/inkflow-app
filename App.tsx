@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
+import { DashboardThemeProvider } from './contexts/DashboardThemeContext';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -78,7 +79,7 @@ const App: React.FC = () => {
                   {/* Demo Routes - Lazy loaded */}
                   <Route path="/client" element={<ClientHome onNavigate={() => {}} />} />
                   <Route path="/flashs" element={<FlashGallery />} />
-                  <Route path="/project" element={<CustomProjectForm />} />
+                  <Route path="/project" element={<CustomProjectForm artistId="" />} />
                   
                   {/* Protected Routes - Lazy loaded */}
                   <Route
@@ -95,7 +96,9 @@ const App: React.FC = () => {
                     path="/dashboard"
                     element={
                       <ProtectedRoute>
-                        <DashboardLayout />
+                        <DashboardThemeProvider>
+                          <DashboardLayout />
+                        </DashboardThemeProvider>
                       </ProtectedRoute>
                     }
                   >
