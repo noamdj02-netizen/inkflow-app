@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { DashboardDemo3D } from './DashboardDemo3D';
+
+const DashboardDemo = lazy(() =>
+  import('./DashboardDemo').then((m) => ({ default: m.DashboardDemo }))
+);
 
 export function HeroSection() {
   return (
@@ -58,7 +61,7 @@ export function HeroSection() {
         </motion.div>
       </div>
 
-      {/* Dashboard Demo 3D : perspective + levitation + ombre colorée */}
+      {/* Dashboard Demo : interactive demo, lazy-loaded */}
       <motion.div
         initial={{ opacity: 0, y: 64 }}
         animate={{ opacity: 1, y: 0 }}
@@ -66,34 +69,29 @@ export function HeroSection() {
         className="mt-14 md:mt-20 mx-auto max-w-5xl px-4 relative z-10"
       >
         <motion.div
-          animate={{
-            y: [0, -8, 0],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          className="relative w-full"
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          className="relative w-full max-w-4xl mx-auto"
           style={{
-            perspective: '1200px',
-            transformStyle: 'preserve-3d',
+            marginBottom: '-5rem',
+            boxShadow: '0 0 80px -20px rgba(99, 102, 241, 0.35), 0 0 40px -20px rgba(139, 92, 246, 0.2)',
+            borderRadius: '1rem',
           }}
         >
-          <div
-            className="relative w-full max-w-4xl mx-auto"
-            style={{
-              transform: 'perspective(1200px) rotateX(4deg) rotateY(-2deg)',
-              boxShadow: '0 0 100px -20px rgba(99, 102, 241, 0.35), 0 0 60px -30px rgba(139, 92, 246, 0.2), 0 50px 80px -20px rgba(0,0,0,0.6)',
-              marginBottom: '-5rem',
-            }}
+          <Suspense
+            fallback={
+              <div
+                className="aspect-video w-full rounded-2xl border border-white/10 bg-[#0d0d0d] animate-pulse"
+                style={{
+                  boxShadow: '0 0 80px -20px rgba(99, 102, 241, 0.25)',
+                }}
+              />
+            }
           >
-            <div className="aspect-[16/10] w-full flex">
-              <div className="w-full h-full min-h-0">
-                <DashboardDemo3D />
-              </div>
+            <div className="aspect-video w-full">
+              <DashboardDemo />
             </div>
-          </div>
+          </Suspense>
         </motion.div>
       </motion.div>
     </section>

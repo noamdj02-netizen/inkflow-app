@@ -93,9 +93,10 @@ export const DashboardCareSheets: React.FC = () => {
           content: `Après votre séance :\n\n- Gardez le pansement X heures\n- Lavez doucement à l’eau tiède + savon neutre\n- Appliquez une fine couche de crème\n- Évitez soleil/piscine 2 semaines\n`,
         })
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Erreur lors de la création du template');
       setTemplates(prev => [data, ...prev]);
       setSelectedId(data.id);
       toast.success('Template créé');
@@ -125,9 +126,10 @@ export const DashboardCareSheets: React.FC = () => {
         .eq('id', selected.id)
         .eq('artist_id', user.id)
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Template introuvable');
       setTemplates(prev => prev.map(t => (t.id === data.id ? data : t)));
       toast.success('Template enregistré');
     } catch (e) {

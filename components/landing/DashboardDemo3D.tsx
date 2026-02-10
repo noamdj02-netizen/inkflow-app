@@ -44,7 +44,7 @@ export function DashboardDemo3D() {
       {/* Sidebar */}
       <aside className="w-14 sm:w-16 flex-shrink-0 bg-[#0a0a0a] border-r border-white/5 flex flex-col">
         <div className="p-3 border-b border-white/5">
-          <span className="text-sm font-bold tracking-tight text-white">INK</span>
+          <span className="text-sm font-display font-bold tracking-tight text-white">INK<span className="text-zinc-500">FLOW</span></span>
         </div>
         <div className="flex-1 py-2 space-y-0.5">
           {navItems.map((item, i) => (

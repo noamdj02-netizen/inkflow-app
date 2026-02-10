@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   Calendar,
@@ -12,9 +13,19 @@ import {
   XCircle,
   AlertCircle,
   MoreVertical,
+  X,
+  AlertTriangle,
+  Bell,
+  CreditCard,
+  MessageSquare,
+  Trophy,
+  Globe,
 } from 'lucide-react';
 import { useDashboardTheme } from '../../contexts/DashboardThemeContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useAuth } from '../../hooks/useAuth';
+import { useArtistProfile } from '../../contexts/ArtistProfileContext';
+import { supabase } from '../../services/supabase';
 import {
   AreaChart,
   Area,
@@ -28,6 +39,24 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { Booking } from '../../types/supabase';
+
+// --- Types pour alertes ---
+interface DashboardAlert {
+  id: string;
+  type: 'warning' | 'info' | 'urgent';
+  icon: typeof AlertTriangle;
+  message: string;
+  cta: string;
+  link: string;
+}
+
+// --- Types pour top clients ---
+interface TopClient {
+  clientName: string;
+  clientEmail: string;
+  totalSpent: number;
+  bookingsCount: number;
+}
 
 // Données mock pour le graphique revenus (6 mois) - à remplacer par des données réelles si l'API fournit une série mensuelle
 const defaultRevenueData = [
@@ -58,7 +87,185 @@ function getRevenueChartData(totalRevenue: number): { month: string; revenue: nu
 export const DashboardOverview: React.FC = () => {
   const { theme } = useDashboardTheme();
   const { stats, recentBookings, loading } = useDashboardData();
+  const { user } = useAuth();
+  const { profile } = useArtistProfile();
+  const navigate = useNavigate();
   const isDark = theme === 'dark';
+
+  // --- Alerts state ---
+  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+
+  // --- Top 5 Clients state ---
+  const [topClients, setTopClients] = useState<TopClient[]>([]);
+
+  // --- Client count state ---
+  const [totalClients, setTotalClients] = useState<number | null>(null);
+
+  // Fetch alerts from Supabase
+  const fetchAlerts = useCallback(async () => {
+    if (!user) return;
+    const newAlerts: DashboardAlert[] = [];
+
+    try {
+      // 1. Bookings confirmés sans acompte payé
+      const { data: unpaidDeposits } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('artist_id', user.id)
+        .eq('statut_booking', 'confirmed')
+        .eq('statut_paiement', 'pending');
+
+      if (unpaidDeposits && unpaidDeposits.length > 0) {
+        newAlerts.push({
+          id: 'unpaid-deposits',
+          type: 'warning',
+          icon: CreditCard,
+          message: `${unpaidDeposits.length} RDV sans acompte payé`,
+          cta: 'Voir les finances',
+          link: '/dashboard/finance',
+        });
+      }
+
+      // 2. Demandes en attente depuis plus de 3 jours
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const { data: stalePending } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('artist_id', user.id)
+        .in('statut', ['inquiry', 'pending'])
+        .lt('created_at', threeDaysAgo.toISOString());
+
+      if (stalePending && stalePending.length > 0) {
+        newAlerts.push({
+          id: 'stale-requests',
+          type: 'urgent',
+          icon: MessageSquare,
+          message: `${stalePending.length} demande${stalePending.length > 1 ? 's' : ''} en attente depuis plus de 3 jours`,
+          cta: 'Voir les demandes',
+          link: '/dashboard/requests',
+        });
+      }
+
+      // 3. RDV dans les 24 prochaines heures
+      const now = new Date();
+      const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const { data: upcoming24h } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('artist_id', user.id)
+        .in('statut_booking', ['confirmed', 'pending'])
+        .gte('date_debut', now.toISOString())
+        .lt('date_debut', in24h.toISOString());
+
+      if (upcoming24h && upcoming24h.length > 0) {
+        const isToday = (d: Date) => {
+          const t = new Date();
+          return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+        };
+        const label = isToday(now) ? "aujourd'hui" : 'dans les 24h';
+        newAlerts.push({
+          id: 'upcoming-24h',
+          type: 'info',
+          icon: Bell,
+          message: `${upcoming24h.length} RDV prévu${upcoming24h.length > 1 ? 's' : ''} ${label}`,
+          cta: 'Voir le calendrier',
+          link: '/dashboard/calendar',
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+    }
+
+    // 4. Page publique non configurée
+    if (!profile?.slug_profil) {
+      newAlerts.push({
+        id: 'no-public-page',
+        type: 'warning',
+        icon: Globe,
+        message: 'Votre vitrine publique n\'est pas encore active. Configurez-la pour que vos clients puissent réserver.',
+        cta: 'Configurer ma vitrine',
+        link: '/dashboard/settings',
+      });
+    }
+
+    setAlerts(newAlerts);
+  }, [user, profile]);
+
+  // Fetch top 5 clients
+  const fetchTopClients = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: bookingsRaw } = await supabase
+        .from('bookings')
+        .select('client_email, client_name, prix_total, statut_paiement')
+        .eq('artist_id', user.id)
+        .in('statut_paiement', ['deposit_paid', 'fully_paid']);
+
+      const bookingsData = bookingsRaw as { client_email: string; client_name: string | null; prix_total: number; statut_paiement: string }[] | null;
+
+      if (!bookingsData || bookingsData.length === 0) {
+        setTopClients([]);
+        return;
+      }
+
+      // Agréger par client_email
+      const clientMap = new Map<string, { name: string; total: number; count: number }>();
+      for (const b of bookingsData) {
+        const existing = clientMap.get(b.client_email) || { name: b.client_name || b.client_email, total: 0, count: 0 };
+        existing.total += b.prix_total || 0;
+        existing.count += 1;
+        if (b.client_name && existing.name === b.client_email) existing.name = b.client_name;
+        clientMap.set(b.client_email, existing);
+      }
+
+      const sorted = Array.from(clientMap.entries())
+        .map(([email, data]) => ({
+          clientEmail: email,
+          clientName: data.name,
+          totalSpent: data.total / 100, // centimes → euros
+          bookingsCount: data.count,
+        }))
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 5);
+
+      setTopClients(sorted);
+    } catch (err) {
+      console.error('Error fetching top clients:', err);
+    }
+  }, [user]);
+
+  // Fetch distinct client count
+  const fetchClientCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: clientData } = await supabase
+        .from('bookings')
+        .select('client_email')
+        .eq('artist_id', user.id);
+
+      const typedClientData = clientData as { client_email: string }[] | null;
+      if (typedClientData) {
+        const uniqueEmails = new Set(typedClientData.map((b) => b.client_email));
+        setTotalClients(uniqueEmails.size);
+      }
+    } catch (err) {
+      console.error('Error fetching client count:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchAlerts();
+    fetchTopClients();
+    fetchClientCount();
+  }, [fetchAlerts, fetchTopClients, fetchClientCount]);
+
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlerts((prev) => new Set(prev).add(alertId));
+  };
+
+  const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.id));
 
   const revenueChartData = useMemo(
     () => (stats.totalRevenue > 0 ? getRevenueChartData(stats.totalRevenue) : defaultRevenueData),
@@ -106,7 +313,7 @@ export const DashboardOverview: React.FC = () => {
       },
       {
         title: 'Total Clients',
-        value: '—',
+        value: totalClients !== null ? String(totalClients) : '—',
         change: '—',
         trend: 'up' as const,
         icon: Users,
@@ -132,7 +339,7 @@ export const DashboardOverview: React.FC = () => {
         bgGradient: isDark ? 'from-orange-500/10 to-amber-600/10' : 'from-orange-50 to-amber-50',
       },
     ],
-    [stats, isDark]
+    [stats, isDark, totalClients]
   );
 
   const getStatusBadge = (status: string) => {
@@ -228,6 +435,68 @@ export const DashboardOverview: React.FC = () => {
         </h1>
         <p className="text-gray-500 mt-1">Vue d'ensemble de votre activité</p>
       </div>
+
+      {/* --- Alertes --- */}
+      <AnimatePresence>
+        {visibleAlerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2"
+          >
+            {visibleAlerts.map((alert) => {
+              const AlertIcon = alert.icon;
+              const colorMap = {
+                warning: {
+                  bg: isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200',
+                  icon: 'text-amber-500',
+                  text: isDark ? 'text-amber-300' : 'text-amber-800',
+                  btn: isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300' : 'bg-amber-100 hover:bg-amber-200 text-amber-700',
+                },
+                urgent: {
+                  bg: isDark ? 'bg-red-500/10 border-red-500/20' : 'bg-red-50 border-red-200',
+                  icon: 'text-red-500',
+                  text: isDark ? 'text-red-300' : 'text-red-800',
+                  btn: isDark ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-red-100 hover:bg-red-200 text-red-700',
+                },
+                info: {
+                  bg: isDark ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200',
+                  icon: 'text-blue-500',
+                  text: isDark ? 'text-blue-300' : 'text-blue-800',
+                  btn: isDark ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300' : 'bg-blue-100 hover:bg-blue-200 text-blue-700',
+                },
+              };
+              const colors = colorMap[alert.type];
+              return (
+                <motion.div
+                  key={alert.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20, height: 0 }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${colors.bg}`}
+                >
+                  <AlertIcon size={18} className={`shrink-0 ${colors.icon}`} />
+                  <span className={`text-sm font-medium flex-1 ${colors.text}`}>{alert.message}</span>
+                  <button
+                    onClick={() => navigate(alert.link)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${colors.btn}`}
+                  >
+                    {alert.cta}
+                  </button>
+                  <button
+                    onClick={() => dismissAlert(alert.id)}
+                    className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-gray-500' : 'hover:bg-gray-200 text-gray-400'}`}
+                    title="Masquer"
+                  >
+                    <X size={14} />
+                  </button>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {statsCards.map((stat, index) => {
@@ -469,6 +738,82 @@ export const DashboardOverview: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* --- Top 5 Clients --- */}
+      {topClients.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className={`rounded-2xl p-6 ${
+            isDark ? 'bg-[#1a1a2e] border border-white/5' : 'bg-white border border-gray-200'
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="inline-flex p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
+              <Trophy size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Top 5 Clients
+              </h3>
+              <p className="text-sm text-gray-500">Par chiffre d'affaires généré</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {(() => {
+              const maxSpent = topClients[0]?.totalSpent || 1;
+              return topClients.map((client, index) => {
+                const percentage = (client.totalSpent / maxSpent) * 100;
+                const rankColors = [
+                  'from-amber-400 to-yellow-500',
+                  'from-gray-300 to-gray-400',
+                  'from-orange-400 to-amber-500',
+                  'from-violet-400 to-purple-500',
+                  'from-blue-400 to-cyan-500',
+                ];
+                return (
+                  <div key={client.clientEmail} className="group">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div
+                        className={`flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br ${rankColors[index]} text-white text-xs font-bold shrink-0`}
+                      >
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {client.clientName}
+                          </p>
+                          <div className="flex items-center gap-3 shrink-0 ml-3">
+                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {client.bookingsCount} RDV
+                            </span>
+                            <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {formatRevenue(client.totalSpent)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ml-10">
+                      <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ delay: 0.9 + index * 0.1, duration: 0.6, ease: 'easeOut' }}
+                          className={`h-full rounded-full bg-gradient-to-r ${rankColors[index]}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

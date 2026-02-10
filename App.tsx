@@ -1,8 +1,8 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { ArtistProfileProvider } from './contexts/ArtistProfileContext';
 import { DashboardThemeProvider } from './contexts/DashboardThemeContext';
 import { LandingPage } from './components/LandingPage';
@@ -10,6 +10,44 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+// ── Intercepteur global : humanise les messages PostgREST / Supabase ──
+// On monkey-patch toast.error pour que les messages techniques ne s'affichent
+// jamais tels quels à l'utilisateur.
+const PGRST_PATTERNS: [RegExp, string][] = [
+  [/cannot coerce the result to a single json object/i, 'Erreur de chargement des données. Rafraîchissez la page.'],
+  [/could not find the table.*in the schema cache/i, 'Service temporairement indisponible. Réessayez dans un instant.'],
+  [/permission denied for table/i, 'Accès refusé. Veuillez vous reconnecter.'],
+  [/PGRST116/i, ''],   // No rows — silencieux, pas de toast
+  [/PGRST301/i, 'Session expirée. Veuillez vous reconnecter.'],
+  [/JWT expired/i, 'Votre session a expiré. Veuillez vous reconnecter.'],
+  [/Failed to fetch/i, 'Impossible de joindre le serveur. Vérifiez votre connexion.'],
+  [/NetworkError/i, 'Erreur réseau. Vérifiez votre connexion internet.'],
+];
+
+const _originalToastError = toast.error.bind(toast);
+toast.error = ((message: any, options?: any) => {
+  const rawMsg = typeof message === 'string' ? message : String(message ?? '');
+
+  for (const [pattern, replacement] of PGRST_PATTERNS) {
+    if (pattern.test(rawMsg)) {
+      if (!replacement) return; // '' = silencieux, on n'affiche rien
+      return _originalToastError(replacement, options);
+    }
+  }
+
+  // Aussi vérifier dans la description (Sonner met parfois le message là)
+  if (options?.description && typeof options.description === 'string') {
+    for (const [pattern, replacement] of PGRST_PATTERNS) {
+      if (pattern.test(options.description)) {
+        if (!replacement) return;
+        return _originalToastError(rawMsg, { ...options, description: replacement });
+      }
+    }
+  }
+
+  return _originalToastError(message, options);
+}) as typeof toast.error;
 
 // Lazy load components pour code splitting (réduction du bundle initial ~60%)
 const OnboardingPage = lazy(() => import('./components/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
@@ -31,6 +69,7 @@ const DashboardFlashs = lazy(() => import('./components/dashboard/DashboardFlash
 const DashboardClients = lazy(() => import('./components/dashboard/DashboardClients').then(m => ({ default: m.DashboardClients })));
 const DashboardFinance = lazy(() => import('./components/dashboard/DashboardFinance').then(m => ({ default: m.DashboardFinance })));
 const DashboardSettings = lazy(() => import('./components/dashboard/DashboardSettings').then(m => ({ default: m.DashboardSettings })));
+const DashboardPayments = lazy(() => import('./components/dashboard/DashboardPayments').then(m => ({ default: m.DashboardPayments })));
 const DashboardCareSheets = lazy(() => import('./components/dashboard/DashboardCareSheets').then(m => ({ default: m.DashboardCareSheets })));
 
 // Skeleton de chargement réutilisable
@@ -44,6 +83,24 @@ const LoadingSkeleton: React.FC = () => (
 );
 
 const App: React.FC = () => {
+  // Intercepter les promesses rejetées non capturées pour éviter
+  // des toasts d'erreurs techniques sauvages
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      const msg = event?.reason?.message || String(event?.reason ?? '');
+
+      // Bloquer les erreurs PostgREST / Supabase sauvages
+      for (const [pattern] of PGRST_PATTERNS) {
+        if (pattern.test(msg)) {
+          event.preventDefault(); // Empêche la console error
+          return;
+        }
+      }
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
   return (
     <ErrorBoundary>
       <HelmetProvider>
@@ -113,6 +170,7 @@ const App: React.FC = () => {
                     <Route path="clients" element={<DashboardClients />} />
                     <Route path="finance" element={<DashboardFinance />} />
                     <Route path="settings" element={<DashboardSettings />} />
+                    <Route path="settings/payments" element={<DashboardPayments />} />
                     <Route path="settings/care-sheets" element={<DashboardCareSheets />} />
                   </Route>
                   

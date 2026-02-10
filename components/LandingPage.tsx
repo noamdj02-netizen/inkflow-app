@@ -11,6 +11,9 @@ import {
 import { motion, useInView } from 'framer-motion';
 import { HeroSection } from './landing/HeroSection';
 import { FeaturesStickyScroll } from './landing/FeaturesStickyScroll';
+import { TestimonialMarquee } from './landing/TestimonialMarquee';
+import { PricingSection } from './landing/PricingSection';
+import { FAQSection } from './landing/FAQSection';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -34,11 +37,8 @@ function LandingContent() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <span
-              className="text-xl font-semibold tracking-tight"
-              style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
-            >
-              InkFlow
+            <span className="text-xl font-display font-bold tracking-tight text-white">
+              INK<span className="text-zinc-500">FLOW</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
@@ -47,6 +47,15 @@ function LandingContent() {
             </a>
             <a href="#deep-dive" className="text-sm text-zinc-400 hover:text-white transition-colors">
               Fonctionnalités
+            </a>
+            <a href="#temoignages" className="text-sm text-zinc-400 hover:text-white transition-colors">
+              Témoignages
+            </a>
+            <a href="#tarifs" className="text-sm text-zinc-400 hover:text-white transition-colors">
+              Tarifs
+            </a>
+            <a href="#faq" className="text-sm text-zinc-400 hover:text-white transition-colors">
+              FAQ
             </a>
             <Link to="/login" className="text-sm text-zinc-400 hover:text-white transition-colors">
               Se connecter
@@ -74,6 +83,15 @@ function LandingContent() {
             </a>
             <a href="#deep-dive" className="text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
               Fonctionnalités
+            </a>
+            <a href="#temoignages" className="text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+              Témoignages
+            </a>
+            <a href="#tarifs" className="text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+              Tarifs
+            </a>
+            <a href="#faq" className="text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+              FAQ
             </a>
             <Link to="/login" className="text-zinc-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
               Se connecter
@@ -149,6 +167,37 @@ function LandingContent() {
 
       <FeaturesStickyScroll />
 
+      <section id="temoignages" className="relative py-8 md:py-12 px-4">
+        <div className="max-w-6xl mx-auto text-center mb-10">
+          <motion.h2
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            transition={{ duration: 0.6 }}
+            className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tighter"
+            style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
+          >
+            Ils gèrent leur studio avec InkFlow
+          </motion.h2>
+          <motion.p
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            transition={{ duration: 0.5, delay: 0.08 }}
+            className="text-zinc-400 text-lg"
+          >
+            Tatoueurs et studios nous font confiance.
+          </motion.p>
+        </div>
+        <TestimonialMarquee speed={35} />
+      </section>
+
+      <PricingSection />
+
+      <FAQSection />
+
       <section ref={sectionRefCta} className="relative py-24 md:py-32 px-4 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
           <div
@@ -194,12 +243,15 @@ function LandingContent() {
 
       <footer className="border-t border-white/5 py-8 px-4">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-sm text-zinc-500" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
-            InkFlow
+          <span className="text-sm font-display font-bold tracking-tight text-zinc-500">
+            INK<span className="text-zinc-600">FLOW</span>
           </span>
           <div className="flex items-center gap-6 text-sm text-zinc-500">
             <a href="#solution" className="hover:text-white transition-colors">Pourquoi InkFlow</a>
             <a href="#deep-dive" className="hover:text-white transition-colors">Fonctionnalités</a>
+            <a href="#temoignages" className="hover:text-white transition-colors">Témoignages</a>
+            <a href="#tarifs" className="hover:text-white transition-colors">Tarifs</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             <Link to="/login" className="hover:text-white transition-colors">Connexion</Link>
             <Link to="/register" className="hover:text-white transition-colors">Inscription</Link>
           </div>
@@ -209,16 +261,38 @@ function LandingContent() {
   );
 }
 
+const SEO = {
+  title: 'InkFlow - Logiciel de Gestion pour Tatoueurs & Studios',
+  description:
+    "Agenda, Acomptes, Fiches Clients. Le tout-en-un pour les artistes tatoueurs. Essai gratuit 14 jours.",
+  keywords:
+    "logiciel tatoueur, agenda tatouage, fiche client tattoo, gestion studio tatouage",
+  /** Pour OpenGraph : définir VITE_APP_URL en production (ex. https://inkflow.fr) pour des images absolues. */
+  baseUrl: typeof import.meta.env !== "undefined" && import.meta.env.VITE_APP_URL
+    ? String(import.meta.env.VITE_APP_URL).replace(/\/$/, "")
+    : "",
+  ogImage: "/inkflow-logo-v2.png",
+};
+
 export function LandingPage(_props: LandingPageProps) {
+  const ogImageUrl = SEO.baseUrl ? `${SEO.baseUrl}${SEO.ogImage}` : undefined;
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white antialiased overflow-x-hidden font-sans relative">
       <Helmet>
-        <title>InkFlow | Gérez votre studio comme jamais</title>
-        <meta
-          name="description"
-          content="Agenda, réservations, acomptes et vitrine en un seul outil. Simple et professionnel. 30 jours d'essai gratuit."
-        />
-        <meta name="keywords" content="logiciel tatoueur, réservation tatouage, gestion studio, flash tattoo, booking" />
+        <title>{SEO.title}</title>
+        <meta name="description" content={SEO.description} />
+        <meta name="keywords" content={SEO.keywords} />
+        {/* OpenGraph / Facebook & Instagram */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={SEO.title} />
+        <meta property="og:description" content={SEO.description} />
+        {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+        {ogImageUrl && <meta property="og:image:width" content="512" />}
+        {ogImageUrl && <meta property="og:image:height" content="512" />}
+        {SEO.baseUrl && <meta property="og:url" content={SEO.baseUrl} />}
+        <meta property="og:locale" content="fr_FR" />
+        <meta property="og:site_name" content="InkFlow" />
       </Helmet>
       <LandingContent />
     </div>

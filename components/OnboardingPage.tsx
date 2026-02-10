@@ -42,9 +42,9 @@ export const OnboardingPage: React.FC = () => {
       .from('artists')
       .select('id')
       .eq('slug_profil', slugToCheck.trim().toLowerCase())
-      .single();
+      .maybeSingle();
 
-    if (error && error.code === 'PGRST116') {
+    if (!data && !error) {
       // Aucun résultat trouvé = slug disponible
       setSlugAvailable(true);
       setSlugError(null);
@@ -112,10 +112,14 @@ export const OnboardingPage: React.FC = () => {
           slug_profil: slug,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertError) {
         throw insertError;
+      }
+
+      if (!data) {
+        throw new Error('Erreur lors de la création du profil');
       }
 
       // Rafraîchir le profil dans le contexte
@@ -140,7 +144,7 @@ export const OnboardingPage: React.FC = () => {
         .from('artists')
         .select('id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
         // L'utilisateur a déjà un profil, rediriger vers le dashboard

@@ -184,6 +184,85 @@ export const careInstructionsSchema = z.object({
     .optional(),
 }).strict();
 
+// ─── Artist Profile Schema (Dashboard Settings) ────────────────────
+/**
+ * Slug regex: lowercase letters, digits, hyphens; starts & ends with alnum
+ */
+const slugRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+
+export const artistProfileSchema = z.object({
+  nom_studio: z
+    .string()
+    .min(2, 'Le nom du studio doit contenir au moins 2 caractères')
+    .max(100, 'Le nom du studio est trop long (max 100)')
+    .trim(),
+
+  email: z
+    .string()
+    .min(1, 'L\'email est requis')
+    .email('Format d\'email invalide')
+    .toLowerCase()
+    .trim()
+    .max(255, 'Email trop long'),
+
+  slug_profil: z
+    .string()
+    .min(3, 'Le slug doit contenir au moins 3 caractères')
+    .max(40, 'Le slug est trop long (max 40)')
+    .regex(slugRegex, 'Le slug ne doit contenir que des lettres minuscules, chiffres et tirets')
+    .trim()
+    .optional()
+    .or(z.literal('')),
+
+  bio_instagram: z
+    .string()
+    .max(500, 'La bio est trop longue (max 500 caractères)')
+    .trim()
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+});
+
+export type ArtistProfileFormData = z.infer<typeof artistProfileSchema>;
+
+/**
+ * Validate artist profile data before saving
+ */
+export function validateArtistProfile(data: unknown): {
+  success: boolean;
+  data: ArtistProfileFormData | null;
+  error: string | null;
+  fieldErrors: Record<string, string>;
+} {
+  try {
+    const validated = artistProfileSchema.parse(data);
+    return { success: true, data: validated, error: null, fieldErrors: {} };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of error.issues) {
+        const path = issue.path.join('.');
+        if (!fieldErrors[path]) {
+          fieldErrors[path] = issue.message;
+        }
+      }
+      const firstError = error.issues[0];
+      return {
+        success: false,
+        data: null,
+        error: firstError.message || 'Données invalides',
+        fieldErrors,
+      };
+    }
+    return {
+      success: false,
+      data: null,
+      error: 'Données invalides',
+      fieldErrors: {},
+    };
+  }
+}
+
 /**
  * Sanitize HTML to prevent XSS
  * Escapes special characters for safe rendering in emails/HTML

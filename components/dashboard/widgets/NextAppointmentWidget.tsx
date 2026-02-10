@@ -79,7 +79,7 @@ export const NextAppointmentWidget: React.FC = () => {
         .gte('date_debut', now.toISOString())
         .order('date_debut', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setNextBooking(data as Booking);

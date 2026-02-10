@@ -89,9 +89,10 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({ flash, artist, isOpen, on
           statut_booking: 'pending',
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertError) throw insertError;
+      if (!booking) throw new Error('Erreur lors de la création de la réservation');
 
       // 2. Vérifier la configuration Supabase
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -495,14 +496,16 @@ export const PublicArtistPage: React.FC = () => {
           .from('artists')
           .select('*')
           .eq('slug_profil', slug)
-          .single();
+          .maybeSingle();
 
         if (artistError) {
-          if (artistError.code === 'PGRST116') {
-            setError('Artiste non trouvé');
-          } else {
-            setError('Erreur lors du chargement');
-          }
+          setError('Erreur lors du chargement');
+          setLoading(false);
+          return;
+        }
+
+        if (!artistData) {
+          setError('Artiste non trouvé');
           setLoading(false);
           return;
         }

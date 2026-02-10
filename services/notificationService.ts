@@ -78,7 +78,7 @@ export const sendBookingReminder = async (bookingId: string) => {
       .from('bookings')
       .select('*, flashs(title), projects(body_part, style)')
       .eq('id', bookingId)
-      .single();
+      .maybeSingle();
 
     if (bookingError || !booking) {
       throw new Error('Booking not found');
@@ -154,7 +154,7 @@ export const sendBookingConfirmation = async (bookingId: string) => {
       .from('bookings')
       .select('*, flashs(title), projects(body_part, style)')
       .eq('id', bookingId)
-      .single();
+      .maybeSingle();
 
     if (error || !booking) {
       throw new Error('Booking not found');
