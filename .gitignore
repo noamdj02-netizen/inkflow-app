@@ -28,3 +28,6 @@ dist-ssr
 # Environment variables
 .env
 .env.production
+
+# Next.js build output (legacy)
+.next
